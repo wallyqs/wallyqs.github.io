@@ -1,0 +1,6 @@
+[submodule "vendor/re-org"]
+	path = vendor/re-org
+	url = https://github.com/wallyqs/re-org
+[submodule "_plugins/jekyll-org"]
+	path = _plugins/jekyll-org
+	url = https://github.com/eggcaker/jekyll-org
