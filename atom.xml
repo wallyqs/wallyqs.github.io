@@ -4,7 +4,7 @@
  <title>Waldemar Quevedo</title>
  <link href="http://wallyqs.github.io/atom.xml" rel="self"/>
  <link href="http://wallyqs.github.io/"/>
- <updated>2013-11-25T01:49:00+09:00</updated>
+ <updated>2013-11-25T02:31:46+09:00</updated>
  <id>http://wallyqs.github.io</id>
  <author>
    <name>Waldemar Quevedo</name>
@@ -12,7 +12,29 @@
  
  
  <entry>
-   <title>Blogging with Jekyll</title>
+   <title>Rakuten Tech Conf</title>
+   <link href="http://wallyqs.github.io/posts/rakuten-tech-conf"/>
+   <updated>2013-11-25T00:00:00+09:00</updated>
+   <id>http://wallyqs.github.io/posts/rakuten-tech-conf</id>
+   <content type="html">&lt;h1&gt;Gave a presentation at the Rakuten Tech Conference 2013&lt;/h1&gt;
+&lt;p&gt;Last month, I gave presentation at the
+  &lt;a href=&quot;http://tech.rakuten.co.jp/&quot;&gt;Rakuten Tech Conf&lt;/a&gt; to talk a little bit of how it has resulted to us
+  having an internal platform as a service to make teams&lt;/p&gt;
+&lt;p&gt;After watching the video, I see that I had a lot of misplaced
+  confidence with the English I speak&amp;#8230; I&amp;#8217;m mispronouncing tons of words
+  and overall I think there is a lot of room to improve&amp;#8230;&lt;/p&gt;
+&lt;p&gt;In the end, it was a good experience to give this talk,
+  and felt that it would be worth trying to get better at this
+  by doing it more often. Need to get out of my comfort zone and maybe
+  try doing these sort of things at local meetups.&lt;/p&gt;
+&lt;p&gt;The video of the talk has been finally been uploaded and can be
+  watched here:&lt;/p&gt;
+&lt;iframe width=&quot;560&quot; height=&quot;315&quot; src=&quot;//www.youtube.com/embed/oe1u0PjwW90?list=SPNVIqXmk6x8zlxVX0Cl-uHvEF9hycNcy6&quot; frameborder=&quot;0&quot; allowfullscreen&gt;&lt;/iframe&gt;
+</content>
+ </entry>
+ 
+ <entry>
+   <title>Started to blog with Jekyll</title>
    <link href="http://wallyqs.github.io/posts/hello"/>
    <updated>2013-11-24T00:00:00+09:00</updated>
    <id>http://wallyqs.github.io/posts/hello</id>
