@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+<head>
+  <meta charset="utf-8">
+  <title>
+    
+      Posts &ndash;
+    
+    Waldemar Quevedo
+  </title>
+
+  <meta name="author" content="Waldemar Quevedo" />
+  <meta name="description" content="PaaS, Org mode & other misc writings." />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <link rel="alternate" type="application/rss+xml" href="/atom.xml" />
+
+  <link rel="stylesheet" href="/css/fontawesome.min.css" type="text/css" media="screen, projection" />
+  <link rel="stylesheet" href="/css/base.css" type="text/css" media="screen, projection" />
+  <link rel="stylesheet" href="/css/pygments.css" type="text/css" />
+  <link media="only screen and (max-device-width: 480px)" href="/css/mobile.css" type="text/css" rel="stylesheet" />
+  <link media="only screen and (device-width: 768px)" href="/css/mobile.css" type="text/css" rel="stylesheet" />
+  <link href='http://fonts.googleapis.com/css?family=Yanone+Kaffeesatz' rel='stylesheet' type='text/css'>
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+  <script type="text/javascript" src="/js/application.js"></script>
+</head>
+
+<body>
+  <section class="sidebar">
+    <a href="/">
+      <img src="http://gravatar.com/avatar/210dbb68c0380da4d77ff46759f02d1a?s=150" height="75" width="75" class="avatar" />
+    </a>
+
+    <section class="name">
+      <a href="/">
+        <span id="fname">Waldemar</span>
+        <span id="lname">Quevedo</span>
+      </a>
+    </section>
+
+    <section class="description">
+      <p>
+        PaaS, Org mode & other misc writings.
+      </p>
+    </section>
+
+    <section class="meta">
+      <a href="https://github.com/wallyqs" target="_blank"><i class="icon icon-github"></i></a>
+      <a href="https://twitter.com/wallyqs" target="_blank"><i class="icon icon-twitter"></i></a>
+      <a href="/atom.xml"><i class="icon icon-rss"></i></a>
+    </section>
+
+    <section class="sections">
+      <ul>
+        <li><a href="/about.html">about</a></li>
+        <li><a href="/posts.html">posts</a></li>
+      </ul>
+    </section>
+  </section>
+
+  <section class="content">
+  
+  <h1>
+    <a href="/posts/hello">Blogging with Jekyll</a>
+  </h1>
+  <section class="byline">
+    November 24, 2013
+  </section>
+  <p>Starting a blog using the <a href="https://github.com/holman/left">Left</a> theme for <a href="https://github.com/mojombo/jekyll">Jekyll</a>.</p>
+<p>Compared to other solutions, this uses the <code>org-ruby</code> parser
+  to export <code>.org</code> files into HTML. You can check the source
+  for this site here: <a href="https://github.com/wallyqs/wallyqs.github.io">https://github.com/wallyqs/wallyqs.github.io</a></p>
+<div class="highlight"><pre><span class="nb">puts</span> <span class="s2">&quot;Syntax highlighting works!&quot;</span>
+</pre></div>
+<p>There are still some pending things that I would like to improve:</p>
+<ul>
+  <li>Use the <a href="https://github.com/wallyqs/re-org">re-org</a> tool to create and organize the posts that
+    would finally go into the <code>_posts</code> directory for publishing.
+    I think in the end using a YAML file would have been better than
+    having to use environment variables.</li>
+  <li>Try to extend or patch Jekyll so that I can avoid having to write:
+<div class="highlight"><pre>---
+layout: post
+title:  Hello world
+category: posts
+---
+</pre></div>
+    <p>And instead cover this with Org syntax like:</p>
+<div class="highlight"><pre>#+layout:   post
+#+title:    Hello world
+#+category: posts
+</pre></div>
+  </li>
+</ul>
+<p>Other than that, the setup promises to be very comfortable for
+  writing, I&#8217;ll see how it goes.</p>
+
+  <hr />
+  
+</section>
+
+</body>
+
+</html>
