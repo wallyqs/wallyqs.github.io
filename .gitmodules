@@ -4,3 +4,6 @@
 [submodule "_vendor/re-org"]
 	path = _vendor/re-org
 	url = https://github.com/wallyqs/re-org
+[submodule "_vendor/jekyll"]
+	path = _vendor/jekyll
+	url = https://github.com/mojombo/jekyll
