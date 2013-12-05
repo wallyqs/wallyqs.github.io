@@ -63,12 +63,55 @@
   <section class="content">
   
   <h1>
+    <a href="/posts/jekyll-without-yaml">Replacing Jekyll YAML headers with Org mode buffer settings</a>
+  </h1>
+  <section class="byline">
+    December  6, 2013
+  </section>
+  <p class="title">Replacing Jekyll YAML headers with Org mode buffer settings</p>
+<p>I took a quick look at what would be required
+  to avoid having to use <code>YAML</code> headers for Jekyll and using
+  only Org mode buffer settings to set the layout, title
+  from a Jekyll post.</p>
+<div class="highlight"><pre><span class="k">module</span> <span class="nn">Jekyll</span>
+ <span class="k">class</span> <span class="nc">Post</span>
+    <span class="k">def</span> <span class="nf">read_yaml</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="nb">name</span><span class="p">,</span> <span class="n">opts</span> <span class="o">=</span> <span class="p">{})</span>
+      <span class="nb">self</span><span class="o">.</span><span class="n">content</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">read_with_options</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="nb">name</span><span class="p">),</span>
+                                            <span class="n">merged_file_read_opts</span><span class="p">(</span><span class="n">opts</span><span class="p">))</span>
+      <span class="nb">self</span><span class="o">.</span><span class="n">data</span> <span class="o">||=</span> <span class="p">{}</span>
+
+      <span class="n">org_text</span> <span class="o">=</span> <span class="no">Orgmode</span><span class="o">::</span><span class="no">Parser</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="nb">self</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
+      <span class="n">org_text</span><span class="o">.</span><span class="n">in_buffer_settings</span><span class="o">.</span><span class="n">each_pair</span> <span class="k">do</span> <span class="o">|</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="o">|</span>
+        <span class="nb">self</span><span class="o">.</span><span class="n">data</span><span class="o">[</span><span class="n">key</span><span class="o">.</span><span class="n">downcase</span><span class="o">]</span> <span class="o">=</span> <span class="n">value</span>
+      <span class="k">end</span>
+
+      <span class="nb">self</span><span class="o">.</span><span class="n">extracted_excerpt</span> <span class="o">=</span> <span class="nb">self</span><span class="o">.</span><span class="n">extract_excerpt</span>
+    <span class="k">rescue</span> <span class="o">=&gt;</span> <span class="n">e</span>
+      <span class="nb">puts</span> <span class="s2">&quot;Error converting file </span><span class="si">#{</span><span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="nb">name</span><span class="p">)</span><span class="si">}</span><span class="s2">: </span><span class="si">#{</span><span class="n">e</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</pre></div>
+<p>This way, instead of having to write</p>
+<div class="highlight"><pre><span class="nn">---</span>
+<span class="l-Scalar-Plain">title</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">something</span>
+<span class="nn">---</span>
+</pre></div>
+<p>I can just continue to use Org mode syntax:</p>
+<div class="highlight"><pre><span class="c1">#+title: Replacing Jekyll YAML headers with Org mode buffer settings</span>
+</pre></div>
+<p>My fork of <code>jekyll-org</code> which has this feature enabled is <a href="https://github.com/wallyqs/jekyll-org/blob/54e1e19697e12d73e9765fb96db37522666af274/convert.rb">here</a>.</p>
+
+  <hr />
+  
+  <h1>
     <a href="/posts/simple-express-webapp">Example of a simple web app with express</a>
   </h1>
   <section class="byline">
     November 26, 2013
   </section>
-  <blockquote>
+  <p class="title">Example of a simple web app with express</p>
+<blockquote>
   <p>The following is an Org babel document from a long time ago,
     though I publish it anyway. Raw Org babel content can be fetch from here:
     <a href="https://raw.github.com/wallyqs/org_writings/master/express_app/babel.org">https://raw.github.com/wallyqs/org_writings/master/express_app/babel.org</a>
@@ -335,7 +378,8 @@ rm -rf routes
   <section class="byline">
     November 25, 2013
   </section>
-  <h1>Gave a presentation at the Rakuten Tech Conference 2013</h1>
+  <p class="title">Rakuten Tech Conf</p>
+<h1>Gave a presentation at the Rakuten Tech Conference 2013</h1>
 <p>Last month, I gave presentation at the
   <a href="http://tech.rakuten.co.jp/">Rakuten Tech Conf</a> to talk a little bit of how it has resulted to us
   having an internal platform as a service to make teams</p>
@@ -353,12 +397,13 @@ rm -rf routes
   <hr />
   
   <h1>
-    <a href="/posts/hello">Started to blog with Jekyll</a>
+    <a href="/posts/hello">Blogging with Jekyll!!!</a>
   </h1>
   <section class="byline">
     November 24, 2013
   </section>
-  <p>Starting a blog using the <a href="https://github.com/holman/left">Left</a> theme for <a href="https://github.com/mojombo/jekyll">Jekyll</a>.</p>
+  <p class="title">Blogging with Jekyll!!!</p>
+<p>Starting a blog using the <a href="https://github.com/holman/left">Left</a> theme for <a href="https://github.com/mojombo/jekyll">Jekyll</a>.</p>
 <p>Compared to other solutions, this uses the <code>org-ruby</code> parser
   to export <code>.org</code> files into HTML. You can check the source
   for this site here: <a href="https://github.com/wallyqs/wallyqs.github.io">https://github.com/wallyqs/wallyqs.github.io</a></p>
