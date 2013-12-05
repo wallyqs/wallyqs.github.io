@@ -1,0 +1,45 @@
+#+TITLE: Replacing Jekyll YAML headers with Org mode buffer settings
+#+category: posts
+#+layout:   post
+
+I took a quick look at what would be required
+to avoid having to use =YAML= headers for Jekyll and using
+only Org mode buffer settings to set the layout, title
+from a Jekyll post.
+
+#+begin_src ruby
+module Jekyll
+ class Post
+    def read_yaml(base, name, opts = {})
+      self.content = File.read_with_options(File.join(base, name),
+                                            merged_file_read_opts(opts))
+      self.data ||= {}
+
+      org_text = Orgmode::Parser.new(self.content)
+      org_text.in_buffer_settings.each_pair do |key, value|
+        self.data[key.downcase] = value
+      end
+
+      self.extracted_excerpt = self.extract_excerpt
+    rescue => e
+      puts "Error converting file #{File.join(base, name)}: #{e.message}"
+    end
+  end
+end
+#+end_src
+
+This way, instead of having to write
+
+#+begin_src yaml
+---
+title: something
+---
+#+end_src
+
+I can just continue to use Org mode syntax:
+
+#+begin_src ruby
+#+title: Replacing Jekyll YAML headers with Org mode buffer settings
+#+end_src
+
+My fork of =jekyll-org= which has this feature enabled is [[https://github.com/wallyqs/jekyll-org/blob/54e1e19697e12d73e9765fb96db37522666af274/convert.rb][here]].
