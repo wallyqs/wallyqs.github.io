@@ -1,13 +1,10 @@
----
-layout: post
-title: Rakuten Tech Conf
-category: posts
----
-
-#+OPTIONS: ^:nil
-#+DATE:  2013-11-25
-#+STARTUP: showeverything
-#+NOTEBOOK: posts
+#+title:	 Rakuten Tech Conf
+#+category:	 posts
+#+layout:	 post
+#+options:	 ^:nil
+#+date:		 2013-11-25
+#+startup:	 showeverything
+#+notebook:	 posts
 
 * Gave a presentation at the Rakuten Tech Conference 2013
   :PROPERTIES:

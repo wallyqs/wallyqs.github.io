@@ -1,9 +1,7 @@
----
-layout: post
-title:  Example of a simple web app with express
-category: posts
-liquid:   false
----
+#+title:  Example of a simple web app with express
+#+layout:   post
+#+category: posts
+#+liquid:   false
 
 #+begin_quote
 The following is an Org babel document from a long time ago,
