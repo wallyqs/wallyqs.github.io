@@ -68,7 +68,7 @@
   <section class="byline">
     December  6, 2013
   </section>
-  <p class="title">Replacing Jekyll YAML headers with Org mode buffer settings</p>
+  
 <p>I took a quick look at what would be required
   to avoid having to use <code>YAML</code> headers for Jekyll and using
   only Org mode buffer settings to set the layout, title
@@ -101,6 +101,76 @@
 <div class="highlight"><pre><span class="c1">#+title: Replacing Jekyll YAML headers with Org mode buffer settings</span>
 </pre></div>
 <p>My fork of <code>jekyll-org</code> which has this feature enabled is <a href="https://github.com/wallyqs/jekyll-org/blob/54e1e19697e12d73e9765fb96db37522666af274/convert.rb">here</a>.</p>
+<h2>Update [2013-12-07 Sat]</h2>
+<p>I did some modifications again to plugin for converting Org mode
+  texts:</p>
+<ul>
+  <li>Disable using Liquid tags and rely mostly on Org mode syntax for
+    exporting</li>
+  <li>Remove the <code>#+TITLE</code> from in buffer settings to exporting it 2 times
+    with different styles</li>
+</ul>
+<p>The resulting plugin is here:</p>
+<div class="highlight"><pre><span class="nb">require</span> <span class="s1">&#39;org-ruby&#39;</span>
+
+<span class="k">module</span> <span class="nn">Jekyll</span>
+  <span class="c1"># This overrides having to use YAML in the posts</span>
+  <span class="c1"># and instead use in buffer settings from Org mode</span>
+  <span class="k">class</span> <span class="nc">Post</span>
+    <span class="k">def</span> <span class="nf">read_yaml</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="nb">name</span><span class="p">,</span> <span class="n">opts</span> <span class="o">=</span> <span class="p">{})</span>
+      <span class="n">content</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">read_with_options</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="nb">name</span><span class="p">),</span>
+                                       <span class="n">merged_file_read_opts</span><span class="p">(</span><span class="n">opts</span><span class="p">))</span>
+      <span class="nb">self</span><span class="o">.</span><span class="n">data</span> <span class="o">||=</span> <span class="p">{}</span>
+
+      <span class="n">org_text</span> <span class="o">=</span> <span class="no">Orgmode</span><span class="o">::</span><span class="no">Parser</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
+      <span class="n">org_text</span><span class="o">.</span><span class="n">in_buffer_settings</span><span class="o">.</span><span class="n">each_pair</span> <span class="k">do</span> <span class="o">|</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="o">|</span>
+        <span class="c1"># Remove #+TITLE from the buffer settings to avoid double exporting</span>
+        <span class="n">org_text</span><span class="o">.</span><span class="n">in_buffer_settings</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="k">if</span> <span class="n">key</span> <span class="o">=~</span> <span class="sr">/title/i</span>
+        <span class="n">buffer_setting</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">downcase</span>
+        <span class="nb">self</span><span class="o">.</span><span class="n">data</span><span class="o">[</span><span class="n">buffer_setting</span><span class="o">]</span> <span class="o">=</span> <span class="n">value</span>
+      <span class="k">end</span>
+
+      <span class="c1"># Disable Liquid tags from the output</span>
+      <span class="nb">self</span><span class="o">.</span><span class="n">content</span> <span class="o">=</span> <span class="o">&lt;&lt;</span><span class="no">ORG</span>
+<span class="sh">{％ raw ％}</span>
+<span class="sh">#{org_text.to_html}</span>
+<span class="sh">{％ endraw ％}</span>
+<span class="no">ORG</span>
+      <span class="nb">self</span><span class="o">.</span><span class="n">extracted_excerpt</span> <span class="o">=</span> <span class="nb">self</span><span class="o">.</span><span class="n">extract_excerpt</span>
+    <span class="k">rescue</span> <span class="o">=&gt;</span> <span class="n">e</span>
+      <span class="nb">puts</span> <span class="s2">&quot;Error converting file </span><span class="si">#{</span><span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="nb">name</span><span class="p">)</span><span class="si">}</span><span class="s2">: </span><span class="si">#{</span><span class="n">e</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2"> </span><span class="si">#{</span><span class="n">e</span><span class="o">.</span><span class="n">backtrace</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+
+  <span class="c1"># Based from https://github.com/eggcaker/jekyll-org</span>
+  <span class="k">class</span> <span class="nc">OrgConverter</span> <span class="o">&lt;</span> <span class="no">Converter</span>
+    <span class="n">safe</span> <span class="kp">true</span>
+    <span class="n">priority</span> <span class="ss">:low</span>
+
+    <span class="k">def</span> <span class="nf">matches</span><span class="p">(</span><span class="n">ext</span><span class="p">)</span>
+      <span class="n">ext</span> <span class="o">=~</span> <span class="sr">/org/i</span>
+    <span class="k">end</span>
+
+    <span class="k">def</span> <span class="nf">output_ext</span><span class="p">(</span><span class="n">ext</span><span class="p">)</span>
+      <span class="s2">&quot;.html&quot;</span>
+    <span class="k">end</span>
+
+    <span class="k">def</span> <span class="nf">convert</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
+      <span class="n">content</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+
+  <span class="k">module</span> <span class="nn">Filters</span>
+    <span class="k">def</span> <span class="nf">restify</span><span class="p">(</span><span class="n">input</span><span class="p">)</span>
+      <span class="n">site</span> <span class="o">=</span> <span class="vi">@context</span><span class="o">.</span><span class="n">registers</span><span class="o">[</span><span class="ss">:site</span><span class="o">]</span>
+      <span class="n">converter</span> <span class="o">=</span> <span class="n">site</span><span class="o">.</span><span class="n">getConverterImpl</span><span class="p">(</span><span class="no">Jekyll</span><span class="o">::</span><span class="no">OrgConverter</span><span class="p">)</span>
+      <span class="n">converter</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">input</span><span class="p">)</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</pre></div>
+
+
 
   <hr />
   
@@ -110,19 +180,17 @@
   <section class="byline">
     November 26, 2013
   </section>
-  <p class="title">Example of a simple web app with express</p>
+  
+<h1>Building a simple web app with express</h1>
 <blockquote>
   <p>The following is an Org babel document from a long time ago,
     though I publish it anyway. Raw Org babel content can be fetch from here:
-    <a href="https://raw.github.com/wallyqs/org_writings/master/express_app/babel.org">https://raw.github.com/wallyqs/org_writings/master/express_app/babel.org</a>
-    Also it looks like some tags like &#8216;{ %&#8217; need to be escaped for Jekyll,
-    need to figure it out how to disable them&#8230;</p>
+    <a href="https://raw.github.com/wallyqs/org_writings/master/express_app/babel.org">https://raw.github.com/wallyqs/org_writings/master/express_app/babel.org</a></p>
 </blockquote>
 <h2>Scaffolding the app</h2>
 <div class="highlight"><pre>~/node_modules/express/bin/express
 </pre></div>
-<pre class="example">
-create : .
+<div class="highlight"><pre>create : .
 create : ./package.json
 create : ./app.js
 create : ./public
@@ -141,7 +209,7 @@ install dependencies:
 
 run the app:
   $ node app
-</pre>
+</pre></div>
 <p>For this app, I want to customize things a bit and have a <code>controllers</code> folder,
   instead of using the <code>routes</code> folder created when scaffolding the app.</p>
 <div class="highlight"><pre>mkdir controllers
@@ -172,15 +240,12 @@ rm -rf routes
 <p>A Node.js project includes its dependencies
   along with the project under the <code>node_modules</code> directory.</p>
 <div class="highlight"><pre>npm install
+
+ls node_modules
 </pre></div>
-<div class="highlight"><pre>ls node_modules
+<p>and confirm that the following modules exist:</p>
+<div class="highlight"><pre>consolidate express mongoose swig 
 </pre></div>
-<table>
-  <tr><td>consolidate</td></tr>
-  <tr><td>express</td></tr>
-  <tr><td>mongoose</td></tr>
-  <tr><td>swig</td></tr>
-</table>
 <h2>Bootstrapping: app.js</h2>
 <p>This is were we build up the app and start the server.</p>
 <h3>Require application dependencies</h3>
@@ -331,27 +396,27 @@ rm -rf routes
 <div class="highlight"><pre><span class="cp">&lt;!DOCTYPE html&gt;</span>
 <span class="nt">&lt;html&gt;</span>
   <span class="nt">&lt;head&gt;</span>
-    <span class="nt">&lt;title&gt;</span>{ block page_title }{ endblock }<span class="nt">&lt;/title&gt;</span>
+    <span class="nt">&lt;title&gt;</span>{% block page_title %}{% endblock %}<span class="nt">&lt;/title&gt;</span>
     <span class="nt">&lt;link</span> <span class="na">rel=</span><span class="s">&quot;stylesheet&quot;</span> <span class="na">href=</span><span class="s">&quot;/stylesheets/style.css&quot;</span> <span class="na">type=</span><span class="s">&quot;text/css&quot;</span> <span class="na">media=</span><span class="s">&quot;screen&quot;</span> <span class="nt">/&gt;</span>
   <span class="nt">&lt;/head&gt;</span>
-  { block body }{ endblock }
+  {% block body %}{% endblock %}
 <span class="nt">&lt;/html&gt;</span>
 </pre></div>
 <h3>Template :: Home#index</h3>
-<div class="highlight"><pre>{ extends &#39;layout.html&#39; }
+<div class="highlight"><pre>{% extends &#39;layout.html&#39; %}
 
-{ block body }
+{% block body %}
 <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">&quot;content&quot;</span><span class="nt">&gt;</span>
-  <span class="nt">&lt;h1&gt;</span> { page_title } <span class="nt">&lt;/h1&gt;</span>
+  <span class="nt">&lt;h1&gt;</span> {{ page_title }} <span class="nt">&lt;/h1&gt;</span>
   <span class="nt">&lt;p&gt;</span> Current Texts
     <span class="nt">&lt;ol&gt;</span>
-      { for text in texts }
-      <span class="nt">&lt;li&gt;</span>{ text.title }<span class="nt">&lt;/li&gt;</span>
-      { endfor }    
+      {% for text in texts %}
+      <span class="nt">&lt;li&gt;</span>{{ text.title }}<span class="nt">&lt;/li&gt;</span>
+      {% endfor %}    
     <span class="nt">&lt;/ol&gt;</span>
   <span class="nt">&lt;/p&gt;</span>
 <span class="nt">&lt;/div&gt;</span>
-{ endblock }
+{% endblock %}
 </pre></div>
 <h2>Running the app</h2>
 <div class="highlight"><pre>node app.js
@@ -370,6 +435,8 @@ rm -rf routes
     <a href="https://gist.github.com/1025038">https://gist.github.com/1025038</a></li>
 </ul>
 
+
+
   <hr />
   
   <h1>
@@ -378,7 +445,7 @@ rm -rf routes
   <section class="byline">
     November 25, 2013
   </section>
-  <p class="title">Rakuten Tech Conf</p>
+  
 <h1>Gave a presentation at the Rakuten Tech Conference 2013</h1>
 <p>Last month, I gave presentation at the
   <a href="http://tech.rakuten.co.jp/">Rakuten Tech Conf</a> to talk a little bit of how it has resulted to us
@@ -394,15 +461,17 @@ rm -rf routes
   watched here:</p>
 <iframe width="560" height="315" src="//www.youtube.com/embed/oe1u0PjwW90?list=SPNVIqXmk6x8zlxVX0Cl-uHvEF9hycNcy6" frameborder="0" allowfullscreen></iframe>
 
+
+
   <hr />
   
   <h1>
-    <a href="/posts/hello">Blogging with Jekyll!!!</a>
+    <a href="/posts/hello">Started to blog with Jekyll</a>
   </h1>
   <section class="byline">
     November 24, 2013
   </section>
-  <p class="title">Blogging with Jekyll!!!</p>
+  
 <p>Starting a blog using the <a href="https://github.com/holman/left">Left</a> theme for <a href="https://github.com/mojombo/jekyll">Jekyll</a>.</p>
 <p>Compared to other solutions, this uses the <code>org-ruby</code> parser
   to export <code>.org</code> files into HTML. You can check the source
@@ -431,6 +500,8 @@ category: posts
 </ul>
 <p>Other than that, the setup promises to be very comfortable for
   writing, I&#8217;ll see how it goes.</p>
+
+
 
   <hr />
   

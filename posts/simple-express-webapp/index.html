@@ -69,18 +69,17 @@
     November 26, 2013
   </section>
 
-  <blockquote>
+  
+<h1>Building a simple web app with express</h1>
+<blockquote>
   <p>The following is an Org babel document from a long time ago,
     though I publish it anyway. Raw Org babel content can be fetch from here:
-    <a href="https://raw.github.com/wallyqs/org_writings/master/express_app/babel.org">https://raw.github.com/wallyqs/org_writings/master/express_app/babel.org</a>
-    Also it looks like some tags like &#8216;{ %&#8217; need to be escaped for Jekyll,
-    need to figure it out how to disable them&#8230;</p>
+    <a href="https://raw.github.com/wallyqs/org_writings/master/express_app/babel.org">https://raw.github.com/wallyqs/org_writings/master/express_app/babel.org</a></p>
 </blockquote>
 <h2>Scaffolding the app</h2>
 <div class="highlight"><pre>~/node_modules/express/bin/express
 </pre></div>
-<pre class="example">
-create : .
+<div class="highlight"><pre>create : .
 create : ./package.json
 create : ./app.js
 create : ./public
@@ -99,7 +98,7 @@ install dependencies:
 
 run the app:
   $ node app
-</pre>
+</pre></div>
 <p>For this app, I want to customize things a bit and have a <code>controllers</code> folder,
   instead of using the <code>routes</code> folder created when scaffolding the app.</p>
 <div class="highlight"><pre>mkdir controllers
@@ -130,15 +129,12 @@ rm -rf routes
 <p>A Node.js project includes its dependencies
   along with the project under the <code>node_modules</code> directory.</p>
 <div class="highlight"><pre>npm install
+
+ls node_modules
 </pre></div>
-<div class="highlight"><pre>ls node_modules
+<p>and confirm that the following modules exist:</p>
+<div class="highlight"><pre>consolidate express mongoose swig 
 </pre></div>
-<table>
-  <tr><td>consolidate</td></tr>
-  <tr><td>express</td></tr>
-  <tr><td>mongoose</td></tr>
-  <tr><td>swig</td></tr>
-</table>
 <h2>Bootstrapping: app.js</h2>
 <p>This is were we build up the app and start the server.</p>
 <h3>Require application dependencies</h3>
@@ -289,27 +285,27 @@ rm -rf routes
 <div class="highlight"><pre><span class="cp">&lt;!DOCTYPE html&gt;</span>
 <span class="nt">&lt;html&gt;</span>
   <span class="nt">&lt;head&gt;</span>
-    <span class="nt">&lt;title&gt;</span>{ block page_title }{ endblock }<span class="nt">&lt;/title&gt;</span>
+    <span class="nt">&lt;title&gt;</span>{% block page_title %}{% endblock %}<span class="nt">&lt;/title&gt;</span>
     <span class="nt">&lt;link</span> <span class="na">rel=</span><span class="s">&quot;stylesheet&quot;</span> <span class="na">href=</span><span class="s">&quot;/stylesheets/style.css&quot;</span> <span class="na">type=</span><span class="s">&quot;text/css&quot;</span> <span class="na">media=</span><span class="s">&quot;screen&quot;</span> <span class="nt">/&gt;</span>
   <span class="nt">&lt;/head&gt;</span>
-  { block body }{ endblock }
+  {% block body %}{% endblock %}
 <span class="nt">&lt;/html&gt;</span>
 </pre></div>
 <h3>Template :: Home#index</h3>
-<div class="highlight"><pre>{ extends &#39;layout.html&#39; }
+<div class="highlight"><pre>{% extends &#39;layout.html&#39; %}
 
-{ block body }
+{% block body %}
 <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">&quot;content&quot;</span><span class="nt">&gt;</span>
-  <span class="nt">&lt;h1&gt;</span> { page_title } <span class="nt">&lt;/h1&gt;</span>
+  <span class="nt">&lt;h1&gt;</span> {{ page_title }} <span class="nt">&lt;/h1&gt;</span>
   <span class="nt">&lt;p&gt;</span> Current Texts
     <span class="nt">&lt;ol&gt;</span>
-      { for text in texts }
-      <span class="nt">&lt;li&gt;</span>{ text.title }<span class="nt">&lt;/li&gt;</span>
-      { endfor }    
+      {% for text in texts %}
+      <span class="nt">&lt;li&gt;</span>{{ text.title }}<span class="nt">&lt;/li&gt;</span>
+      {% endfor %}    
     <span class="nt">&lt;/ol&gt;</span>
   <span class="nt">&lt;/p&gt;</span>
 <span class="nt">&lt;/div&gt;</span>
-{ endblock }
+{% endblock %}
 </pre></div>
 <h2>Running the app</h2>
 <div class="highlight"><pre>node app.js
@@ -327,6 +323,8 @@ rm -rf routes
   <li>Gist with examples about how to use mongoose
     <a href="https://gist.github.com/1025038">https://gist.github.com/1025038</a></li>
 </ul>
+
+
 
 
   <section class="meta">
