@@ -1,6 +1,6 @@
-#+TITLE: Blogging with Jekyll!!!
-#+CATEGORY: posts
-#+LAYOUT:   post
+#+TITLE:	Started to blog with Jekyll
+#+CATEGORY:	posts
+#+LAYOUT:	post
 
 Starting a blog using the [[https://github.com/holman/left][Left]] theme for [[https://github.com/mojombo/jekyll][Jekyll]].
 

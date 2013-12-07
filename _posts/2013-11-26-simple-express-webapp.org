@@ -1,25 +1,24 @@
-#+title:  Example of a simple web app with express
-#+layout:   post
-#+category: posts
-#+liquid:   false
+#+title:        Example of a simple web app with express
+#+layout:       post
+#+category:     posts
+#+liquid:       false
+
+* Building a simple web app with express
 
 #+begin_quote
 The following is an Org babel document from a long time ago,
 though I publish it anyway. Raw Org babel content can be fetch from here:
 <https://raw.github.com/wallyqs/org_writings/master/express_app/babel.org>
-Also it looks like some tags like '{ %' need to be escaped for Jekyll,
-need to figure it out how to disable them...
 #+end_quote
 
-# * Building a simple web app with express
 ** Scaffolding the app
 
-#+BEGIN_SRC sh :results output
+#+begin_src sh :results output
 ~/node_modules/express/bin/express
-#+END_SRC
+#+end_src
 
 #+RESULTS:
-#+BEGIN_EXAMPLE
+#+begin_src conf
    create : .
    create : ./package.json
    create : ./app.js
@@ -39,7 +38,7 @@ need to figure it out how to disable them...
 
    run the app:
      $ node app
-#+END_EXAMPLE
+#+end_src
 
 For this app, I want to customize things a bit and have a =controllers= folder,
 instead of using the =routes= folder created when scaffolding the app.
@@ -80,19 +79,17 @@ make =swig= templates to work with latest express.
 A Node.js project includes its dependencies
 along with the project under the =node_modules= directory.
 
-#+BEGIN_SRC sh :results output
+#+begin_src sh :results output
 npm install
-#+END_SRC
 
-#+BEGIN_SRC sh
 ls node_modules
-#+END_SRC
+#+end_src
 
-#+RESULTS:
-| consolidate |
-| express     |
-| mongoose    |
-| swig        |
+and confirm that the following modules exist:
+
+#+begin_src 
+consolidate express mongoose swig 
+#+end_src
 
 ** Bootstrapping: app.js
 
@@ -288,34 +285,34 @@ This creates a new Text.
 ** The Views
 *** The Layout
 
-#+BEGIN_SRC html :tangle views/layout.html
+#+BEGIN_SRC  html :tangle views/layout.html
  <!DOCTYPE html>
  <html>
    <head>
-     <title>{ block page_title }{ endblock }</title>
+     <title>{% block page_title %}{% endblock %}</title>
      <link rel="stylesheet" href="/stylesheets/style.css" type="text/css" media="screen" />
    </head>
-   { block body }{ endblock }
+   {% block body %}{% endblock %}
  </html>
 #+END_SRC
 
 *** Template :: Home#index
 
 #+BEGIN_SRC rhtml :tangle views/home/index.html
-  { extends 'layout.html' }
+  {% extends 'layout.html' %}
   
-  { block body }
+  {% block body %}
   <div class="content">
-    <h1> { page_title } </h1>
+    <h1> {{ page_title }} </h1>
     <p> Current Texts
       <ol>
-        { for text in texts }
-        <li>{ text.title }</li>
-        { endfor }    
+        {% for text in texts %}
+        <li>{{ text.title }}</li>
+        {% endfor %}    
       </ol>
     </p>
   </div>
-  { endblock }
+  {% endblock %}
   
 #+END_SRC
 ** Running the app
@@ -340,4 +337,3 @@ node app.js
 
 - Gist with examples about how to use mongoose
   <https://gist.github.com/1025038>
-
