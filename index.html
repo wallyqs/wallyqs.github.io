@@ -63,6 +63,97 @@
   <section class="content">
   
   <h1>
+    <a href="/posts/introducing-re-org">Introducing re-org: tool for generating templates for Org mode</a>
+  </h1>
+  <section class="byline">
+    December  8, 2013
+  </section>
+  
+<p>I have written a small utility named <a href="https://github.com/wallyqs/re-org">re-org</a> that could be useful for
+  when writing posts in Jekyll.</p>
+<h2>Creating a new post with <code>re-org</code></h2>
+<p>For example, we can create a new Jekyll post like this:</p>
+<div class="highlight"><pre>re-org new jekyll-post --title=sample-post
+
+Created a new writing at `/home/wallyqs/repos/jekyll-org-blog/_drafts/2013-12-08-sample-post.org&#39;
+</pre></div>
+<p>The generated file will include some required attributes to be able to
+  publish content when using Jekyll.</p>
+<div class="highlight"><pre>#+title:         Sample post
+#+date:          2013-12-08
+#+layout:        post
+#+category:      posts
+</pre></div>
+<p>By including <a href="https://gist.github.com/wallyqs/7857206">this plugin</a> within the <code>_plugins</code> directory from Jekyll,
+  we can just use Org mode buffer settings instead of having to add
+  <code>YAML</code> as we are usually supposed to do when using
+  Jekyll.</p>
+<p><code>re-org new</code> creates the file in the <code>_drafts</code> directory,
+  so we need to run <code>jekyll server --drafts</code> in case we want to see the preview.
+  For publishing, we just move it to the <code>_posts</code> directory, then
+  <code>jekyll server</code> to render them.</p>
+<div class="highlight"><pre>mv _drafts/2013-12-08-sample-post.org _posts
+
+jekyll server
+</pre></div>
+<h2>Adding a new template</h2>
+<p>You can modify the default templates from <code>re-org</code> by creating a
+  <code>_templates</code> directory within the Jekyll project.
+  The default templates can be inspected like this:</p>
+<div class="highlight"><pre>re-org templates 
+
+- clockfile.org
+- jekyll-post.org
+- notebook.org
+- writing.org
+
+re-org templates --name<span class="o">=</span>jekyll-post.org
+<span class="c">#+title:         &lt;%= @org[:title].capitalize.gsub(&quot;-&quot;, &quot; &quot;) %&gt;</span>
+<span class="c">#+date:          &lt;%= @org[:date] %&gt;</span>
+<span class="c">#+layout:        post</span>
+<span class="c">#+category:      posts</span>
+</pre></div>
+<p>We&#8217;ll use the contents from the <code>jekyll-post.org</code> template and create
+  a new one:</p>
+<div class="highlight"><pre>mkdir _templates
+re-org templates --name<span class="o">=</span>jekyll-post.org &gt; _templates/post.org
+
+re-org templates
+* Default Templates
+
+- clockfile.org <span class="o">(</span>default<span class="o">)</span>
+- jekyll-post.org       <span class="o">(</span>default<span class="o">)</span>
+- notebook.org  <span class="o">(</span>default<span class="o">)</span>
+- writing.org   <span class="o">(</span>default<span class="o">)</span>
+- post.org      <span class="o">(</span>found at _templates/<span class="o">)</span>
+</pre></div>
+<p>As we can see, <code>ERB</code> tags can be used to modify the content of the
+  template that will be used. Having done that, we can use it to setup
+  the template for the next writing:</p>
+<div class="highlight"><pre>re-org new post --title<span class="o">=</span>getting-started-with-jekyll-and-org-mode
+Created a new writing at <span class="sb">`</span>/home/wallyqs/repos/jekyll-org-blog/_drafts/2013-12-08-getting-started-with-jekyll-and-org-mode.org<span class="err">&#39;</span>
+
+
+cat _drafts/2013-12-08-getting-started-with-jekyll-and-org-mode.org
+<span class="c">#+title:         Getting started with jekyll and org mode</span>
+<span class="c">#+date:          2013-12-08</span>
+<span class="c">#+layout:        post</span>
+<span class="c">#+category:      posts</span>
+</pre></div>
+<p>I&#8217;m satisfied with the current state of the <code>re-org</code> utility so I have
+  released as a gem as well. It definitely needs more polish but the
+  basic idea is there.</p>
+<p>To install:</p>
+<div class="highlight"><pre>gem install re-org
+</pre></div>
+<p>If you find this remotely useful, please don&#8217;t hesitate to submit a
+  ticket in Github: <a href="https://github.com/wallyqs/re-org/issues">https://github.com/wallyqs/re-org/issues</a></p>
+
+
+
+  <hr />
+  
+  <h1>
     <a href="/posts/jekyll-without-yaml">Replacing Jekyll YAML headers with Org mode buffer settings</a>
   </h1>
   <section class="byline">

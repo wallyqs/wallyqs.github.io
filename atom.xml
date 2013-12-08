@@ -4,12 +4,102 @@
  <title>Waldemar Quevedo</title>
  <link href="http://wallyqs.github.io/atom.xml" rel="self"/>
  <link href="http://wallyqs.github.io/"/>
- <updated>2013-12-08T00:16:43+09:00</updated>
+ <updated>2013-12-08T22:44:09+09:00</updated>
  <id>http://wallyqs.github.io</id>
  <author>
    <name>Waldemar Quevedo</name>
  </author>
  
+ 
+ <entry>
+   <title>Introducing re-org: tool for generating templates for Org mode</title>
+   <link href="http://wallyqs.github.io/posts/introducing-re-org"/>
+   <updated>2013-12-08T00:00:00+09:00</updated>
+   <id>http://wallyqs.github.io/posts/introducing-re-org</id>
+   <content type="html">
+&lt;p&gt;I have written a small utility named &lt;a href=&quot;https://github.com/wallyqs/re-org&quot;&gt;re-org&lt;/a&gt; that could be useful for
+  when writing posts in Jekyll.&lt;/p&gt;
+&lt;h2&gt;Creating a new post with &lt;code&gt;re-org&lt;/code&gt;&lt;/h2&gt;
+&lt;p&gt;For example, we can create a new Jekyll post like this:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;re-org new jekyll-post --title=sample-post
+
+Created a new writing at `/home/wallyqs/repos/jekyll-org-blog/_drafts/2013-12-08-sample-post.org&amp;#39;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;The generated file will include some required attributes to be able to
+  publish content when using Jekyll.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;#+title:         Sample post
+#+date:          2013-12-08
+#+layout:        post
+#+category:      posts
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;By including &lt;a href=&quot;https://gist.github.com/wallyqs/7857206&quot;&gt;this plugin&lt;/a&gt; within the &lt;code&gt;_plugins&lt;/code&gt; directory from Jekyll,
+  we can just use Org mode buffer settings instead of having to add
+  &lt;code&gt;YAML&lt;/code&gt; as we are usually supposed to do when using
+  Jekyll.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;re-org new&lt;/code&gt; creates the file in the &lt;code&gt;_drafts&lt;/code&gt; directory,
+  so we need to run &lt;code&gt;jekyll server --drafts&lt;/code&gt; in case we want to see the preview.
+  For publishing, we just move it to the &lt;code&gt;_posts&lt;/code&gt; directory, then
+  &lt;code&gt;jekyll server&lt;/code&gt; to render them.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;mv _drafts/2013-12-08-sample-post.org _posts
+
+jekyll server
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h2&gt;Adding a new template&lt;/h2&gt;
+&lt;p&gt;You can modify the default templates from &lt;code&gt;re-org&lt;/code&gt; by creating a
+  &lt;code&gt;_templates&lt;/code&gt; directory within the Jekyll project.
+  The default templates can be inspected like this:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;re-org templates 
+
+- clockfile.org
+- jekyll-post.org
+- notebook.org
+- writing.org
+
+re-org templates --name&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;jekyll-post.org
+&lt;span class=&quot;c&quot;&gt;#+title:         &amp;lt;%= @org[:title].capitalize.gsub(&amp;quot;-&amp;quot;, &amp;quot; &amp;quot;) %&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#+date:          &amp;lt;%= @org[:date] %&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#+layout:        post&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#+category:      posts&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;We&amp;#8217;ll use the contents from the &lt;code&gt;jekyll-post.org&lt;/code&gt; template and create
+  a new one:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;mkdir _templates
+re-org templates --name&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;jekyll-post.org &amp;gt; _templates/post.org
+
+re-org templates
+* Default Templates
+
+- clockfile.org &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;default&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+- jekyll-post.org       &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;default&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+- notebook.org  &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;default&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+- writing.org   &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;default&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+- post.org      &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;found at _templates/&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;As we can see, &lt;code&gt;ERB&lt;/code&gt; tags can be used to modify the content of the
+  template that will be used. Having done that, we can use it to setup
+  the template for the next writing:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;re-org new post --title&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;getting-started-with-jekyll-and-org-mode
+Created a new writing at &lt;span class=&quot;sb&quot;&gt;`&lt;/span&gt;/home/wallyqs/repos/jekyll-org-blog/_drafts/2013-12-08-getting-started-with-jekyll-and-org-mode.org&lt;span class=&quot;err&quot;&gt;&amp;#39;&lt;/span&gt;
+
+
+cat _drafts/2013-12-08-getting-started-with-jekyll-and-org-mode.org
+&lt;span class=&quot;c&quot;&gt;#+title:         Getting started with jekyll and org mode&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#+date:          2013-12-08&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#+layout:        post&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#+category:      posts&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;I&amp;#8217;m satisfied with the current state of the &lt;code&gt;re-org&lt;/code&gt; utility so I have
+  released as a gem as well. It definitely needs more polish but the
+  basic idea is there.&lt;/p&gt;
+&lt;p&gt;To install:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;gem install re-org
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;If you find this remotely useful, please don&amp;#8217;t hesitate to submit a
+  ticket in Github: &lt;a href=&quot;https://github.com/wallyqs/re-org/issues&quot;&gt;https://github.com/wallyqs/re-org/issues&lt;/a&gt;&lt;/p&gt;
+
+
+</content>
+ </entry>
  
  <entry>
    <title>Replacing Jekyll YAML headers with Org mode buffer settings</title>

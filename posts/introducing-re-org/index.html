@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+<head>
+  <meta charset="utf-8">
+  <title>
+    
+      Introducing re-org: tool for generating templates for Org mode &ndash;
+    
+    Waldemar Quevedo
+  </title>
+
+  <meta name="author" content="Waldemar Quevedo" />
+  <meta name="description" content="PaaS, Org mode, living in Tokyo & other misc writings." />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <link rel="alternate" type="application/rss+xml" href="/atom.xml" />
+
+  <link rel="stylesheet" href="/css/fontawesome.min.css" type="text/css" media="screen, projection" />
+  <link rel="stylesheet" href="/css/base.css" type="text/css" media="screen, projection" />
+  <link rel="stylesheet" href="/css/pygments.css" type="text/css" />
+  <link media="only screen and (max-device-width: 480px)" href="/css/mobile.css" type="text/css" rel="stylesheet" />
+  <link media="only screen and (device-width: 768px)" href="/css/mobile.css" type="text/css" rel="stylesheet" />
+  <link href='http://fonts.googleapis.com/css?family=Yanone+Kaffeesatz' rel='stylesheet' type='text/css'>
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+  <script type="text/javascript" src="/js/application.js"></script>
+</head>
+
+<body>
+  <section class="sidebar">
+    <a href="/">
+      <img src="http://gravatar.com/avatar/210dbb68c0380da4d77ff46759f02d1a?s=150" height="75" width="75" class="avatar" />
+    </a>
+
+    <section class="name">
+      <a href="/">
+        <span id="fname">Waldemar</span>
+        <span id="lname">Quevedo</span>
+      </a>
+    </section>
+
+    <section class="description">
+      <p>
+        PaaS, Org mode, living in Tokyo & other misc writings.
+      </p>
+    </section>
+
+    <section class="meta">
+      <a href="https://github.com/wallyqs" target="_blank"><i class="icon icon-github"></i></a>
+      <a href="https://twitter.com/wallyqs" target="_blank"><i class="icon icon-twitter"></i></a>
+      <a href="/atom.xml"><i class="icon icon-rss"></i></a>
+    </section>
+
+    <section class="sections">
+      <ul>
+        <li><a href="/about.html">about</a></li>
+        <li><a href="/posts.html">posts</a></li>
+      </ul>
+    </section>
+  </section>
+
+  <section class="content">
+  <h1>
+    <a href="/posts/introducing-re-org">Introducing re-org: tool for generating templates for Org mode</a>
+  </h1>
+
+  <section class="byline">
+    December  8, 2013
+  </section>
+
+  
+<p>I have written a small utility named <a href="https://github.com/wallyqs/re-org">re-org</a> that could be useful for
+  when writing posts in Jekyll.</p>
+<h2>Creating a new post with <code>re-org</code></h2>
+<p>For example, we can create a new Jekyll post like this:</p>
+<div class="highlight"><pre>re-org new jekyll-post --title=sample-post
+
+Created a new writing at `/home/wallyqs/repos/jekyll-org-blog/_drafts/2013-12-08-sample-post.org&#39;
+</pre></div>
+<p>The generated file will include some required attributes to be able to
+  publish content when using Jekyll.</p>
+<div class="highlight"><pre>#+title:         Sample post
+#+date:          2013-12-08
+#+layout:        post
+#+category:      posts
+</pre></div>
+<p>By including <a href="https://gist.github.com/wallyqs/7857206">this plugin</a> within the <code>_plugins</code> directory from Jekyll,
+  we can just use Org mode buffer settings instead of having to add
+  <code>YAML</code> as we are usually supposed to do when using
+  Jekyll.</p>
+<p><code>re-org new</code> creates the file in the <code>_drafts</code> directory,
+  so we need to run <code>jekyll server --drafts</code> in case we want to see the preview.
+  For publishing, we just move it to the <code>_posts</code> directory, then
+  <code>jekyll server</code> to render them.</p>
+<div class="highlight"><pre>mv _drafts/2013-12-08-sample-post.org _posts
+
+jekyll server
+</pre></div>
+<h2>Adding a new template</h2>
+<p>You can modify the default templates from <code>re-org</code> by creating a
+  <code>_templates</code> directory within the Jekyll project.
+  The default templates can be inspected like this:</p>
+<div class="highlight"><pre>re-org templates 
+
+- clockfile.org
+- jekyll-post.org
+- notebook.org
+- writing.org
+
+re-org templates --name<span class="o">=</span>jekyll-post.org
+<span class="c">#+title:         &lt;%= @org[:title].capitalize.gsub(&quot;-&quot;, &quot; &quot;) %&gt;</span>
+<span class="c">#+date:          &lt;%= @org[:date] %&gt;</span>
+<span class="c">#+layout:        post</span>
+<span class="c">#+category:      posts</span>
+</pre></div>
+<p>We&#8217;ll use the contents from the <code>jekyll-post.org</code> template and create
+  a new one:</p>
+<div class="highlight"><pre>mkdir _templates
+re-org templates --name<span class="o">=</span>jekyll-post.org &gt; _templates/post.org
+
+re-org templates
+* Default Templates
+
+- clockfile.org <span class="o">(</span>default<span class="o">)</span>
+- jekyll-post.org       <span class="o">(</span>default<span class="o">)</span>
+- notebook.org  <span class="o">(</span>default<span class="o">)</span>
+- writing.org   <span class="o">(</span>default<span class="o">)</span>
+- post.org      <span class="o">(</span>found at _templates/<span class="o">)</span>
+</pre></div>
+<p>As we can see, <code>ERB</code> tags can be used to modify the content of the
+  template that will be used. Having done that, we can use it to setup
+  the template for the next writing:</p>
+<div class="highlight"><pre>re-org new post --title<span class="o">=</span>getting-started-with-jekyll-and-org-mode
+Created a new writing at <span class="sb">`</span>/home/wallyqs/repos/jekyll-org-blog/_drafts/2013-12-08-getting-started-with-jekyll-and-org-mode.org<span class="err">&#39;</span>
+
+
+cat _drafts/2013-12-08-getting-started-with-jekyll-and-org-mode.org
+<span class="c">#+title:         Getting started with jekyll and org mode</span>
+<span class="c">#+date:          2013-12-08</span>
+<span class="c">#+layout:        post</span>
+<span class="c">#+category:      posts</span>
+</pre></div>
+<p>I&#8217;m satisfied with the current state of the <code>re-org</code> utility so I have
+  released as a gem as well. It definitely needs more polish but the
+  basic idea is there.</p>
+<p>To install:</p>
+<div class="highlight"><pre>gem install re-org
+</pre></div>
+<p>If you find this remotely useful, please don&#8217;t hesitate to submit a
+  ticket in Github: <a href="https://github.com/wallyqs/re-org/issues">https://github.com/wallyqs/re-org/issues</a></p>
+
+
+
+
+  <section class="meta">
+    <h3>Discussion, links, and tweets</h3>
+    <section class="copy">
+      <a href="https://twitter.com/wallyqs" target="_blank">
+        <img src="http://gravatar.com/avatar/210dbb68c0380da4d77ff46759f02d1a?s=142" height="50" width="50" />
+      </a>
+
+      <p>
+        I do Dev&amp;Ops at Rakuten in the Platform as a Service team, where I have focused
+        on solving logging related issues as well as Ruby support.
+        I'm also a contributor and current maintainer of the <a href="https://github.com/bdewey/org-ruby">org-ruby</a> gem, 
+        in case you find some functionality missing please issue a ticket <a href="https://github.com/bdewey/org-ruby/issues">here</a>
+        please. Thanks :)
+      </p>
+
+      <a href="http://twitter.com/share" class="twitter-share-button" data-count="none" data-via="wallyqs">Tweet</a>
+      <a href="http://twitter.com/wallyqs" class="twitter-follow-button" data-show-count="false">Follow @wallyqs</a>
+      <script src="http://platform.twitter.com/widgets.js" type="text/javascript"></script>
+    </section>
+  </section>
+</section>
+
+</body>
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-45988428-1']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+</html>
