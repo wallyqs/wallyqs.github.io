@@ -63,6 +63,56 @@
   <section class="content">
   
   <h1>
+    <a href="/posts/org-converge">More org tools: Org Converge</a>
+  </h1>
+  <section class="byline">
+    April 21, 2014
+  </section>
+  
+<p>In a past release from <a href="https://github.com/wallyqs/org-ruby">Org Ruby</a>, I added the functionality to be able
+  to turn off exporting the results attached to a code block. For
+  example, here only the actual code would make it to the export:</p>
+<div class="highlight"><pre>#+begin_src sh :results code
+echo &#39;hello&#39;
+#+end_src
+
+#+RESULTS:
+#+BEGIN_SRC sh
+hello
+#+END_SRC
+</pre></div>
+<p>Doing this involved adding support to parse the header arguments from
+  a code block, so I decided to start playing with the idea of
+  implementing <i>tangling</i> code blocks:</p>
+<div class="highlight"><pre>#+begin_src sh :tangle /etc/component.yml
+port: 4000
+#+end_src
+</pre></div>
+<p>This is just a subset of the functionality provided by the powerful
+  <b>Org babel</b> mode, and still very basic since it does not support
+  <code>#+MACROS</code> for example, which would make feature more convenient.</p>
+<p>After doing this, and since this is all Ruby, I imagined that since
+  there is good interop with other reliable Ruby tools, it would be
+  interesting to reopen <code>foreman</code> for actually running the blocks.</p>
+<p>All this functionality is wrapped into a gem named <code>org-converge</code>
+  (<a href="https://github.com/wallyqs/org-converge.git">repo here</a>),
+  name that way in the sense that all reproducible runs should converge
+  into a state. In the future, I hope to have some Chef/Ansible like
+  features, but for now integration between has been nice.</p>
+<p>I have been using lately for doing literate runs, and I have found it
+  pretty comfortable for cases where using the command line is
+  the best approach.</p>
+<script src="https://gist.github.com/wallyqs/11141778.js"></script>
+<p>Sometimes it feels that this is reinventing the wheel though, since
+  many of these things could be done with something like <code>make</code> for
+  example. Precisely for that, the next step is to give it some Rake
+  like tasks, to be able to <i>chain</i> runlists.</p>
+
+
+
+  <hr />
+  
+  <h1>
     <a href="/posts/introducing-re-org">Introducing re-org: tool for generating templates for Org mode</a>
   </h1>
   <section class="byline">
@@ -119,6 +169,7 @@ re-org templates --name<span class="o">=</span>jekyll-post.org
 re-org templates --name<span class="o">=</span>jekyll-post.org &gt; _templates/post.org
 
 re-org templates
+
 * Default Templates
 
 - clockfile.org <span class="o">(</span>default<span class="o">)</span>
@@ -281,26 +332,12 @@ cat _drafts/2013-12-08-getting-started-with-jekyll-and-org-mode.org
 <h2>Scaffolding the app</h2>
 <div class="highlight"><pre>~/node_modules/express/bin/express
 </pre></div>
-<div class="highlight"><pre>create : .
-create : ./package.json
-create : ./app.js
-create : ./public
-create : ./public/javascripts
-create : ./public/images
-create : ./public/stylesheets
-create : ./public/stylesheets/style.css
-create : ./routes
-create : ./routes/index.js
-create : ./views
-create : ./views/layout.jade
-create : ./views/index.jade
-
-install dependencies:
-  $ cd . &amp;&amp; npm install
-
-run the app:
-  $ node app
-</pre></div>
+<p>
+</p>
+<p>
+</p>
+<p>
+</p>
 <p>For this app, I want to customize things a bit and have a <code>controllers</code> folder,
   instead of using the <code>routes</code> folder created when scaffolding the app.</p>
 <div class="highlight"><pre>mkdir controllers
