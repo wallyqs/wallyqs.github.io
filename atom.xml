@@ -4,12 +4,61 @@
  <title>Waldemar Quevedo</title>
  <link href="http://wallyqs.github.io/atom.xml" rel="self"/>
  <link href="http://wallyqs.github.io/"/>
- <updated>2013-12-08T23:34:10+09:00</updated>
+ <updated>2014-04-21T21:51:51+09:00</updated>
  <id>http://wallyqs.github.io</id>
  <author>
    <name>Waldemar Quevedo</name>
  </author>
  
+ 
+ <entry>
+   <title>More org tools: Org Converge</title>
+   <link href="http://wallyqs.github.io/posts/org-converge"/>
+   <updated>2014-04-21T00:00:00+09:00</updated>
+   <id>http://wallyqs.github.io/posts/org-converge</id>
+   <content type="html">
+&lt;p&gt;In a past release from &lt;a href=&quot;https://github.com/wallyqs/org-ruby&quot;&gt;Org Ruby&lt;/a&gt;, I added the functionality to be able
+  to turn off exporting the results attached to a code block. For
+  example, here only the actual code would make it to the export:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;#+begin_src sh :results code
+echo &amp;#39;hello&amp;#39;
+#+end_src
+
+#+RESULTS:
+#+BEGIN_SRC sh
+hello
+#+END_SRC
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Doing this involved adding support to parse the header arguments from
+  a code block, so I decided to start playing with the idea of
+  implementing &lt;i&gt;tangling&lt;/i&gt; code blocks:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;#+begin_src sh :tangle /etc/component.yml
+port: 4000
+#+end_src
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;This is just a subset of the functionality provided by the powerful
+  &lt;b&gt;Org babel&lt;/b&gt; mode, and still very basic since it does not support
+  &lt;code&gt;#+MACROS&lt;/code&gt; for example, which would make feature more convenient.&lt;/p&gt;
+&lt;p&gt;After doing this, and since this is all Ruby, I imagined that since
+  there is good interop with other reliable Ruby tools, it would be
+  interesting to reopen &lt;code&gt;foreman&lt;/code&gt; for actually running the blocks.&lt;/p&gt;
+&lt;p&gt;All this functionality is wrapped into a gem named &lt;code&gt;org-converge&lt;/code&gt;
+  (&lt;a href=&quot;https://github.com/wallyqs/org-converge.git&quot;&gt;repo here&lt;/a&gt;),
+  name that way in the sense that all reproducible runs should converge
+  into a state. In the future, I hope to have some Chef/Ansible like
+  features, but for now integration between has been nice.&lt;/p&gt;
+&lt;p&gt;I have been using lately for doing literate runs, and I have found it
+  pretty comfortable for cases where using the command line is
+  the best approach.&lt;/p&gt;
+&lt;script src=&quot;https://gist.github.com/wallyqs/11141778.js&quot;&gt;&lt;/script&gt;
+&lt;p&gt;Sometimes it feels that this is reinventing the wheel though, since
+  many of these things could be done with something like &lt;code&gt;make&lt;/code&gt; for
+  example. Precisely for that, the next step is to give it some Rake
+  like tasks, to be able to &lt;i&gt;chain&lt;/i&gt; runlists.&lt;/p&gt;
+
+
+</content>
+ </entry>
  
  <entry>
    <title>Introducing re-org: tool for generating templates for Org mode</title>
@@ -67,6 +116,7 @@ re-org templates --name&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;jekyll-post
 re-org templates --name&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;jekyll-post.org &amp;gt; _templates/post.org
 
 re-org templates
+
 * Default Templates
 
 - clockfile.org &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;default&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
@@ -227,26 +277,12 @@ cat _drafts/2013-12-08-getting-started-with-jekyll-and-org-mode.org
 &lt;h2&gt;Scaffolding the app&lt;/h2&gt;
 &lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;~/node_modules/express/bin/express
 &lt;/pre&gt;&lt;/div&gt;
-&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;create : .
-create : ./package.json
-create : ./app.js
-create : ./public
-create : ./public/javascripts
-create : ./public/images
-create : ./public/stylesheets
-create : ./public/stylesheets/style.css
-create : ./routes
-create : ./routes/index.js
-create : ./views
-create : ./views/layout.jade
-create : ./views/index.jade
-
-install dependencies:
-  $ cd . &amp;amp;&amp;amp; npm install
-
-run the app:
-  $ node app
-&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;
+&lt;/p&gt;
+&lt;p&gt;
+&lt;/p&gt;
+&lt;p&gt;
+&lt;/p&gt;
 &lt;p&gt;For this app, I want to customize things a bit and have a &lt;code&gt;controllers&lt;/code&gt; folder,
   instead of using the &lt;code&gt;routes&lt;/code&gt; folder created when scaffolding the app.&lt;/p&gt;
 &lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;mkdir controllers

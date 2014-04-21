@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <title>
     
-      Introducing re-org: tool for generating templates for Org mode &ndash;
+      More org tools: Org Converge &ndash;
     
     Waldemar Quevedo
   </title>
@@ -62,94 +62,52 @@
 
   <section class="content">
   <h1>
-    <a href="/posts/introducing-re-org">Introducing re-org: tool for generating templates for Org mode</a>
+    <a href="/posts/org-converge">More org tools: Org Converge</a>
   </h1>
 
   <section class="byline">
-    December  8, 2013
+    April 21, 2014
   </section>
 
   
-<p>I have written a small utility named <a href="https://github.com/wallyqs/re-org">re-org</a> that could be useful for
-  when writing posts in Jekyll.</p>
-<h2>Creating a new post with <code>re-org</code></h2>
-<p>For example, we can create a new Jekyll post like this:</p>
-<div class="highlight"><pre>re-org new jekyll-post --title=sample-post
+<p>In a past release from <a href="https://github.com/wallyqs/org-ruby">Org Ruby</a>, I added the functionality to be able
+  to turn off exporting the results attached to a code block. For
+  example, here only the actual code would make it to the export:</p>
+<div class="highlight"><pre>#+begin_src sh :results code
+echo &#39;hello&#39;
+#+end_src
 
-Created a new writing at `/home/wallyqs/repos/jekyll-org-blog/_drafts/2013-12-08-sample-post.org&#39;
+#+RESULTS:
+#+BEGIN_SRC sh
+hello
+#+END_SRC
 </pre></div>
-<p>The generated file will include some required attributes to be able to
-  publish content when using Jekyll.</p>
-<div class="highlight"><pre>#+title:         Sample post
-#+date:          2013-12-08
-#+layout:        post
-#+category:      posts
+<p>Doing this involved adding support to parse the header arguments from
+  a code block, so I decided to start playing with the idea of
+  implementing <i>tangling</i> code blocks:</p>
+<div class="highlight"><pre>#+begin_src sh :tangle /etc/component.yml
+port: 4000
+#+end_src
 </pre></div>
-<p>By including <a href="https://gist.github.com/wallyqs/7857206">this plugin</a> within the <code>_plugins</code> directory from Jekyll,
-  we can just use Org mode buffer settings instead of having to add
-  <code>YAML</code> as we are usually supposed to do when using
-  Jekyll.</p>
-<p><code>re-org new</code> creates the file in the <code>_drafts</code> directory,
-  so we need to run <code>jekyll server --drafts</code> in case we want to see the preview.
-  For publishing, we just move it to the <code>_posts</code> directory, then
-  <code>jekyll server</code> to render them.</p>
-<div class="highlight"><pre>mv _drafts/2013-12-08-sample-post.org _posts
-
-jekyll server
-</pre></div>
-<h2>Adding a new template</h2>
-<p>You can modify the default templates from <code>re-org</code> by creating a
-  <code>_templates</code> directory within the Jekyll project.
-  The default templates can be inspected like this:</p>
-<div class="highlight"><pre>re-org templates 
-
-- clockfile.org
-- jekyll-post.org
-- notebook.org
-- writing.org
-
-re-org templates --name<span class="o">=</span>jekyll-post.org
-<span class="c">#+title:         &lt;%= @org[:title].capitalize.gsub(&quot;-&quot;, &quot; &quot;) %&gt;</span>
-<span class="c">#+date:          &lt;%= @org[:date] %&gt;</span>
-<span class="c">#+layout:        post</span>
-<span class="c">#+category:      posts</span>
-</pre></div>
-<p>We&#8217;ll use the contents from the <code>jekyll-post.org</code> template and create
-  a new one:</p>
-<div class="highlight"><pre>mkdir _templates
-re-org templates --name<span class="o">=</span>jekyll-post.org &gt; _templates/post.org
-
-re-org templates
-
-* Default Templates
-
-- clockfile.org <span class="o">(</span>default<span class="o">)</span>
-- jekyll-post.org       <span class="o">(</span>default<span class="o">)</span>
-- notebook.org  <span class="o">(</span>default<span class="o">)</span>
-- writing.org   <span class="o">(</span>default<span class="o">)</span>
-- post.org      <span class="o">(</span>found at _templates/<span class="o">)</span>
-</pre></div>
-<p>As we can see, <code>ERB</code> tags can be used to modify the content of the
-  template that will be used. Having done that, we can use it to setup
-  the template for the next writing:</p>
-<div class="highlight"><pre>re-org new post --title<span class="o">=</span>getting-started-with-jekyll-and-org-mode
-Created a new writing at <span class="sb">`</span>/home/wallyqs/repos/jekyll-org-blog/_drafts/2013-12-08-getting-started-with-jekyll-and-org-mode.org<span class="err">&#39;</span>
-
-
-cat _drafts/2013-12-08-getting-started-with-jekyll-and-org-mode.org
-<span class="c">#+title:         Getting started with jekyll and org mode</span>
-<span class="c">#+date:          2013-12-08</span>
-<span class="c">#+layout:        post</span>
-<span class="c">#+category:      posts</span>
-</pre></div>
-<p>I&#8217;m satisfied with the current state of the <code>re-org</code> utility so I have
-  released as a gem as well. It definitely needs more polish but the
-  basic idea is there.</p>
-<p>To install:</p>
-<div class="highlight"><pre>gem install re-org
-</pre></div>
-<p>If you find this remotely useful, please don&#8217;t hesitate to submit a
-  ticket in Github: <a href="https://github.com/wallyqs/re-org/issues">https://github.com/wallyqs/re-org/issues</a></p>
+<p>This is just a subset of the functionality provided by the powerful
+  <b>Org babel</b> mode, and still very basic since it does not support
+  <code>#+MACROS</code> for example, which would make feature more convenient.</p>
+<p>After doing this, and since this is all Ruby, I imagined that since
+  there is good interop with other reliable Ruby tools, it would be
+  interesting to reopen <code>foreman</code> for actually running the blocks.</p>
+<p>All this functionality is wrapped into a gem named <code>org-converge</code>
+  (<a href="https://github.com/wallyqs/org-converge.git">repo here</a>),
+  name that way in the sense that all reproducible runs should converge
+  into a state. In the future, I hope to have some Chef/Ansible like
+  features, but for now integration between has been nice.</p>
+<p>I have been using lately for doing literate runs, and I have found it
+  pretty comfortable for cases where using the command line is
+  the best approach.</p>
+<script src="https://gist.github.com/wallyqs/11141778.js"></script>
+<p>Sometimes it feels that this is reinventing the wheel though, since
+  many of these things could be done with something like <code>make</code> for
+  example. Precisely for that, the next step is to give it some Rake
+  like tasks, to be able to <i>chain</i> runlists.</p>
 
 
 
