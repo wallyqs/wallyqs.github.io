@@ -1,3 +1,5 @@
+# TODO: Use Org mode for this too
+
 # Dependencies
 highlighter:      pygments
 
@@ -6,10 +8,9 @@ permalink:        pretty
 relative_permalinks: true
 
 # Setup
-title:            Literate Infrastructure Notes
-tagline:          ''
-description:      '<a href="https://twitter.com/mdo" target="_blank">@wallyqs</a>.'
-url:              http://blog.wallyqs.apps.tokyo
+title:            Literate Infrastructure
+tagline:          'PaaS + Org mode'
+description:      'written by <a href="https://twitter.com/mdo" target="_blank">@wallyqs</a>.'
 baseurl:          /
 
 author:

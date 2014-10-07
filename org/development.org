@@ -1,4 +1,5 @@
-#+title: Development environment
+#+TITLE:   Development environment
+#+runmode: sequential
 
 #+name: build-site
 #+BEGIN_SRC sh :dir src
