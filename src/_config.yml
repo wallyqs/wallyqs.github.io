@@ -1,0 +1,25 @@
+# Dependencies
+highlighter:      pygments
+
+# Permalinks
+permalink:        pretty
+relative_permalinks: true
+
+# Setup
+title:            Literate Infrastructure Notes
+tagline:          ''
+description:      '<a href="https://twitter.com/mdo" target="_blank">@wallyqs</a>.'
+url:              http://blog.wallyqs.apps.tokyo
+baseurl:          /
+
+author:
+  name:           'Waldemar Quevedo'
+  url:            https://twitter.com/wallyqs
+
+paginate:         5
+
+# Custom vars
+version:          2.1.0
+
+github:
+  repo:           https://github.com/wallyqs/org-hyde

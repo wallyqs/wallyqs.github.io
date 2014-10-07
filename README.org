@@ -1,0 +1,19 @@
+# -*- mode: org; mode: auto-fill -*-
+#+title: Org mode based Hyde site
+
+A version of Hyde that allows the author to write and publish without
+having to write the YAML frontmatter in its files and instead only
+having to use Org mode.
+
+*** How to use
+
+To generate the site we can use the =org-converge= gem
+
+#+BEGIN_SRC sh
+gem install org-converge
+org-run org/setup.org
+org-run org/development.org
+#+END_SRC
+
+If not using the gem, the instructions described in the Org mode
+files can could help, read in order as stated above.
