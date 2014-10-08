@@ -4,7 +4,7 @@
  <title>Literate Infrastructure</title>
  <link href="/atom.xml" rel="self"/>
  <link href="/"/>
- <updated>2014-10-08T13:43:01-04:00</updated>
+ <updated>2014-10-08T14:34:51-04:00</updated>
  <id></id>
  <author>
    <name>Waldemar Quevedo</name>
@@ -20,7 +20,7 @@
    <content type="html">
 &lt;p&gt;Here is a modified version of the original Hyde fit for my flow
   to continue doing things with mostly Org mode.&lt;/p&gt;
-&lt;p&gt;The repo ccan be found here: &lt;a href=&quot;https://github.com/wallyqs/org-hyde&quot;&gt;https://github.com/wallyqs/org-hyde&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;The repo can be found here: &lt;a href=&quot;https://github.com/wallyqs/org-hyde&quot;&gt;https://github.com/wallyqs/org-hyde&lt;/a&gt;&lt;/p&gt;
 
 
 </content>
