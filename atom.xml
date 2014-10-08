@@ -4,7 +4,7 @@
  <title>Literate Infrastructure</title>
  <link href="/atom.xml" rel="self"/>
  <link href="/"/>
- <updated>2014-10-08T12:00:26-04:00</updated>
+ <updated>2014-10-08T12:09:14-04:00</updated>
  <id></id>
  <author>
    <name>Waldemar Quevedo</name>
@@ -14,9 +14,9 @@
  
  <entry>
    <title>Switching to Hyde</title>
-   <link href="/2014/10/08/moved-to-hyde/"/>
+   <link href="/posts/2014/10/08/moved-to-hyde/"/>
    <updated>2014-10-08T00:00:00-04:00</updated>
-   <id>/2014/10/08/moved-to-hyde</id>
+   <id>/posts/2014/10/08/moved-to-hyde</id>
    <content type="html">
 &lt;p&gt;Here is a modified version of the original Hyde fit for my flow
   to continue doing things with mostly Org mode.&lt;/p&gt;
@@ -28,9 +28,9 @@
  
  <entry>
    <title>At Hacker School in NY</title>
-   <link href="/2014/10/06/first-day-at-hackerschool/"/>
+   <link href="/posts/2014/10/06/first-day-at-hackerschool/"/>
    <updated>2014-10-06T00:00:00-04:00</updated>
-   <id>/2014/10/06/first-day-at-hackerschool</id>
+   <id>/posts/2014/10/06/first-day-at-hackerschool</id>
    <content type="html">
 &lt;p&gt;I managed to get into the Fall batch from Hacker School.
   Lots of things to focus on!&lt;/p&gt;
