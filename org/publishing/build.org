@@ -1,8 +1,7 @@
 #+TITLE:   Generating the site
 #+runmode: sequential
-#+include: "org/publishing/setup.org"
-#+include: "org/publishing/layout.org"
-#+include: "org/publishing/pages.org"
+#+include: "org/site/layout.org"
+#+include: "org/site/pages.org"
 
 - We sync the current writings.
 
@@ -21,5 +20,5 @@ rsync -avz org/posts/ src/_posts/
 
 #+name: build-site
 #+BEGIN_SRC sh :dir src
-bundle exec jekyll server -d ../site/
+bundle exec jekyll build  -d ../site/
 #+END_SRC

@@ -8,7 +8,7 @@ relative_permalinks: true
 # Setup
 title:            Literate Infrastructure
 tagline:          'PaaS + Org mode'
-description:      'by <a href="https://twitter.com/wallyqs" target="_blank">@wallyqs</a>.'
+description:      '<a href="https://twitter.com/wallyqs" target="_blank">@wallyqs</a>'
 baseurl:          /
 
 author:
