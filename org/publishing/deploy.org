@@ -1,0 +1,36 @@
+#+TITLE:        Deploying
+#+runmode:      idempotent
+#+include:      "org/publishing/build.org"
+
+*** Set the CNAME for the site
+
+#+BEGIN_SRC text :tangle site/CNAME
+blog.literateinfrastructure.org
+#+END_SRC
+
+*** Deploying to Github
+
+#+name: already-git-init
+#+BEGIN_SRC sh :dir site :exports none :results output
+[ -e .git ] 
+#+END_SRC
+
+In case we haven't done it, we need to initialize the repo for Github pages usage:
+
+#+name: initialize-ghpages-repo
+#+BEGIN_SRC sh :dir site
+git init
+git remote add origin https://github.com/wallyqs/wallyqs.github.io
+#+END_SRC
+
+Then just commit and push:
+
+#+name: github-pages-deploy
+#+BEGIN_SRC sh :dir site
+export published_at=`date "+%Y%m%d"`
+git add *
+git commit -m "Update $published_at"
+git tag -a "$published_at" -m "$published_at"
+git push origin master --tags
+#+END_SRC
+

@@ -1,5 +1,6 @@
 # -*- mode: org; mode: auto-fill -*-
 #+TITLE: At Hacker School in NY
+#+CATEGORY:	posts
 
 I managed to get into the Fall batch from Hacker School.
 Lots of things to focus on!

@@ -1,0 +1,53 @@
+#+TITLE: Pages
+
+*** Page layout
+
+#+BEGIN_SRC html :tangle src/_layouts/page.html
+---
+layout: default
+---
+
+<div class="page">
+  <h1 class="page-title">{{ page.title }}</h1>
+  {{ content }}
+</div>
+#+END_SRC
+
+*** About page
+
+#+BEGIN_SRC html :tangle src/about.html
+---
+layout: page
+title: "About"
+permalink: about.html
+---
+
+  <p>
+
+    Hi, my name is Waldemar Quevedo (though most people call me Wally) <br /><br />
+
+    Originally from Guadalajara, Mexico where I got a B.A in Computer Science from the Monterey Institute of Technology and Higher Education. <br /><br />
+
+    Emacsen, Rubyist, ex-GSoC <br /><br />
+
+    Moved to Tokyo in 2010 to join Rakuten during its initial stages of globalization. <br /><br />
+
+    Helped launch the platform as a service from Rakuten in 2012 using Cloudfoundry. Developped its logging infrastructure. <br /><br />
+
+    Interested in distributed systems, literate programming, and GIS technologies. <br /><br />
+
+    Current maintainer of the <a href="https://github.com/bdewey/org-ruby">org-ruby</a> gem being use at Github,
+    (in case you find some functionality missing please issue a ticket <a href="https://github.com/bdewey/org-ruby/issues">here</a>
+    please) <br /><br />
+
+    You can find me at:
+
+    <ul>
+    <li><a href="https://twitter.com/wallyqs">Twitter</a><a href="https://twitter.com/wallyqs">Twitter</a></li>
+    <li><a href="https://github.com/wallyqs">Github</a></li>
+    <li><a href="http://jp.linkedin.com/in/waldemarquevedo">Linkedin</a></li>
+    </ul>
+  </p>
+#+END_SRC
+
+

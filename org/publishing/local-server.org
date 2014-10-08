@@ -1,0 +1,11 @@
+#+TITLE:   Serve locally the site after building it
+#+include: "org/publishing/build.org"
+
+*** Serving the site
+
+A basic Python server can suffice for this...
+
+#+name: server
+#+BEGIN_SRC sh :dir site
+python -m SimpleHTTPServer 4000
+#+END_SRC
