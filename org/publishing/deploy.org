@@ -4,7 +4,7 @@
 
 *** Set the CNAME for the site
 
-#+BEGIN_SRC text :tangle site/CNAME
+#+BEGIN_SRC text :tangle src/CNAME
 blog.literateinfrastructure.org
 #+END_SRC
 
