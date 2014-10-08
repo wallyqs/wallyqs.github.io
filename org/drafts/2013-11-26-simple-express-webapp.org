@@ -1,0 +1,340 @@
+#+title:        Example of a simple web app with express
+#+layout:       post
+#+category:     posts
+#+liquid:       false
+#+startup:      showeverything
+
+* Building a simple web app with express
+
+#+begin_quote
+The following is an Org babel document from a long time ago,
+though I publish it anyway. Raw Org babel content can be fetch from here:
+<https://raw.github.com/wallyqs/org_writings/master/express_app/babel.org>
+#+end_quote
+
+** Scaffolding the app
+
+#+begin_src sh :results output
+~/node_modules/express/bin/express
+#+end_src
+
+#+RESULTS:
+#+begin_src conf
+   create : .
+   create : ./package.json
+   create : ./app.js
+   create : ./public
+   create : ./public/javascripts
+   create : ./public/images
+   create : ./public/stylesheets
+   create : ./public/stylesheets/style.css
+   create : ./routes
+   create : ./routes/index.js
+   create : ./views
+   create : ./views/layout.jade
+   create : ./views/index.jade
+
+   install dependencies:
+     $ cd . && npm install
+
+   run the app:
+     $ node app
+#+end_src
+
+For this app, I want to customize things a bit and have a =controllers= folder,
+instead of using the =routes= folder created when scaffolding the app.
+
+#+BEGIN_SRC sh
+mkdir controllers
+rm -rf routes
+#+END_SRC
+
+** Dependencies: package.json
+
+The project will be built using latest =express= web framework,
+=swig= for templates given its similarity to Django templates,
+and =mongoose= as the ORM for MongoDB.
+
+We also include the =consolidate= module as a workaround to
+make =swig= templates to work with latest express.
+
+#+BEGIN_SRC js :tangle package.json
+{
+  "name": "simple-express-app",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start": "node app"
+  },
+  "dependencies": {
+    "express": "3.0.0beta6",
+    "swig": "*",
+    "consolidate": "*",
+    "mongoose": "*"
+  }
+}
+#+END_SRC
+
+** Installing the dependencies
+
+A Node.js project includes its dependencies
+along with the project under the =node_modules= directory.
+
+#+begin_src sh :results output
+npm install
+
+ls node_modules
+#+end_src
+
+and confirm that the following modules exist:
+
+#+begin_src 
+consolidate express mongoose swig 
+#+end_src
+
+** Bootstrapping: app.js
+
+This is were we build up the app and start the server.
+
+*** Require application dependencies
+
+#+BEGIN_SRC js :tangle app.js
+var express	= require('express')
+  , fs          = require('fs')
+  , swig        = require('swig')
+  , cons	= require('consolidate')
+  , mongoose	= require('mongoose')
+  , http	= require('http')
+  , app		= express();
+#+END_SRC
+
+*** Connect to MongoDB
+
+Create the connection to MongoDB on startup:
+
+#+BEGIN_SRC js :tangle app.js
+if(process.env.VCAP_SERVICES){
+  var env = JSON.parse(process.env.VCAP_SERVICES);
+  var mongo = env['mongodb-1.8'][0]['credentials'];
+} else {
+  var mongo = {
+    "hostname":"localhost",
+    "port":27017,
+    "username":"",
+    "password":"",
+    "name":"",
+    "db":"simple_express_app"
+  }
+}
+
+var mongo_url = function(obj){
+  obj.hostname = (obj.hostname || 'localhost');
+  obj.port = (obj.port || 27017);
+  obj.db = (obj.db || 'test');
+
+  if(obj.username && obj.password){
+    return "mongodb://" + obj.username + ":" + obj.password + "@" + obj.hostname + ":" + obj.port + "/" + obj.db;
+  }
+  else{
+    return "mongodb://" + obj.hostname + ":" + obj.port + "/" + obj.db;
+  }
+}
+
+mongoose.connect(mongo_url(mongo));
+#+END_SRC
+
+*** Configuration
+
+In order for this to work in latest express =swig=,
+we have to explicitly say that we are using =swig= as
+the template engine for =.html= files, initialize it,
+and then use =consolidate= to enable it.
+
+Notice that we have to set =allowErrors= to =true=,
+otherwise a /Circular extends found/ error will be thrown
+when using template inheritance.
+
+#+BEGIN_SRC js :tangle app.js
+swig.init({
+    root: __dirname + '/views',
+    allowErrors: true,
+    autoescape: true,
+    encoding: 'utf8'
+});
+
+app.engine('html', cons.swig);
+#+END_SRC
+
+Here we include some commonly use middleware used for =express= apps.
+Also we set the views directory by using the =swig.root= that
+we previously set.
+
+#+BEGIN_SRC js :tangle app.js
+app.configure(function(){
+  app.set('port', process.env.VCAP_PORT || 3000);
+  app.set('views', swig.root);
+  app.set('view engine', 'html');
+  app.use(express.favicon());
+  app.use(express.logger('dev'));
+  app.use(express.bodyParser());
+  app.use(express.methodOverride());
+  app.use(app.router);
+  app.use(express.static(__dirname + '/public'));
+});
+#+END_SRC
+
+Only show errors in development.
+
+#+BEGIN_SRC js :tangle app.js
+app.configure('development', function(){
+  app.use(express.errorHandler());
+});
+#+END_SRC
+
+*** Load the controllers
+
+We have to load all the controllers manually by globbing
+the =controllers= directory we created.
+
+#+BEGIN_SRC js :tangle app.js
+var Controllers = {};
+fs.readdirSync(__dirname + '/controllers').forEach(function(filename){
+  var name = filename.split('.')[0];
+  Controllers[name] = require(__dirname + '/controllers/' + filename);
+});
+#+END_SRC
+
+*** Routes of the application
+
+#+BEGIN_SRC js :tangle app.js
+app.get('/'		, Controllers.home.index);
+app.get('/texts/create'	, Controllers.texts.create);
+#+END_SRC
+
+*** Starting the server!
+
+#+BEGIN_SRC js :tangle app.js
+http.createServer(app).listen(app.get('port'), function(){
+  console.log("Express server listening on port " + app.get('port'));
+});
+#+END_SRC
+** The Models
+
+We will use =mongoose= to set up the models of the application.
+
+#+BEGIN_SRC sh
+mkdir models
+#+END_SRC
+
+*** Model :: Text
+
+#+BEGIN_SRC js :tangle models/text.js
+var mongoose = require('mongoose')
+  , Schema   = mongoose.Schema;
+
+var textSchema = new Schema({
+    title:	{ type: String, index: true }
+  , content:	{ type: String }
+  , created_at: { type: Date, default: Date.now }
+});
+
+module.exports = mongoose.model('Text', textSchema);
+#+END_SRC
+** The Controllers
+*** Scaffolding the controllers
+
+We have to create a directory for the views from each
+controller since it was not created during the initial scaffold:
+
+#+BEGIN_SRC sh :results output
+mkdir controllers/home
+#+END_SRC
+
+*** Action :: Home#index
+
+This points to the root of the application.
+
+#+BEGIN_SRC js :tangle controllers/home.js
+  var Text = require('../models/text.js');
+
+  exports.index = function(req, res){
+    Text.find({}, function(err, texts){    
+      res.render('home/index', { page_title: 'Texts', texts: texts });
+    });
+  };
+#+END_SRC
+
+*** Action :: Text#create
+
+This creates a new Text.
+
+#+BEGIN_SRC js :tangle controllers/texts.js
+  var Text = require('../models/text.js');
+
+  exports.create = function(req, res){
+    var t = new Text({ page_title: "Example"
+                     , content: "Lorem ipsum dolor..." 
+                    });
+
+    t.save(function(err){
+      if (err) console.log('Something went wrong:' + err);
+    });
+
+    res.send('Created a new text.');
+  };
+#+END_SRC
+** The Views
+*** The Layout
+
+#+BEGIN_SRC  html :tangle views/layout.html
+ <!DOCTYPE html>
+ <html>
+   <head>
+     <title>{% block page_title %}{% endblock %}</title>
+     <link rel="stylesheet" href="/stylesheets/style.css" type="text/css" media="screen" />
+   </head>
+   {% block body %}{% endblock %}
+ </html>
+#+END_SRC
+
+*** Template :: Home#index
+
+#+BEGIN_SRC rhtml :tangle views/home/index.html
+  {% extends 'layout.html' %}
+  
+  {% block body %}
+  <div class="content">
+    <h1> {{ page_title }} </h1>
+    <p> Current Texts
+      <ol>
+        {% for text in texts %}
+        <li>{{ text.title }}</li>
+        {% endfor %}    
+      </ol>
+    </p>
+  </div>
+  {% endblock %}
+  
+#+END_SRC
+** Running the app
+
+#+BEGIN_SRC sh :results output
+node app.js
+#+END_SRC
+
+* Links
+
+- Express example apps
+  <https://github.com/visionmedia/express/tree/master/examples>
+
+- Comparison among Node.js template technologies
+  <http://paularmstrong.github.com/node-templates/>
+
+- Example of using mongoose for the schema
+  <https://github.com/LearnBoost/mongoose/blob/master/examples/schema.js>
+
+- Connecting to MongoDB in Cloudfoundry
+  <http://docs.cloudfoundry.com/services/mongodb/nodejs-mongodb.html>
+
+- Gist with examples about how to use mongoose
+  <https://gist.github.com/1025038>

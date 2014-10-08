@@ -51,7 +51,7 @@ module Jekyll
 ORG
       self.extracted_excerpt = self.extract_excerpt
     rescue => e
-      puts "Error converting file #{File.join(base, name)}: #{e.message} #{e.backtrace}"
+     $stderr.puts "Error converting file #{File.join(base, name)}: #{e.message} #{e.backtrace}"
     end
   end
 end

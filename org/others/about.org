@@ -1,0 +1,16 @@
+#+TITLE:  About me
+#+layout: page
+
+Hi, my name is Waldemar Quevedo (nickname: Wally) <br />
+
+I do Dev&amp;Ops at Rakuten in the Platform as a Service team in Tokyo, where I have focused
+on solving <a href="http://www.slideshare.net/rakutentech/fluentd-meetup-logging-infrastructure-in-paa-s">logging related issues</a>
+as well as Ruby support.
+
+I'm also a contributor and current maintainer of the <a href="https://github.com/bdewey/org-ruby">org-ruby</a> gem,
+in case you find some functionality missing please issue a ticket <a href="https://github.com/bdewey/org-ruby/issues">here</a>
+please.
+
+You can also contact me by sending an email to waldemar.quevedo at Google's mail service.
+
+

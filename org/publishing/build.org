@@ -1,0 +1,25 @@
+#+TITLE:   Generating the site
+#+runmode: sequential
+#+include: "org/publishing/setup.org"
+#+include: "org/publishing/layout.org"
+#+include: "org/publishing/pages.org"
+
+- We sync the current writings.
+
+*Note:* Remember changes in the =src= directory are meant to be
+ephemeral and we should mostly rely on the tangling.
+
+#+name: sync-writings
+#+BEGIN_SRC sh
+rsync -avz org/posts/ src/_posts/
+
+# TODO: not rendered
+# rsync -avz org/others/about.org src/about.org
+#+END_SRC
+
+- Build the site and test locally.
+
+#+name: build-site
+#+BEGIN_SRC sh :dir src
+bundle exec jekyll server -d ../site/
+#+END_SRC

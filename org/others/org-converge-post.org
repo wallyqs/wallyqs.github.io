@@ -1,0 +1,131 @@
+#+title: More org tools: Org Converge
+
+In a past release from Org Ruby, I added the functionality to be able
+to turn off exporting the results attached to a code block. For
+example, here only the actual code would make it to the export:
+
+#+begin_src sh :results code
+echo 'hello'
+#+end_src
+
+#+RESULTS:
+#+BEGIN_SRC sh
+hello
+#+END_SRC
+Doing this involved adding support to parse the header arguments from a code block, so I decided to start playing with the idea of implementing tangling code blocks:
+
+#+begin_src sh :tangle /etc/component.yml
+port: 4000
+#+end_src
+
+This is just a subset of the functionality provided by the powerful
+Org babel mode, and still very basic since it does not
+support #+MACROS for example, which would make feature more
+convenient.
+
+After doing this, and since this is all Ruby, I imagined that since
+there is good interop with other reliable Ruby tools, it would be
+interesting to reopen foreman for actually running the blocks.
+
+All this functionality is wrapped into a gem named org-converge (repo
+here), name that way in the sense that all reproducible runs should
+converge into a state. In the future, I hope to have some Chef/Ansible
+like features, but for now integration between has been nice.
+
+I have been using lately for doing literate runs, and I have found it
+pretty comfortable for cases where using the command line is the best
+approach.
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+
+#+TITLE:        Running scripts in parallel
+ 
+In the following example, the following 3 scripts should be run in parallel
+with all output being flushed to the screen.
+ 
+- Count some numbers with bash
+ 
+#+name: bash_counter
+#+begin_src sh :shebang #!/bin/bash
+echo '' > out.log
+for i in `seq 1 5`; do 
+echo "Writing! $i"
+echo "hello $i" >> out.log
+sleep $(($RANDOM % 5))
+done
+#+end_src
+ 
+- Count some numbers with ruby
+ 
+#+name: ruby_counter
+#+begin_src ruby :shebang #!/usr/bin/ruby
+$stdout.sync = true
+sleep 0.2
+10.times do |n|
+  puts "And now writing! #{n}"
+  File.open("out.log", "a") {|f| f.puts "Hello again #{n}" }
+  sleep rand.round(2)
+end
+#+end_src
+ 
+- Print some numbers with python
+ 
+#+name: python_counter
+#+begin_src python :shebang #!/usr/bin/python
+for i in range(0,3):
+  print i
+#+end_src
+ 
+- Block that should not be run
+ 
+#+begin_src js
+{
+  "hello": "world"
+}
+#+end_src
+view rawgistfile1.txt hosted with ❤ by GitHub
+Sometimes it feels that this is reinventing the wheel though, since many of these things could be done with something like make for example. Precisely for that, the next step is to give it some Rake like tasks, to be able to chain runlists.

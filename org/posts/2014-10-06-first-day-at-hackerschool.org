@@ -1,0 +1,24 @@
+# -*- mode: org; mode: auto-fill -*-
+#+TITLE: At Hacker School
+
+I managed to get into the Fall batch from Hacker School.
+Lots of things to focus on!
+
+Some links:
+
+- [[https://twitter.com/cristalopes][Crista Lopes]] talk from StrangeLoop about programming styles, which
+  are in the end nothing but constraints.
+  [[http://www.infoq.com/presentations/style-methodology]]
+  I was there at that StrangeLoop but missed the talk...
+
+- And accompanying exercises
+  <https://github.com/crista/exercises-in-programming-style>
+
+- Talk on Monads in Haskell, (there are Haskell books everywhere...)
+  + <http://www.haskell.org/haskellwiki/Monad>
+  + Styles [[https://github.com/crista/exercises-in-programming-style/tree/master/09-the-one][#9]] and [[https://github.com/crista/exercises-in-programming-style/tree/master/24-quarantine][#24]] from Crista's book.
+
+- SICP
+  + Morning group to cover it.
+  + Version of the book at: [[http://sarabander.github.io/sicp/]]
+

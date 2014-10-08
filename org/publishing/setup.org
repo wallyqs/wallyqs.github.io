@@ -1,7 +1,10 @@
 # -*- mode: org; mode auto-fill -*-
-#+TITLE: Initial setup
+#+TITLE:   Initial setup
+#+startup: showeverything
 
 *** Gem dependencies
+
+Lock to this version of jekyll so that the Jekyll Org plugin works (plugin is very brittle!)
 
 #+BEGIN_SRC ruby :tangle Gemfile
 source "https://rubygems.org"
@@ -16,12 +19,37 @@ gem 'org-ruby'
 bundle install 
 #+END_SRC
 
+*** Config
+
+This can be in YAML, no problem...
+
+#+BEGIN_SRC yaml :tangle src/_config.yml
+# Dependencies
+highlighter:      pygments
+
+# Permalinks
+permalink:        pretty
+relative_permalinks: true
+
+# Setup
+title:            Literate Infrastructure
+tagline:          'PaaS + Org mode'
+description:      'by <a href="https://twitter.com/wallyqs" target="_blank">@wallyqs</a>.'
+baseurl:          /
+
+author:
+  name:           'Waldemar Quevedo'
+  url:            https://twitter.com/wallyqs
+
+paginate:         5
+#+END_SRC
+
 *** Org mode plugin
 
 In order to avoid the YAML markup above and only use Org mode,
 we install the following plugin below.
 
-Note: Based from source at <https://github.com/eggcaker/jekyll-org>
+*Note*: Based from source at <https://github.com/eggcaker/jekyll-org>
 
 #+BEGIN_SRC ruby :tangle src/_plugins/convert.rb :mkdirp true
 require 'org-ruby'
@@ -77,38 +105,8 @@ module Jekyll
 ORG
       self.extracted_excerpt = self.extract_excerpt
     rescue => e
-      puts "Error converting file #{File.join(base, name)}: #{e.message} #{e.backtrace}"
+     $stderr.puts "Error converting file #{File.join(base, name)}: #{e.message} #{e.backtrace}"
     end
   end
 end
-#+END_SRC
-*** Config
-
-This can be in YAML all right.
-
-#+BEGIN_SRC yaml :tangle src/_config.yml
-# Dependencies
-highlighter:      pygments
-
-# Permalinks
-permalink:        pretty
-relative_permalinks: true
-
-# Setup
-title:            Hyde
-tagline:          ''
-description:      '<a href="https://twitter.com/mdo" target="_blank">@wallyqs</a>.'
-baseurl:          /
-
-author:
-  name:           'Waldemar Quevedo'
-  url:            https://twitter.com/wallyqs
-
-paginate:         5
-
-# Custom vars
-version:          2.1.0
-
-github:
-  repo:           https://github.com/wallyqs/org-hyde
 #+END_SRC
