@@ -38,7 +38,7 @@ permalink: about.html
 
     Interested in distributed systems, literate programming, and GIS technologies. <br /><br />
 
-    Current maintainer of the <a href="https://github.com/bdewey/org-ruby">org-ruby</a> gem being use at Github,
+    Current maintainer of the <a href="https://github.com/bdewey/org-ruby">org-ruby</a> gem being used at Github,
     (in case you find some functionality missing please issue a ticket <a href="https://github.com/bdewey/org-ruby/issues">here</a>
     please) <br /><br />
 

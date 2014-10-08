@@ -5,4 +5,5 @@
 Here is a modified version of the original Hyde fit for my flow
 to continue doing things with mostly Org mode.
 
-The repo ccan be found here: [[https://github.com/wallyqs/org-hyde]]
+The repo can be found here: [[https://github.com/wallyqs/org-hyde]]
+

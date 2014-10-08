@@ -1,18 +1,20 @@
 # -*- mode: org; mode: auto-fill -*-
-#+title: Org mode based Hyde site
+#+TITLE: Literate infrastructure site
 
-A version of Hyde that allows the author to write and publish without
-having to write the YAML frontmatter in its files and instead only
-having to use Org mode.
+*** How to generate the site
 
-*** How to use
-
-To generate the site we can use the =org-converge= gem
+To generate the site we can use the =org-converge= gem:
 
 #+BEGIN_SRC sh
 gem install org-converge
-org-run org/setup.org
-org-run org/development.org
+org-run org/publishing/initial-setup.org
+org-run org/publishing/build.org
+#+END_SRC
+
+Then to deploy to Github pages:
+
+#+BEGIN_SRC sh
+org-run org/publishing/deploy.org
 #+END_SRC
 
 If not using the gem, the instructions described in the Org mode
