@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+
+  <head>
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+  <!-- Enable responsiveness on mobile devices-->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  <title>
+    
+      Replacing Jekyll YAML headers with Org mode buffer settings &middot; Literate Infrastructure
+    
+  </title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/public/css/poole.css">
+  <link rel="stylesheet" href="/public/css/syntax.css">
+  <link rel="stylesheet" href="/public/css/hyde.css">
+  <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+
+  <!-- Icons -->
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/public/apple-touch-icon-144-precomposed.png">
+                                 <link rel="shortcut icon" href="/public/favicon.ico">
+
+  <!-- RSS -->
+  <link rel="alternate" type="application/rss+xml" title="RSS" href="/atom.xml">
+</head>
+
+
+  <body>
+
+    <div class="sidebar">
+  <div class="container sidebar-sticky">
+    <div class="sidebar-about">
+      <h2>
+        <a href="/">
+          Literate Infrastructure
+        </a>
+      </h2>
+      <p>PaaS + Org mode</p>
+      <p class="lead"><a href="https://twitter.com/wallyqs" target="_blank">@wallyqs</a></p>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="sidebar-nav-item" href="/">Home</a>
+
+      
+      
+        
+          
+            <a class="sidebar-nav-item" href="/about.html">About</a>
+          
+        
+      
+        
+          
+        
+      
+        
+      
+        
+          
+        
+      
+
+    </nav>
+
+    <p>&copy; 2014. All rights reserved.</p>
+  </div>
+</div>
+
+
+    <div class="content container">
+      <div class="post">
+  <h1 class="post-title">Replacing Jekyll YAML headers with Org mode buffer settings</h1>
+  <span class="post-date">06 Dec 2013</span>
+  
+<p>I took a quick look at what would be required
+  to avoid having to use <code>YAML</code> headers for Jekyll and using
+  only Org mode buffer settings to set the layout, title
+  from a Jekyll post.</p>
+<div class="highlight"><pre><span class="k">module</span> <span class="nn">Jekyll</span>
+ <span class="k">class</span> <span class="nc">Post</span>
+    <span class="k">def</span> <span class="nf">read_yaml</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="nb">name</span><span class="p">,</span> <span class="n">opts</span> <span class="o">=</span> <span class="p">{})</span>
+      <span class="nb">self</span><span class="o">.</span><span class="n">content</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">read_with_options</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="nb">name</span><span class="p">),</span>
+                                            <span class="n">merged_file_read_opts</span><span class="p">(</span><span class="n">opts</span><span class="p">))</span>
+      <span class="nb">self</span><span class="o">.</span><span class="n">data</span> <span class="o">||=</span> <span class="p">{}</span>
+
+      <span class="n">org_text</span> <span class="o">=</span> <span class="no">Orgmode</span><span class="o">::</span><span class="no">Parser</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="nb">self</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
+      <span class="n">org_text</span><span class="o">.</span><span class="n">in_buffer_settings</span><span class="o">.</span><span class="n">each_pair</span> <span class="k">do</span> <span class="o">|</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="o">|</span>
+        <span class="nb">self</span><span class="o">.</span><span class="n">data</span><span class="o">[</span><span class="n">key</span><span class="o">.</span><span class="n">downcase</span><span class="o">]</span> <span class="o">=</span> <span class="n">value</span>
+      <span class="k">end</span>
+
+      <span class="nb">self</span><span class="o">.</span><span class="n">extracted_excerpt</span> <span class="o">=</span> <span class="nb">self</span><span class="o">.</span><span class="n">extract_excerpt</span>
+    <span class="k">rescue</span> <span class="o">=&gt;</span> <span class="n">e</span>
+      <span class="nb">puts</span> <span class="s2">&quot;Error converting file </span><span class="si">#{</span><span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="nb">name</span><span class="p">)</span><span class="si">}</span><span class="s2">: </span><span class="si">#{</span><span class="n">e</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</pre></div>
+<p>This way, instead of having to write</p>
+<div class="highlight"><pre><span class="nn">---</span>
+<span class="l-Scalar-Plain">title</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">something</span>
+<span class="nn">---</span>
+</pre></div>
+<p>I can just continue to use Org mode syntax:</p>
+<div class="highlight"><pre><span class="c1">#+title: Replacing Jekyll YAML headers with Org mode buffer settings</span>
+</pre></div>
+<p>My fork of <code>jekyll-org</code> which has this feature enabled is <a href="https://github.com/wallyqs/jekyll-org/blob/54e1e19697e12d73e9765fb96db37522666af274/convert.rb">here</a>.</p>
+<h2>Update [2013-12-07 Sat]</h2>
+<p>I did some modifications again to plugin for converting Org mode
+  texts:</p>
+<ul>
+  <li>Disable using Liquid tags and rely mostly on Org mode syntax for
+    exporting</li>
+  <li>Remove the <code>#+TITLE</code> from in buffer settings to exporting it 2 times
+    with different styles</li>
+</ul>
+<p>The resulting plugin is here:</p>
+<div class="highlight"><pre><span class="nb">require</span> <span class="s1">&#39;org-ruby&#39;</span>
+
+<span class="k">module</span> <span class="nn">Jekyll</span>
+  <span class="c1"># This overrides having to use YAML in the posts</span>
+  <span class="c1"># and instead use in buffer settings from Org mode</span>
+  <span class="k">class</span> <span class="nc">Post</span>
+    <span class="k">def</span> <span class="nf">read_yaml</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="nb">name</span><span class="p">,</span> <span class="n">opts</span> <span class="o">=</span> <span class="p">{})</span>
+      <span class="n">content</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">read_with_options</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="nb">name</span><span class="p">),</span>
+                                       <span class="n">merged_file_read_opts</span><span class="p">(</span><span class="n">opts</span><span class="p">))</span>
+      <span class="nb">self</span><span class="o">.</span><span class="n">data</span> <span class="o">||=</span> <span class="p">{}</span>
+
+      <span class="n">org_text</span> <span class="o">=</span> <span class="no">Orgmode</span><span class="o">::</span><span class="no">Parser</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
+      <span class="n">org_text</span><span class="o">.</span><span class="n">in_buffer_settings</span><span class="o">.</span><span class="n">each_pair</span> <span class="k">do</span> <span class="o">|</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="o">|</span>
+        <span class="c1"># Remove #+TITLE from the buffer settings to avoid double exporting</span>
+        <span class="n">org_text</span><span class="o">.</span><span class="n">in_buffer_settings</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="k">if</span> <span class="n">key</span> <span class="o">=~</span> <span class="sr">/title/i</span>
+        <span class="n">buffer_setting</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">downcase</span>
+        <span class="nb">self</span><span class="o">.</span><span class="n">data</span><span class="o">[</span><span class="n">buffer_setting</span><span class="o">]</span> <span class="o">=</span> <span class="n">value</span>
+      <span class="k">end</span>
+
+      <span class="c1"># Disable Liquid tags from the output</span>
+      <span class="nb">self</span><span class="o">.</span><span class="n">content</span> <span class="o">=</span> <span class="o">&lt;&lt;</span><span class="no">ORG</span>
+<span class="sh">{％ raw ％}</span>
+<span class="sh">#{org_text.to_html}</span>
+<span class="sh">{％ endraw ％}</span>
+<span class="no">ORG</span>
+      <span class="nb">self</span><span class="o">.</span><span class="n">extracted_excerpt</span> <span class="o">=</span> <span class="nb">self</span><span class="o">.</span><span class="n">extract_excerpt</span>
+    <span class="k">rescue</span> <span class="o">=&gt;</span> <span class="n">e</span>
+      <span class="nb">puts</span> <span class="s2">&quot;Error converting file </span><span class="si">#{</span><span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="nb">name</span><span class="p">)</span><span class="si">}</span><span class="s2">: </span><span class="si">#{</span><span class="n">e</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2"> </span><span class="si">#{</span><span class="n">e</span><span class="o">.</span><span class="n">backtrace</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+
+  <span class="c1"># Based from https://github.com/eggcaker/jekyll-org</span>
+  <span class="k">class</span> <span class="nc">OrgConverter</span> <span class="o">&lt;</span> <span class="no">Converter</span>
+    <span class="n">safe</span> <span class="kp">true</span>
+    <span class="n">priority</span> <span class="ss">:low</span>
+
+    <span class="k">def</span> <span class="nf">matches</span><span class="p">(</span><span class="n">ext</span><span class="p">)</span>
+      <span class="n">ext</span> <span class="o">=~</span> <span class="sr">/org/i</span>
+    <span class="k">end</span>
+
+    <span class="k">def</span> <span class="nf">output_ext</span><span class="p">(</span><span class="n">ext</span><span class="p">)</span>
+      <span class="s2">&quot;.html&quot;</span>
+    <span class="k">end</span>
+
+    <span class="k">def</span> <span class="nf">convert</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
+      <span class="n">content</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+
+  <span class="k">module</span> <span class="nn">Filters</span>
+    <span class="k">def</span> <span class="nf">restify</span><span class="p">(</span><span class="n">input</span><span class="p">)</span>
+      <span class="n">site</span> <span class="o">=</span> <span class="vi">@context</span><span class="o">.</span><span class="n">registers</span><span class="o">[</span><span class="ss">:site</span><span class="o">]</span>
+      <span class="n">converter</span> <span class="o">=</span> <span class="n">site</span><span class="o">.</span><span class="n">getConverterImpl</span><span class="p">(</span><span class="no">Jekyll</span><span class="o">::</span><span class="no">OrgConverter</span><span class="p">)</span>
+      <span class="n">converter</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">input</span><span class="p">)</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</pre></div>
+
+
+
+</div>
+
+<div class="related">
+  <h2>Related Posts</h2>
+  <ul class="related-posts">
+    
+      <li>
+        <h3>
+          <a href="/2014/10/08/moved-to-hyde/">
+            Switching to Hyde
+            <small>08 Oct 2014</small>
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/2014/10/06/first-day-at-hackerschool/">
+            At Hacker School in NY
+            <small>06 Oct 2014</small>
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/posts/2013/11/24/hello/">
+            Started to blog with Jekyll
+            <small>24 Nov 2013</small>
+          </a>
+        </h3>
+      </li>
+    
+  </ul>
+</div>
+
+    </div>
+
+  </body>
+</html>
