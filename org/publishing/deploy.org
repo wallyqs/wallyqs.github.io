@@ -10,6 +10,8 @@ blog.literateinfrastructure.org
 
 *** Deploying to Github
 
+**** COMMENT Initialize the git repo
+
 #+name: already-git-init
 #+BEGIN_SRC sh :dir site :exports none :results output
 [ -e .git ] 
@@ -18,17 +20,19 @@ blog.literateinfrastructure.org
 In case we haven't done it, we need to initialize the repo for Github pages usage:
 
 #+name: initialize-ghpages-repo
-#+BEGIN_SRC sh :dir site
+#+BEGIN_SRC sh :dir site :unless already-git-init
 git init
 git remote add origin https://github.com/wallyqs/wallyqs.github.io
 #+END_SRC
+
+**** Push to git
 
 Then just commit and push:
 
 #+name: github-pages-deploy
 #+BEGIN_SRC sh :dir site
-export published_at=`date "+%Y%m%d"`
-git add *
+export published_at=`date "+%Y%m%d%s"`
+git add * -A
 git commit -m "Update $published_at"
 git tag -a "$published_at" -m "$published_at"
 git push origin master --tags
