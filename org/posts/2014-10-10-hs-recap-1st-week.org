@@ -43,5 +43,4 @@ HackerSchool, a quick recap:
 - Overall, having a great time.  The social rules being
   applied (no feigning, no subtleisms, ...) make up for an
   comfortable environment of collaboration which I had not experienced before,
-  at least definitely not on this level. It really does not feel like
-  a week, kind of as if time expands.
+  at least definitely not on this level.
