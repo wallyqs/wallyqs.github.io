@@ -1,6 +1,7 @@
 # -*- mode: org; mode: auto-fill -*-
 #+TITLE: Switching to Hyde
-#+CATEGORY:	posts
+#+CATEGORY: posts
+#+LAYOUT:   post
 
 Here is a modified version of the original Hyde fit for my flow
 to continue doing things with mostly Org mode.

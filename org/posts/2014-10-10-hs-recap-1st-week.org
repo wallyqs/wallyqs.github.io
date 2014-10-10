@@ -5,8 +5,10 @@
 It's been almost a week since I came to New York to join
 HackerSchool, a quick recap:
 
+*** Week of [2014-10-06]--[2014-10-10]
+
 - [[https://twitter.com/cristalopes][Crista Lopes]] was the resident during this week and she talked about
-  the her /[[http://www.amazon.com/Exercises-Programming-Style-Cristina-Videira/dp/1482227371/][Exercises in Programming Styles]]/ book during the first days.
+  her /[[http://www.amazon.com/Exercises-Programming-Style-Cristina-Videira/dp/1482227371/][Exercises in Programming Styles]]/ book during the first days.
   I'm not even halfway through the book yet, though I have to say that
   the book has already left a mark.
 

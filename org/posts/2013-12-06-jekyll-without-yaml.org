@@ -1,6 +1,6 @@
 #+TITLE: Replacing Jekyll YAML headers with Org mode buffer settings
-#+category: posts
-#+layout:   post
+#+CATEGORY: posts
+#+LAYOUT:   post
 
 I took a quick look at what would be required
 to avoid having to use =YAML= headers for Jekyll and using

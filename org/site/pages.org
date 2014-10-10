@@ -52,4 +52,21 @@ permalink: about.html
   </p>
 #+END_SRC
 
+*** Posts index
 
+#+BEGIN_SRC html :tangle src/posts.html
+---
+layout: page
+title: "Posts"
+---
+  <ul class="listing">
+    {% for post in site.posts %}
+    <li>
+      <a href="{{ post.url }}">{{ post.title }}</a> <br />
+      <em>
+        <span>{{ post.date | date: "%B %e, %Y" }}</span>        
+      </em>
+    </li>
+    {% endfor %}
+  </ul>
+#+END_SRC
