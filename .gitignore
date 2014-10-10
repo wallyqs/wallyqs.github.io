@@ -1,3 +1,8 @@
+old/*
+site/*
+run/*
+site/*
+src/*
 # Ignore docs files
 _gh_pages
 _site

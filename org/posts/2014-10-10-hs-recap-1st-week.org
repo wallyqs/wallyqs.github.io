@@ -1,0 +1,47 @@
+#+TITLE:	Hacker School - week #1 recap
+#+CATEGORY:	posts
+#+LAYOUT:	post
+
+It's been almost a week since I came to New York to join
+HackerSchool, a quick recap:
+
+- [[https://twitter.com/cristalopes][Crista Lopes]] was the resident during this week and she talked about
+  the her /[[http://www.amazon.com/Exercises-Programming-Style-Cristina-Videira/dp/1482227371/][Exercises in Programming Styles]]/ book during the first days.
+  I'm not even halfway through the book yet, though I have to say that
+  the book has already left a mark.
+
+  Crista then went on to concisely explain theoretical concepts
+  around types, data structures, and even monads in Haskell.
+
+  I also shared a bit about Org Babel, which may have to do something
+  to do with the following tweet:
+
+  #+BEGIN_HTML html
+  <blockquote class="twitter-tweet" lang="en"><p>Note to self: set this up in my emacs and learn more about it <a href="http://t.co/HIaegQ5bHp">http://t.co/HIaegQ5bHp</a></p>&mdash; Crista Lopes (@cristalopes) <a href="https://twitter.com/cristalopes/status/519971789422997505">October 8, 2014</a></blockquote>
+  <script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script>
+  #+END_HTML
+
+- Right now I'm working through the exercises [[https://github.com/wallyqs/exercises-in-org/tree/master/org/prog-styles][here]] (of course, in Org mode). 
+  I named it /Exercises in Org/ to keep the scope open
+  to other exercises, though focusing on the /programming styles/ book at this moment.
+
+- I took a bit of time to revamp my blog yet again.  This time using
+  Hyde as the the theme and the =org/=, =src/= folder structure that I
+  have been practicing lately.  Repo at [[https://github.com/wallyqs/org-hyde][wallyqs/org-hyde]].
+
+- Another great thing of being in NYC is the amount of meetups that there are.
+  I assisted to the Mesos NYC meetup at the Twitter offices to hear
+  about the practical usage of Aurora and Mesos, as presented by [[https://twitter.com/wfarner][Bill Farner]].
+  In the following weeks I will be diving more into Mesos, so this was
+  a good opportunity to ask directly to those who operate regarding
+  its practical usage.
+
+- Living in NYC related:
+  + Got my Airbnbs setup until the beginnings of December.
+  + Discovered [[http://www.gasolinealleycoffee.com/][Gasoline Alley Coffee]] which is just around the corner of HackerSchool.
+
+- Overall, having a great time.  The social rules being
+  applied (no feigning, no subtleisms, ...) make up for an
+  comfortable environment of collaboration which I had not experienced before,
+  at least definitely not on this level. It really does not feel like
+  a week, kind of as if time expands.
