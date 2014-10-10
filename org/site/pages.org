@@ -26,7 +26,7 @@ permalink: about.html
 
     Hi, my name is Waldemar Quevedo (though most people call me Wally) <br /><br />
 
-    Originally from Guadalajara, Mexico where I got a <br /> <br />
+    Originally from Guadalajara, Mexico <br /> <br />
 
     B.A in Computer Science from the Monterey Institute of Technology and Higher Education. <br /><br />
 
