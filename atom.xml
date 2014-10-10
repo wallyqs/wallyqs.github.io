@@ -4,13 +4,62 @@
  <title>Literate Infrastructure</title>
  <link href="/atom.xml" rel="self"/>
  <link href="/"/>
- <updated>2014-10-08T14:34:51-04:00</updated>
+ <updated>2014-10-10T11:04:22-04:00</updated>
  <id></id>
  <author>
    <name>Waldemar Quevedo</name>
    <email></email>
  </author>
 
+ 
+ <entry>
+   <title>Hacker School - week #1 recap</title>
+   <link href="/posts/2014/10/10/hs-recap-1st-week/"/>
+   <updated>2014-10-10T00:00:00-04:00</updated>
+   <id>/posts/2014/10/10/hs-recap-1st-week</id>
+   <content type="html">
+&lt;p&gt;It&amp;#8217;s been almost a week since I came to New York to join
+  HackerSchool, a quick recap:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://twitter.com/cristalopes&quot;&gt;Crista Lopes&lt;/a&gt; was the resident during this week and she talked about
+    the her &lt;i&gt;&lt;a href=&quot;http://www.amazon.com/Exercises-Programming-Style-Cristina-Videira/dp/1482227371/&quot;&gt;Exercises in Programming Styles&lt;/a&gt;&lt;/i&gt; book during the first days.
+    I&amp;#8217;m not even halfway through the book yet, though I have to say that
+    the book has already left a mark.
+    &lt;p&gt;Crista then went on to concisely explain theoretical concepts
+      around types, data structures, and even monads in Haskell.&lt;/p&gt;
+    &lt;p&gt;I also shared a bit about Org Babel, which may have to do something
+      to do with the following tweet:&lt;/p&gt;
+  &lt;blockquote class=&quot;twitter-tweet&quot; lang=&quot;en&quot;&gt;&lt;p&gt;Note to self: set this up in my emacs and learn more about it &lt;a href=&quot;http://t.co/HIaegQ5bHp&quot;&gt;http://t.co/HIaegQ5bHp&lt;/a&gt;&lt;/p&gt;&amp;mdash; Crista Lopes (@cristalopes) &lt;a href=&quot;https://twitter.com/cristalopes/status/519971789422997505&quot;&gt;October 8, 2014&lt;/a&gt;&lt;/blockquote&gt;
+  &lt;script async src=&quot;//platform.twitter.com/widgets.js&quot; charset=&quot;utf-8&quot;&gt;&lt;/script&gt;
+  &lt;/li&gt;
+  &lt;li&gt;Right now I&amp;#8217;m working through the exercises &lt;a href=&quot;https://github.com/wallyqs/exercises-in-org/tree/master/org/prog-styles&quot;&gt;here&lt;/a&gt; (of course, in Org mode).
+    I named it &lt;i&gt;Exercises in Org&lt;/i&gt; to keep the scope open
+    to other exercises, though focusing on the &lt;i&gt;programming styles&lt;/i&gt; book at this moment.&lt;/li&gt;
+  &lt;li&gt;I took a bit of time to revamp my blog yet again.  This time using
+    Hyde as the the theme and the &lt;code&gt;org/&lt;/code&gt;, &lt;code&gt;src/&lt;/code&gt; folder structure that I
+    have been practicing lately.  Repo at &lt;a href=&quot;https://github.com/wallyqs/org-hyde&quot;&gt;wallyqs/org-hyde&lt;/a&gt;.&lt;/li&gt;
+  &lt;li&gt;Another great thing of being in NYC is the amount of meetups that there are.
+    I assisted to the Mesos NYC meetup at the Twitter offices to hear
+    about the practical usage of Aurora and Mesos, as presented by &lt;a href=&quot;https://twitter.com/wfarner&quot;&gt;Bill Farner&lt;/a&gt;.
+    In the following weeks I will be diving more into Mesos, so this was
+    a good opportunity to ask directly to those who operate regarding
+    its practical usage.&lt;/li&gt;
+  &lt;li&gt;Living in NYC related:
+    &lt;ul&gt;
+      &lt;li&gt;Got my Airbnbs setup until the beginnings of December.&lt;/li&gt;
+      &lt;li&gt;Discovered &lt;a href=&quot;http://www.gasolinealleycoffee.com/&quot;&gt;Gasoline Alley Coffee&lt;/a&gt; which is just around the corner of HackerSchool.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;Overall, having a great time.  The social rules being
+    applied (no feigning, no subtleisms, &amp;#8230;) make up for an
+    comfortable environment of collaboration which I had not experienced before,
+    at least definitely not on this level. It really does not feel like
+    a week, kind of as if time expands.&lt;/li&gt;
+&lt;/ul&gt;
+
+
+</content>
+ </entry>
  
  <entry>
    <title>Switching to Hyde</title>
