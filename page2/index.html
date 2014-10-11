@@ -11,7 +11,7 @@
 
   <title>
     
-      At Hacker School in NY &middot; Literate Infrastructure
+      Literate Infrastructure &middot; PaaS + Org mode
     
   </title>
 
@@ -93,72 +93,63 @@
 
 
     <div class="content container">
-      <div class="post">
-  <h1 class="post-title">At Hacker School in NY</h1>
-  <span class="post-date">06 Oct 2014</span>
+      <div class="posts">
   
-<p>I managed to get into the Fall batch from Hacker School.
-  Lots of things to focus on!</p>
-<p>Some links:</p>
+  <div class="post">
+    <h1 class="post-title">
+      <a href="/posts/2013/11/24/hello/">
+        Started to blog with Jekyll
+      </a>
+    </h1>
+
+    <span class="post-date">24 Nov 2013</span>
+
+    
+<p>Starting a blog using the <a href="https://github.com/holman/left">Left</a> theme for <a href="https://github.com/mojombo/jekyll">Jekyll</a>.</p>
+<p>Compared to other solutions, this uses the <code>org-ruby</code> parser
+  to export <code>.org</code> files into HTML. You can check the source
+  for this site here: <a href="https://github.com/wallyqs/wallyqs.github.io">https://github.com/wallyqs/wallyqs.github.io</a></p>
+<div class="highlight"><pre><span class="nb">puts</span> <span class="s2">&quot;Syntax highlighting works!&quot;</span>
+</pre></div>
+<p>There are still some pending things that I would like to improve:</p>
 <ul>
-  <li><a href="https://twitter.com/cristalopes">Crista Lopes</a> talk from StrangeLoop about programming styles, which
-    are in the end nothing but constraints.
-    <a href="http://www.infoq.com/presentations/style-methodology">http://www.infoq.com/presentations/style-methodology</a>
-    I was there at that StrangeLoop but missed the talk&#8230;</li>
-  <li>And accompanying exercises
-    <a href="https://github.com/crista/exercises-in-programming-style">https://github.com/crista/exercises-in-programming-style</a></li>
-  <li>Talk on Monads in Haskell, (there are Haskell books everywhere&#8230;)
-    <ul>
-      <li><a href="http://www.haskell.org/haskellwiki/Monad">http://www.haskell.org/haskellwiki/Monad</a></li>
-      <li>Styles <a href="https://github.com/crista/exercises-in-programming-style/tree/master/09-the-one">#9</a> and <a href="https://github.com/crista/exercises-in-programming-style/tree/master/24-quarantine">#24</a> from Crista&#8217;s book.</li>
-    </ul>
-  </li>
-  <li>SICP
-    <ul>
-      <li>Morning group to cover it.</li>
-      <li>Version of the book at: <a href="http://sarabander.github.io/sicp/">http://sarabander.github.io/sicp/</a></li>
-    </ul>
+  <li>Use the <a href="https://github.com/wallyqs/re-org">re-org</a> tool to create and organize the posts that
+    would finally go into the <code>_posts</code> directory for publishing.
+    I think in the end using a YAML file would have been better than
+    having to use environment variables.</li>
+  <li>Try to extend or patch Jekyll so that I can avoid having to write:
+<div class="highlight"><pre>---
+layout: post
+title:  Hello world
+category: posts
+---
+</pre></div>
+    <p>And instead cover this with Org syntax like:</p>
+<div class="highlight"><pre>#+layout:   post
+#+title:    Hello world
+#+category: posts
+</pre></div>
   </li>
 </ul>
+<p>Other than that, the setup promises to be very comfortable for
+  writing, I&#8217;ll see how it goes.</p>
 
 
 
+  </div>
+  
 </div>
 
-<div class="related">
-  <h2>Related Posts</h2>
-  <ul class="related-posts">
+<div class="pagination">
+  
+    <span class="pagination-item older">Older</span>
+  
+  
     
-      <li>
-        <h3>
-          <a href="/2014/10/11/transducers-in-ruby/">
-            Term Frequency with Transducers
-            <small>11 Oct 2014</small>
-          </a>
-        </h3>
-      </li>
+      <a class="pagination-item newer" href="/">Newer</a>
     
-      <li>
-        <h3>
-          <a href="/posts/2014/10/10/hs-recap-1st-week/">
-            Hacker School - week #1 recap
-            <small>10 Oct 2014</small>
-          </a>
-        </h3>
-      </li>
-    
-      <li>
-        <h3>
-          <a href="/posts/2014/10/08/moved-to-hyde/">
-            Switching to Hyde
-            <small>08 Oct 2014</small>
-          </a>
-        </h3>
-      </li>
-    
-  </ul>
+  
 </div>
-
     </div>
 
   </body>
