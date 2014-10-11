@@ -4,7 +4,7 @@
  <title>Literate Infrastructure</title>
  <link href="/atom.xml" rel="self"/>
  <link href="/"/>
- <updated>2014-10-11T18:37:20-04:00</updated>
+ <updated>2014-10-11T18:44:21-04:00</updated>
  <id></id>
  <author>
    <name>Waldemar Quevedo</name>
@@ -13,16 +13,16 @@
 
  
  <entry>
-   <title>Term Frequency with Transducers</title>
+   <title>Term Frequency with Transducers gem in Ruby</title>
    <link href="/2014/10/11/transducers-in-ruby/"/>
    <updated>2014-10-11T00:00:00-04:00</updated>
    <id>/2014/10/11/transducers-in-ruby</id>
    <content type="html">
 &lt;p&gt;Yesterday, Cognitect &lt;a href=&quot;https://twitter.com/cognitect/status/520644214116212736https://twitter.com/cognitect/status/520644214116212736&quot;&gt;announced&lt;/a&gt; about a Ruby implementation among
   others of the transducers concept that Rich Hickey &lt;a href=&quot;https://www.youtube.com/watch?v=6mTbuzafcII&quot;&gt;talked about at StrangeLoop&lt;/a&gt;.&lt;/p&gt;
-&lt;p&gt;After watching the talk a number of times and the reading the source of the &lt;a href=&quot;https://github.com/cognitect-labs/transducers-ruby/blob/master/lib/transducers.rb&quot;&gt;gem&lt;/a&gt;,
+&lt;p&gt;After watching the talk a number of times and reading a little the source of the &lt;a href=&quot;https://github.com/cognitect-labs/transducers-ruby/blob/master/lib/transducers.rb&quot;&gt;gem&lt;/a&gt;,
   I gave it a shot at using it to solve the term frequency exercise
-  from the &lt;i&gt;Exercises in Programming Styles&lt;/i&gt; book.&lt;/p&gt;
+  from the &lt;i&gt;&lt;a href=&quot;http://www.amazon.com/Exercises-Programming-Style-Cristina-Videira/dp/1482227371/&quot;&gt;Exercises in Programming Styles&lt;/a&gt;&lt;/i&gt; book.&lt;/p&gt;
 &lt;h2&gt;Transducers usage in Ruby&lt;/h2&gt;
 &lt;p&gt;The full example looks as follows: (explanation of the steps is further below).&lt;/p&gt;
 &lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;nb&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;transducers&amp;#39;&lt;/span&gt;
@@ -66,7 +66,7 @@
 &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 &lt;h2&gt;Going over the steps of the implementatoin&lt;/h2&gt;
-&lt;h3&gt;Implementation&lt;/h3&gt;
+&lt;h3&gt;Dependencies and definitions&lt;/h3&gt;
 &lt;h4&gt;&lt;code&gt;Gemfile&lt;/code&gt;&lt;/h4&gt;
 &lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;n&quot;&gt;source&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;http://rubygems.org&amp;quot;&lt;/span&gt;
 
@@ -76,7 +76,7 @@
 &lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;nb&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;transducers&amp;#39;&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 &lt;h4&gt;Location of the files&lt;/h4&gt;
-&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;no&quot;&gt;SRC_ROOT&lt;/span&gt;              &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;join&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;expand_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;../../..&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;src&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;exercises-in-programming-style&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;no&quot;&gt;SRC_ROOT&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;join&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;expand_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;../../..&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;src&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;exercises-in-programming-style&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
 &lt;span class=&quot;no&quot;&gt;PRIDE_AND_PREJUDICE&lt;/span&gt;   &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;join&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;SRC_ROOT&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;pride-and-prejudice.txt&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
 &lt;span class=&quot;no&quot;&gt;STOP_WORDS&lt;/span&gt;            &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;join&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;SRC_ROOT&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;stop_words.txt&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;

@@ -1,9 +1,9 @@
 
 <p>Yesterday, Cognitect <a href="https://twitter.com/cognitect/status/520644214116212736https://twitter.com/cognitect/status/520644214116212736">announced</a> about a Ruby implementation among
   others of the transducers concept that Rich Hickey <a href="https://www.youtube.com/watch?v=6mTbuzafcII">talked about at StrangeLoop</a>.</p>
-<p>After watching the talk a number of times and the reading the source of the <a href="https://github.com/cognitect-labs/transducers-ruby/blob/master/lib/transducers.rb">gem</a>,
+<p>After watching the talk a number of times and reading a little the source of the <a href="https://github.com/cognitect-labs/transducers-ruby/blob/master/lib/transducers.rb">gem</a>,
   I gave it a shot at using it to solve the term frequency exercise
-  from the <i>Exercises in Programming Styles</i> book.</p>
+  from the <i><a href="http://www.amazon.com/Exercises-Programming-Style-Cristina-Videira/dp/1482227371/">Exercises in Programming Styles</a></i> book.</p>
 <h2>Transducers usage in Ruby</h2>
 <p>The full example looks as follows: (explanation of the steps is further below).</p>
 <div class="highlight"><pre><span class="nb">require</span> <span class="s1">&#39;transducers&#39;</span>
@@ -47,7 +47,7 @@
 <span class="k">end</span>
 </pre></div>
 <h2>Going over the steps of the implementatoin</h2>
-<h3>Implementation</h3>
+<h3>Dependencies and definitions</h3>
 <h4><code>Gemfile</code></h4>
 <div class="highlight"><pre><span class="n">source</span> <span class="s2">&quot;http://rubygems.org&quot;</span>
 
@@ -57,7 +57,7 @@
 <div class="highlight"><pre><span class="nb">require</span> <span class="s1">&#39;transducers&#39;</span>
 </pre></div>
 <h4>Location of the files</h4>
-<div class="highlight"><pre><span class="no">SRC_ROOT</span>              <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../../..&quot;</span><span class="p">),</span> <span class="s2">&quot;src&quot;</span><span class="p">,</span> <span class="s2">&quot;exercises-in-programming-style&quot;</span><span class="p">)</span>
+<div class="highlight"><pre><span class="no">SRC_ROOT</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../../..&quot;</span><span class="p">),</span> <span class="s2">&quot;src&quot;</span><span class="p">,</span> <span class="s2">&quot;exercises-in-programming-style&quot;</span><span class="p">)</span>
 <span class="no">PRIDE_AND_PREJUDICE</span>   <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">SRC_ROOT</span><span class="p">,</span> <span class="s2">&quot;pride-and-prejudice.txt&quot;</span><span class="p">)</span>
 <span class="no">STOP_WORDS</span>            <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">SRC_ROOT</span><span class="p">,</span> <span class="s1">&#39;stop_words.txt&#39;</span><span class="p">)</span>
 </pre></div>
