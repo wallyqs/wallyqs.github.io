@@ -4,7 +4,7 @@
  <title>Literate Infrastructure</title>
  <link href="/atom.xml" rel="self"/>
  <link href="/"/>
- <updated>2014-10-11T18:55:11-04:00</updated>
+ <updated>2014-10-11T18:57:24-04:00</updated>
  <id></id>
  <author>
    <name>Waldemar Quevedo</name>
@@ -14,9 +14,9 @@
  
  <entry>
    <title>Term Frequency with Transducers gem in Ruby</title>
-   <link href="/2014/10/11/transducers-in-ruby/"/>
+   <link href="/posts/2014/10/11/transducers-in-ruby/"/>
    <updated>2014-10-11T00:00:00-04:00</updated>
-   <id>/2014/10/11/transducers-in-ruby</id>
+   <id>/posts/2014/10/11/transducers-in-ruby</id>
    <content type="html">
 &lt;p&gt;Yesterday, Cognitect &lt;a href=&quot;https://twitter.com/cognitect/status/520644214116212736https://twitter.com/cognitect/status/520644214116212736&quot;&gt;announced&lt;/a&gt; about a Ruby implementation among
   others of the transducers concept that Rich Hickey &lt;a href=&quot;https://www.youtube.com/watch?v=6mTbuzafcII&quot;&gt;talked about at StrangeLoop&lt;/a&gt;.&lt;/p&gt;
