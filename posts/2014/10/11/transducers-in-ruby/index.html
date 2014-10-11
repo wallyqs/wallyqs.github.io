@@ -160,7 +160,7 @@
 <span class="no">STOP_WORDS</span>            <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">SRC_ROOT</span><span class="p">,</span> <span class="s1">&#39;stop_words.txt&#39;</span><span class="p">)</span>
 </pre></div>
 <h4>Stop words</h4>
-<p>The <i>stop words</i> are the list of words and single letters that we
+<p>The <i>stop words</i> are the list of words and single letters that
   appear in the test that we decide to ignore.</p>
 <div class="highlight"><pre><span class="c1"># load words to ignore</span>
 <span class="n">stop_words</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="no">STOP_WORDS</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
@@ -184,7 +184,7 @@
 </ol>
 <p>Then from this list, we will take the top 25 terms and print them to stdout.</p>
 <h4>The Collection</h4>
-<p>The collection upon which we will be applying the transformations are
+<p>The collection upon which we will be applying the transformations
   are each one of the lines that exist in the text.</p>
 <div class="highlight"><pre><span class="n">lines</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="no">PRIDE_AND_PREJUDICE</span><span class="p">)</span><span class="o">.</span><span class="n">lines</span>
 </pre></div>

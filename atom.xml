@@ -4,7 +4,7 @@
  <title>Literate Infrastructure</title>
  <link href="/atom.xml" rel="self"/>
  <link href="/"/>
- <updated>2014-10-11T19:07:17-04:00</updated>
+ <updated>2014-10-11T19:21:34-04:00</updated>
  <id></id>
  <author>
    <name>Waldemar Quevedo</name>
@@ -81,7 +81,7 @@
 &lt;span class=&quot;no&quot;&gt;STOP_WORDS&lt;/span&gt;            &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;join&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;SRC_ROOT&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;stop_words.txt&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 &lt;h4&gt;Stop words&lt;/h4&gt;
-&lt;p&gt;The &lt;i&gt;stop words&lt;/i&gt; are the list of words and single letters that we
+&lt;p&gt;The &lt;i&gt;stop words&lt;/i&gt; are the list of words and single letters that
   appear in the test that we decide to ignore.&lt;/p&gt;
 &lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;c1&quot;&gt;# load words to ignore&lt;/span&gt;
 &lt;span class=&quot;n&quot;&gt;stop_words&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;read&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;STOP_WORDS&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;,&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
@@ -105,7 +105,7 @@
 &lt;/ol&gt;
 &lt;p&gt;Then from this list, we will take the top 25 terms and print them to stdout.&lt;/p&gt;
 &lt;h4&gt;The Collection&lt;/h4&gt;
-&lt;p&gt;The collection upon which we will be applying the transformations are
+&lt;p&gt;The collection upon which we will be applying the transformations
   are each one of the lines that exist in the text.&lt;/p&gt;
 &lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;n&quot;&gt;lines&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;read&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;PRIDE_AND_PREJUDICE&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lines&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
