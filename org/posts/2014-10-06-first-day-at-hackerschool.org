@@ -8,10 +8,9 @@ Lots of things to focus on!
 
 Some links:
 
-- [[https://twitter.com/cristalopes][Crista Lopes]] talk from StrangeLoop about programming styles, which
+- [[https://twitter.com/cristalopes][Crista Lopes]] talk from StrangeLoop about [[http://www.infoq.com/presentations/style-methodology][programming styles]], which
   are in the end nothing but constraints.
-  [[http://www.infoq.com/presentations/style-methodology]]
-  I was there at that StrangeLoop but missed the talk...
+  (I was there at that StrangeLoop but somehow missed the talk...)
 
 - And accompanying exercises
   <https://github.com/crista/exercises-in-programming-style>
