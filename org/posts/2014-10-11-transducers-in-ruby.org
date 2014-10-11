@@ -1,0 +1,203 @@
+# -*- mode: org; mode: auto-fill -*-
+#+TITLE: Term Frequency with Transducers
+
+Yesterday, Cognitect [[https://twitter.com/cognitect/status/520644214116212736https://twitter.com/cognitect/status/520644214116212736][announced]] about a Ruby implementation among
+others of the transducers concept that Rich Hickey [[https://www.youtube.com/watch?v=6mTbuzafcII][talked about at StrangeLoop]].
+
+After watching the talk a number of times and the reading the source of the [[https://github.com/cognitect-labs/transducers-ruby/blob/master/lib/transducers.rb][gem]],
+I gave it a shot at using it to solve the term frequency exercise
+from the /Exercises in Programming Styles/ book.
+
+** Transducers usage in Ruby
+
+The full example looks as follows: (explanation of the steps is further below).
+
+#+BEGIN_SRC ruby
+  require 'transducers'
+  
+  SRC_ROOT = File.join(File.expand_path("../../.."), "src", "exercises-in-programming-style")
+  PRIDE_AND_PREJUDICE   = File.join(SRC_ROOT, "pride-and-prejudice.txt")
+  STOP_WORDS            = File.join(SRC_ROOT, 'stop_words.txt')
+  
+  # load words to ignore
+  stop_words = File.read(STOP_WORDS).split(',')
+  stop_words << ('a'..'z').to_a # also alphabet
+  stop_words.flatten!.uniq!
+  
+  lines            = File.read(PRIDE_AND_PREJUDICE).lines
+  frequency_counter = Class.new do
+    def step(words_frequency, words)
+      words.each { |w| words_frequency[w.downcase] += 1 }
+      words_frequency
+    end
+  
+    def complete(result)
+      result.sort {|a,b| a[1] <=> b[1]}.reverse
+    end
+  end.new
+  
+  t = Transducers.compose(
+        Transducers.map do |line|
+          line.gsub!(/[^a-zA-Z0-9]/, " ") # remove non alphanumeric
+          line.split(' ')                 # split into words
+        end,
+        Transducers.map do |words|        # remove stop words
+          words.delete_if {|w| stop_words.include?(w.downcase) }
+        end)
+  
+  words_frequency  = Hash.new {|h,k| h[k] = 0 }
+  words_frequency_list = Transducers.transduce(t, frequency_counter, words_frequency, lines)
+
+  # Print the top 25 terms
+  words_frequency_list.to_a[0...25].each do |k, v|
+    puts "#{k}  -  #{v}"
+  end
+#+END_SRC
+** Going over the steps of the implementatoin
+*** Implementation
+
+**** =Gemfile=
+
+#+BEGIN_SRC ruby :tangle src/prog-styles/transducers-in-ruby/Gemfile :mkdirp true
+source "http://rubygems.org"
+
+gem 'transducers'
+#+END_SRC
+
+**** Imports
+
+#+BEGIN_SRC ruby  :results output :tangle src/prog-styles/transducers-in-ruby/run.rb :mkdirp true
+require 'transducers'
+#+END_SRC
+
+**** Location of the files
+
+#+BEGIN_SRC ruby  :results output :tangle src/prog-styles/transducers-in-ruby/run.rb :mkdirp true
+  SRC_ROOT              = File.join(File.expand_path("../../.."), "src", "exercises-in-programming-style")
+  PRIDE_AND_PREJUDICE   = File.join(SRC_ROOT, "pride-and-prejudice.txt")
+  STOP_WORDS            = File.join(SRC_ROOT, 'stop_words.txt')
+#+END_SRC
+
+**** Stop words
+
+The /stop words/ are the list of words and single letters that we
+appear in the test that we decide to ignore.
+
+#+BEGIN_SRC ruby :results output :tangle src/prog-styles/transducers-in-ruby/run.rb :mkdirp true
+  # load words to ignore
+  stop_words = File.read(STOP_WORDS).split(',')
+  stop_words << ('a'..'z').to_a # also alphabet
+  stop_words.flatten!.uniq!
+#+END_SRC
+
+*** Using Transducers
+
+In order to determine the term frequency in the pride and prejudice
+text, we will do the following transformations:
+
+1. Create a collection of the lines from the raw body of text
+2. Remove non-alphanumeric characters from the line
+3. Split the line into words
+4. Remove words which are considered to be /stop words/
+
+Then as part of the reducing step:
+
+1. Increment counter in =words_frequency= hash each time the word appears
+2. Sort the words by frequency
+3. Reverse the list
+
+Then from this list, we will take the top 25 terms and print them to stdout.
+
+**** The Collection
+
+The collection upon which we will be applying the transformations are
+are each one of the lines that exist in the text.
+
+#+BEGIN_SRC ruby :tangle src/prog-styles/transducers-in-ruby/run.rb
+  lines = File.read(PRIDE_AND_PREJUDICE).lines
+#+END_SRC
+
+**** The Reducer
+
+From the [[https://github.com/cognitect-labs/transducers-ruby/blob/222686714cc55f984671af48bf506f1c130fc013/lib/transducers.rb#L24][source]]:
+
+#+BEGIN_QUOTE
+A _reducer_ is an object with a `step` method that takes a result
+(so far) and an input and returns a new result. This is similar to
+the blocks we pass to Ruby's `reduce` (a.k.a `inject`), and serves a
+similar role in _transducing process_.
+#+END_QUOTE
+
+As part of its reducing step, the reducer will receive a list of words
+in a line, then iterate over this list and increment the counter in
+the =words_frequency= hash.
+
+Then, once the =words_frequency= has been computed, we returned the
+result sorted by frequency in descending order.
+
+#+BEGIN_SRC ruby :tangle src/prog-styles/transducers-in-ruby/run.rb ruby
+  frequency_counter = Class.new do
+    def step(words_frequency, words)
+      words.each { |w| words_frequency[w.downcase] += 1 }
+      words_frequency
+    end
+
+    def complete(result)
+       result.sort {|a,b| a[1] <=> b[1]}.reverse
+    end
+  end.new
+#+END_SRC
+
+**** The Transducer
+
+Again from the [[https://github.com/cognitect-labs/transducers-ruby/blob/222686714cc55f984671af48bf506f1c130fc013/lib/transducers.rb#L33][source]]:
+
+#+BEGIN_QUOTE
+A _handler_ is an object with a `call` method that a reducer uses
+to process input. In a `map` operation, this would transform the
+input, and in a `filter` operation it would act as a predicate.
+
+A _transducer_ is an object that transforms a reducer by adding
+additional processing for each element in a collection of inputs.
+
+A _transducing process_ is invoked by calling
+`Transducers.transduce` with a transducer, a reducer, an optional
+initial value, and an input collection.
+#+END_QUOTE
+
+Our transducer will compose the functions which filter the
+non-alphanumeric characters that exists on a line, as well as words
+that should be ignored from the text.
+
+This results in the reducer receiving a list of words to compute the
+term frequency list.
+
+#+BEGIN_SRC ruby :tangle src/prog-styles/transducers-in-ruby/run.rb
+
+    t = Transducers.compose(
+      Transducers.map do |line|
+        line.gsub!(/[^a-zA-Z0-9]/, " ") # remove non alphanumeric
+        line.split(' ')                 # split into words
+      end,
+      Transducers.map do |words|        # remove stop words
+        words.delete_if {|w| stop_words.include?(w.downcase) }
+      end
+    )
+
+    words_frequency  = Hash.new {|h,k| h[k] = 0 }
+    words_frequency_list = Transducers.transduce(t, frequency_counter, words_frequency, lines)
+#+END_SRC
+
+**** Printing the results
+
+To verify the results, we only want to check which were the top 25
+terms that have the highest frequency
+
+#+BEGIN_SRC ruby :tangle src/prog-styles/transducers-in-ruby/run.rb
+    # Print the top 25 terms
+    words_frequency_list.to_a[0...25].each do |k, v|
+      puts "#{k}  -  #{v}"
+    end
+#+END_SRC
+
+
