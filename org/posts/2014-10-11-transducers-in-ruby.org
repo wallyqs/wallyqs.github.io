@@ -24,7 +24,7 @@ The full example looks as follows: (explanation of the steps is further below).
   stop_words << ('a'..'z').to_a # also alphabet
   stop_words.flatten!.uniq!
   
-  lines            = File.read(PRIDE_AND_PREJUDICE).lines
+  lines = File.read(PRIDE_AND_PREJUDICE).lines
   frequency_counter = Class.new do
     def step(words_frequency, words)
       words.each { |w| words_frequency[w.downcase] += 1 }
