@@ -83,7 +83,7 @@ require 'transducers'
 
 **** Stop words
 
-The /stop words/ are the list of words and single letters that we
+The /stop words/ are the list of words and single letters that
 appear in the test that we decide to ignore.
 
 #+BEGIN_SRC ruby :results output :tangle src/prog-styles/transducers-in-ruby/run.rb :mkdirp true
@@ -113,7 +113,7 @@ Then from this list, we will take the top 25 terms and print them to stdout.
 
 **** The Collection
 
-The collection upon which we will be applying the transformations are
+The collection upon which we will be applying the transformations
 are each one of the lines that exist in the text.
 
 #+BEGIN_SRC ruby :tangle src/prog-styles/transducers-in-ruby/run.rb
