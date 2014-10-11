@@ -1,5 +1,6 @@
 # -*- mode: org; mode: auto-fill -*-
 #+TITLE: Term Frequency with Transducers gem in Ruby
+#+category: posts
 
 Yesterday, Cognitect [[https://twitter.com/cognitect/status/520644214116212736https://twitter.com/cognitect/status/520644214116212736][announced]] about a Ruby implementation among
 others of the transducers concept that Rich Hickey [[https://www.youtube.com/watch?v=6mTbuzafcII][talked about at StrangeLoop]].
