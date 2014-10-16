@@ -3,10 +3,10 @@
 #+CATEGORY:	posts
 #+LAYOUT:	post
 
-Still going through the /Exercises in Programming Styles/, after
+Still going through the /[[http://www.amazon.com/Exercises-Programming-Style-Cristina-Videira/dp/1482227371/][Exercises in Programming Styles]]/, after
 diving into [[https://github.com/wallyqs/exercises-in-org/blob/master/org/prog-styles/03-monolith/haskell.org][Haskell]] and [[https://github.com/wallyqs/exercises-in-org/blob/master/org/prog-styles/transducers/ruby.org][Transducers]] for a bit, and since I've
 mentioned to other HackerSchoolers about [[https://github.com/derekcollison/nats][NATS]], I decided to use it for
-the map reduce programming style.  It is somewhat loosely based on the
+the map reduce programming example.  It is somewhat loosely based on the
 [[https://github.com/derekcollison/dist-adder][dist-adder]] example from Derek.
 
 *** NATS server
@@ -317,4 +317,3 @@ Once the run is done the output would look something similar to this:
   and see how does defending against this impact the style.
 
 - Dispatch to other nodes with using a different client.
-
