@@ -291,106 +291,106 @@
 </pre></div>
 <h3>Output</h3>
 <p>Once the run is done the output would look something similar to this:</p>
-<div class="highlight"><pre>[2014-10-16T16:25:29 -0400] nats-server         -- started with pid 15660
-[2014-10-16T16:25:33 -0400] aggregator          -- Waiting 5 seconds to get resources for the job...
-[2014-10-16T16:25:36 -0400] aggregator          -- [DISCOVERED]      :: {&quot;id&quot;=&gt;&quot;251adacb-0605-4e96-8904-9fd5f239fce2&quot;}
-[2014-10-16T16:25:36 -0400] aggregator          -- [AVAILABLE NODES] :: 1
-[2014-10-16T16:25:36 -0400] aggregator          -- [DISCOVERED]      :: {&quot;id&quot;=&gt;&quot;a97518f9-2c10-4362-9800-5ec8e57651b9&quot;}
-[2014-10-16T16:25:36 -0400] aggregator          -- [AVAILABLE NODES] :: 2
-[2014-10-16T16:25:36 -0400] aggregator          -- [DISCOVERED]      :: {&quot;id&quot;=&gt;&quot;4ce45026-3cba-4209-a17b-e27e425366c0&quot;}
-[2014-10-16T16:25:36 -0400] aggregator          -- [AVAILABLE NODES] :: 3
-[2014-10-16T16:25:38 -0400] aggregator          -- Total lines to split: 13426
-[2014-10-16T16:25:38 -0400] aggregator          -- Chunk size per node: 4475
-[2014-10-16T16:25:38 -0400] aggregator          -- [REQUEST]   :: Job #1 needs to be done. Anyone can help? Range is (0:4475)
-[2014-10-16T16:25:38 -0400] aggregator          -- [HOPING]    :: 0 -- 4475 to be done by 4ce45026-3cba-4209-a17b-e27e425366c0.
-[2014-10-16T16:25:38 -0400] frequency-counter:1 -- [OK]        :: Start to work on (0:4475)
-[2014-10-16T16:25:39 -0400] aggregator          -- [DONE]      :: Job 1 is done.
-[2014-10-16T16:25:39 -0400] aggregator          -- TOP counted words so far
-[2014-10-16T16:25:39 -0400] aggregator          -- mr  -  395
-[2014-10-16T16:25:39 -0400] aggregator          -- elizabeth  -  202
-[2014-10-16T16:25:39 -0400] aggregator          -- very  -  198
-[2014-10-16T16:25:39 -0400] aggregator          -- bingley  -  181
-[2014-10-16T16:25:39 -0400] aggregator          -- darcy  -  162
-[2014-10-16T16:25:39 -0400] aggregator          -- bennet  -  160
-[2014-10-16T16:25:39 -0400] aggregator          -- miss  -  142
-[2014-10-16T16:25:39 -0400] aggregator          -- such  -  131
-[2014-10-16T16:25:39 -0400] aggregator          -- much  -  130
-[2014-10-16T16:25:39 -0400] aggregator          -- mrs  -  121
-[2014-10-16T16:25:39 -0400] aggregator          -- jane  -  105
-[2014-10-16T16:25:39 -0400] aggregator          -- more  -  102
-[2014-10-16T16:25:39 -0400] aggregator          -- collins  -  95
-[2014-10-16T16:25:39 -0400] aggregator          -- one  -  95
-[2014-10-16T16:25:39 -0400] aggregator          -- though  -  77
-[2014-10-16T16:25:39 -0400] aggregator          -- think  -  74
-[2014-10-16T16:25:39 -0400] aggregator          -- being  -  73
-[2014-10-16T16:25:39 -0400] aggregator          -- know  -  72
-[2014-10-16T16:25:39 -0400] aggregator          -- never  -  71
-[2014-10-16T16:25:39 -0400] aggregator          -- lady  -  70
-[2014-10-16T16:25:39 -0400] aggregator          -- well  -  69
-[2014-10-16T16:25:39 -0400] aggregator          -- good  -  67
-[2014-10-16T16:25:39 -0400] aggregator          -- man  -  65
-[2014-10-16T16:25:39 -0400] aggregator          -- soon  -  64
-[2014-10-16T16:25:39 -0400] aggregator          -- before  -  63
-[2014-10-16T16:25:39 -0400] aggregator          -- [REQUEST]   :: Job #2 needs to be done. Anyone can help? Range is (4476:8951)
-[2014-10-16T16:25:39 -0400] aggregator          -- [HOPING]    :: 4476 -- 8951 to be done by 251adacb-0605-4e96-8904-9fd5f239fce2.
-[2014-10-16T16:25:39 -0400] frequency-counter:3 -- [OK]        :: Start to work on (4476:8951)
-[2014-10-16T16:25:40 -0400] aggregator          -- [DONE]      :: Job 2 is done.
-[2014-10-16T16:25:40 -0400] aggregator          -- TOP counted words so far
-[2014-10-16T16:25:40 -0400] aggregator          -- mr  -  630
-[2014-10-16T16:25:40 -0400] aggregator          -- elizabeth  -  437
-[2014-10-16T16:25:40 -0400] aggregator          -- very  -  378
-[2014-10-16T16:25:40 -0400] aggregator          -- darcy  -  327
-[2014-10-16T16:25:40 -0400] aggregator          -- such  -  251
-[2014-10-16T16:25:40 -0400] aggregator          -- bingley  -  245
-[2014-10-16T16:25:40 -0400] aggregator          -- much  -  243
-[2014-10-16T16:25:40 -0400] aggregator          -- miss  -  240
-[2014-10-16T16:25:40 -0400] aggregator          -- mrs  -  239
-[2014-10-16T16:25:40 -0400] aggregator          -- more  -  218
-[2014-10-16T16:25:40 -0400] aggregator          -- bennet  -  206
-[2014-10-16T16:25:40 -0400] aggregator          -- one  -  187
-[2014-10-16T16:25:40 -0400] aggregator          -- jane  -  185
-[2014-10-16T16:25:40 -0400] aggregator          -- herself  -  173
-[2014-10-16T16:25:40 -0400] aggregator          -- collins  -  167
-[2014-10-16T16:25:40 -0400] aggregator          -- think  -  152
-[2014-10-16T16:25:40 -0400] aggregator          -- lady  -  149
-[2014-10-16T16:25:40 -0400] aggregator          -- before  -  146
-[2014-10-16T16:25:40 -0400] aggregator          -- though  -  143
-[2014-10-16T16:25:40 -0400] aggregator          -- well  -  141
-[2014-10-16T16:25:40 -0400] aggregator          -- never  -  140
-[2014-10-16T16:25:40 -0400] aggregator          -- sister  -  139
-[2014-10-16T16:25:40 -0400] aggregator          -- little  -  136
-[2014-10-16T16:25:40 -0400] aggregator          -- soon  -  133
-[2014-10-16T16:25:40 -0400] aggregator          -- know  -  133
-[2014-10-16T16:25:40 -0400] aggregator          -- [REQUEST]   :: Job #3 needs to be done. Anyone can help? Range is (8952:13426)
-[2014-10-16T16:25:40 -0400] aggregator          -- [HOPING]    :: 8952 -- 13426 to be done by 251adacb-0605-4e96-8904-9fd5f239fce2.
-[2014-10-16T16:25:40 -0400] frequency-counter:3 -- [OK]        :: Start to work on (8952:13426)
-[2014-10-16T16:25:41 -0400] aggregator          -- [DONE]      :: Job 3 is done.
-[2014-10-16T16:25:41 -0400] aggregator          -- TOP counted words so far
-[2014-10-16T16:25:41 -0400] aggregator          -- mr  -  786
-[2014-10-16T16:25:41 -0400] aggregator          -- elizabeth  -  635
-[2014-10-16T16:25:41 -0400] aggregator          -- very  -  488
-[2014-10-16T16:25:41 -0400] aggregator          -- darcy  -  418
-[2014-10-16T16:25:41 -0400] aggregator          -- such  -  395
-[2014-10-16T16:25:41 -0400] aggregator          -- mrs  -  343
-[2014-10-16T16:25:41 -0400] aggregator          -- much  -  329
-[2014-10-16T16:25:41 -0400] aggregator          -- more  -  327
-[2014-10-16T16:25:41 -0400] aggregator          -- bennet  -  323
-[2014-10-16T16:25:41 -0400] aggregator          -- bingley  -  306
-[2014-10-16T16:25:41 -0400] aggregator          -- jane  -  295
-[2014-10-16T16:25:41 -0400] aggregator          -- miss  -  283
-[2014-10-16T16:25:41 -0400] aggregator          -- one  -  275
-[2014-10-16T16:25:41 -0400] aggregator          -- know  -  239
-[2014-10-16T16:25:41 -0400] aggregator          -- before  -  229
-[2014-10-16T16:25:41 -0400] aggregator          -- herself  -  227
-[2014-10-16T16:25:41 -0400] aggregator          -- though  -  226
-[2014-10-16T16:25:41 -0400] aggregator          -- well  -  224
-[2014-10-16T16:25:41 -0400] aggregator          -- never  -  220
-[2014-10-16T16:25:41 -0400] aggregator          -- sister  -  218
-[2014-10-16T16:25:41 -0400] aggregator          -- soon  -  216
-[2014-10-16T16:25:41 -0400] aggregator          -- think  -  211
-[2014-10-16T16:25:41 -0400] aggregator          -- now  -  209
-[2014-10-16T16:25:41 -0400] aggregator          -- time  -  203
-[2014-10-16T16:25:41 -0400] aggregator          -- good  -  201
+<div class="highlight"><pre>nats-server         -- started with pid 15660
+aggregator          -- Waiting 5 seconds to get resources for the job...
+aggregator          -- [DISCOVERED]      :: {&quot;id&quot;=&gt;&quot;251adacb-0605-4e96-8904-9fd5f239fce2&quot;}
+aggregator          -- [AVAILABLE NODES] :: 1
+aggregator          -- [DISCOVERED]      :: {&quot;id&quot;=&gt;&quot;a97518f9-2c10-4362-9800-5ec8e57651b9&quot;}
+aggregator          -- [AVAILABLE NODES] :: 2
+aggregator          -- [DISCOVERED]      :: {&quot;id&quot;=&gt;&quot;4ce45026-3cba-4209-a17b-e27e425366c0&quot;}
+aggregator          -- [AVAILABLE NODES] :: 3
+aggregator          -- Total lines to split: 13426
+aggregator          -- Chunk size per node: 4475
+aggregator          -- [REQUEST]   :: Job #1 needs to be done. Anyone can help? Range is (0:4475)
+aggregator          -- [HOPING]    :: 0 -- 4475 to be done by 4ce45026-3cba-4209-a17b-e27e425366c0.
+frequency-counter:1 -- [OK]        :: Start to work on (0:4475)
+aggregator          -- [DONE]      :: Job 1 is done.
+aggregator          -- TOP counted words so far
+aggregator          -- mr  -  395
+aggregator          -- elizabeth  -  202
+aggregator          -- very  -  198
+aggregator          -- bingley  -  181
+aggregator          -- darcy  -  162
+aggregator          -- bennet  -  160
+aggregator          -- miss  -  142
+aggregator          -- such  -  131
+aggregator          -- much  -  130
+aggregator          -- mrs  -  121
+aggregator          -- jane  -  105
+aggregator          -- more  -  102
+aggregator          -- collins  -  95
+aggregator          -- one  -  95
+aggregator          -- though  -  77
+aggregator          -- think  -  74
+aggregator          -- being  -  73
+aggregator          -- know  -  72
+aggregator          -- never  -  71
+aggregator          -- lady  -  70
+aggregator          -- well  -  69
+aggregator          -- good  -  67
+aggregator          -- man  -  65
+aggregator          -- soon  -  64
+aggregator          -- before  -  63
+aggregator          -- [REQUEST]   :: Job #2 needs to be done. Anyone can help? Range is (4476:8951)
+aggregator          -- [HOPING]    :: 4476 -- 8951 to be done by 251adacb-0605-4e96-8904-9fd5f239fce2.
+frequency-counter:3 -- [OK]        :: Start to work on (4476:8951)
+aggregator          -- [DONE]      :: Job 2 is done.
+aggregator          -- TOP counted words so far
+aggregator          -- mr  -  630
+aggregator          -- elizabeth  -  437
+aggregator          -- very  -  378
+aggregator          -- darcy  -  327
+aggregator          -- such  -  251
+aggregator          -- bingley  -  245
+aggregator          -- much  -  243
+aggregator          -- miss  -  240
+aggregator          -- mrs  -  239
+aggregator          -- more  -  218
+aggregator          -- bennet  -  206
+aggregator          -- one  -  187
+aggregator          -- jane  -  185
+aggregator          -- herself  -  173
+aggregator          -- collins  -  167
+aggregator          -- think  -  152
+aggregator          -- lady  -  149
+aggregator          -- before  -  146
+aggregator          -- though  -  143
+aggregator          -- well  -  141
+aggregator          -- never  -  140
+aggregator          -- sister  -  139
+aggregator          -- little  -  136
+aggregator          -- soon  -  133
+aggregator          -- know  -  133
+aggregator          -- [REQUEST]   :: Job #3 needs to be done. Anyone can help? Range is (8952:13426)
+aggregator          -- [HOPING]    :: 8952 -- 13426 to be done by 251adacb-0605-4e96-8904-9fd5f239fce2.
+frequency-counter:3 -- [OK]        :: Start to work on (8952:13426)
+aggregator          -- [DONE]      :: Job 3 is done.
+aggregator          -- TOP counted words so far
+aggregator          -- mr  -  786
+aggregator          -- elizabeth  -  635
+aggregator          -- very  -  488
+aggregator          -- darcy  -  418
+aggregator          -- such  -  395
+aggregator          -- mrs  -  343
+aggregator          -- much  -  329
+aggregator          -- more  -  327
+aggregator          -- bennet  -  323
+aggregator          -- bingley  -  306
+aggregator          -- jane  -  295
+aggregator          -- miss  -  283
+aggregator          -- one  -  275
+aggregator          -- know  -  239
+aggregator          -- before  -  229
+aggregator          -- herself  -  227
+aggregator          -- though  -  226
+aggregator          -- well  -  224
+aggregator          -- never  -  220
+aggregator          -- sister  -  218
+aggregator          -- soon  -  216
+aggregator          -- think  -  211
+aggregator          -- now  -  209
+aggregator          -- time  -  203
+aggregator          -- good  -  201
 </pre></div>
 <h3>Further work</h3>
 <ul>
