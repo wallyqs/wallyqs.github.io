@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+
+  <head>
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+  <!-- Enable responsiveness on mobile devices-->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  <title>
+    
+      Term Frequency with Transducers gem in Ruby &middot; Literate Infrastructure
+    
+  </title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/public/css/poole.css">
+  <link rel="stylesheet" href="/public/css/syntax.css">
+  <link rel="stylesheet" href="/public/css/hyde.css">
+  <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+
+  <!-- Icons -->
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/public/apple-touch-icon-144-precomposed.png">
+                                 <link rel="shortcut icon" href="/public/favicon.ico">
+
+  <!-- RSS -->
+  <link rel="alternate" type="application/rss+xml" title="RSS" href="/atom.xml">
+</head>
+
+
+  <body>
+  <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-55629836-1', 'auto');
+    ga('send', 'pageview');
+
+  </script>
+    <div class="sidebar">
+  <div class="container sidebar-sticky">
+    <div class="sidebar-about">
+      <h2>
+        <a href="/">
+          Literate Infrastructure
+        </a>
+      </h2>
+      <p>PaaS + Org mode</p>
+      <p class="lead"><a href="https://twitter.com/wallyqs" target="_blank">@wallyqs</a></p>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="sidebar-nav-item" href="/">Home</a>
+
+      
+      
+        
+          
+        
+      
+        
+          
+            <a class="sidebar-nav-item" href="/about.html">About</a>
+          
+        
+      
+        
+      
+        
+          
+        
+      
+        
+          
+            <a class="sidebar-nav-item" href="/posts/">Posts</a>
+          
+        
+      
+        
+          
+        
+      
+
+    </nav>
+
+    <p>&copy; 2014. All rights reserved.</p>
+  </div>
+</div>
+
+
+    <div class="content container">
+      <div class="post">
+  <h1 class="post-title">Term Frequency with Transducers gem in Ruby</h1>
+  <span class="post-date">11 Oct 2014</span>
+  
+<p>Yesterday, Cognitect <a href="https://twitter.com/cognitect/status/520644214116212736https://twitter.com/cognitect/status/520644214116212736">announced</a> about a Ruby implementation among
+  others of the transducers concept that Rich Hickey <a href="https://www.youtube.com/watch?v=6mTbuzafcII">talked about at StrangeLoop</a>.</p>
+<p>After watching the talk a number of times and reading a little the source of the <a href="https://github.com/cognitect-labs/transducers-ruby/blob/master/lib/transducers.rb">gem</a>,
+  I gave it a shot at using it to solve the term frequency exercise
+  from the <i><a href="http://www.amazon.com/Exercises-Programming-Style-Cristina-Videira/dp/1482227371/">Exercises in Programming Styles</a></i> book.</p>
+<h2>Transducers usage in Ruby</h2>
+<p>The full example looks as follows: (explanation of the steps is further below).</p>
+<div class="highlight"><pre><span class="nb">require</span> <span class="s1">&#39;transducers&#39;</span>
+
+<span class="no">SRC_ROOT</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../../..&quot;</span><span class="p">),</span> <span class="s2">&quot;src&quot;</span><span class="p">,</span> <span class="s2">&quot;exercises-in-programming-style&quot;</span><span class="p">)</span>
+<span class="no">PRIDE_AND_PREJUDICE</span>   <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">SRC_ROOT</span><span class="p">,</span> <span class="s2">&quot;pride-and-prejudice.txt&quot;</span><span class="p">)</span>
+<span class="no">STOP_WORDS</span>            <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">SRC_ROOT</span><span class="p">,</span> <span class="s1">&#39;stop_words.txt&#39;</span><span class="p">)</span>
+
+<span class="c1"># load words to ignore</span>
+<span class="n">stop_words</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="no">STOP_WORDS</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+<span class="n">stop_words</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="o">.</span><span class="n">.</span><span class="s1">&#39;z&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">to_a</span> <span class="c1"># also alphabet</span>
+<span class="n">stop_words</span><span class="o">.</span><span class="n">flatten!</span><span class="o">.</span><span class="n">uniq!</span>
+
+<span class="n">lines</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="no">PRIDE_AND_PREJUDICE</span><span class="p">)</span><span class="o">.</span><span class="n">lines</span>
+<span class="n">frequency_counter</span> <span class="o">=</span> <span class="no">Class</span><span class="o">.</span><span class="n">new</span> <span class="k">do</span>
+  <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="n">words_frequency</span><span class="p">,</span> <span class="n">words</span><span class="p">)</span>
+    <span class="n">words</span><span class="o">.</span><span class="n">each</span> <span class="p">{</span> <span class="o">|</span><span class="n">w</span><span class="o">|</span> <span class="n">words_frequency</span><span class="o">[</span><span class="n">w</span><span class="o">.</span><span class="n">downcase</span><span class="o">]</span> <span class="o">+=</span> <span class="mi">1</span> <span class="p">}</span>
+    <span class="n">words_frequency</span>
+  <span class="k">end</span>
+
+  <span class="k">def</span> <span class="nf">complete</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+    <span class="n">result</span><span class="o">.</span><span class="n">sort</span> <span class="p">{</span><span class="o">|</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="o">|</span> <span class="n">a</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span> <span class="o">&lt;=&gt;</span> <span class="n">b</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span><span class="p">}</span><span class="o">.</span><span class="n">reverse</span>
+  <span class="k">end</span>
+<span class="k">end</span><span class="o">.</span><span class="n">new</span>
+
+<span class="n">t</span> <span class="o">=</span> <span class="no">Transducers</span><span class="o">.</span><span class="n">compose</span><span class="p">(</span>
+      <span class="no">Transducers</span><span class="o">.</span><span class="n">map</span> <span class="k">do</span> <span class="o">|</span><span class="n">line</span><span class="o">|</span>
+        <span class="n">line</span><span class="o">.</span><span class="n">gsub!</span><span class="p">(</span><span class="sr">/[^a-zA-Z0-9]/</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">)</span> <span class="c1"># remove non alphanumeric</span>
+        <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span>                 <span class="c1"># split into words</span>
+      <span class="k">end</span><span class="p">,</span>
+      <span class="no">Transducers</span><span class="o">.</span><span class="n">map</span> <span class="k">do</span> <span class="o">|</span><span class="n">words</span><span class="o">|</span>        <span class="c1"># remove stop words</span>
+        <span class="n">words</span><span class="o">.</span><span class="n">delete_if</span> <span class="p">{</span><span class="o">|</span><span class="n">w</span><span class="o">|</span> <span class="n">stop_words</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="n">w</span><span class="o">.</span><span class="n">downcase</span><span class="p">)</span> <span class="p">}</span>
+      <span class="k">end</span><span class="p">)</span>
+
+<span class="n">words_frequency</span>  <span class="o">=</span> <span class="no">Hash</span><span class="o">.</span><span class="n">new</span> <span class="p">{</span><span class="o">|</span><span class="n">h</span><span class="p">,</span><span class="n">k</span><span class="o">|</span> <span class="n">h</span><span class="o">[</span><span class="n">k</span><span class="o">]</span> <span class="o">=</span> <span class="mi">0</span> <span class="p">}</span>
+<span class="n">words_frequency_list</span> <span class="o">=</span> <span class="no">Transducers</span><span class="o">.</span><span class="n">transduce</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">frequency_counter</span><span class="p">,</span> <span class="n">words_frequency</span><span class="p">,</span> <span class="n">lines</span><span class="p">)</span>
+
+<span class="c1"># Print the top 25 terms</span>
+<span class="n">words_frequency_list</span><span class="o">.</span><span class="n">to_a</span><span class="o">[</span><span class="mi">0</span><span class="o">.</span><span class="n">.</span><span class="o">.</span><span class="mi">25</span><span class="o">].</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="o">|</span>
+  <span class="nb">puts</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">k</span><span class="si">}</span><span class="s2">  -  </span><span class="si">#{</span><span class="n">v</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="k">end</span>
+</pre></div>
+<h2>Going over the steps of the implementatoin</h2>
+<h3>Dependencies and definitions</h3>
+<h4><code>Gemfile</code></h4>
+<div class="highlight"><pre><span class="n">source</span> <span class="s2">&quot;http://rubygems.org&quot;</span>
+
+<span class="n">gem</span> <span class="s1">&#39;transducers&#39;</span>
+</pre></div>
+<h4>Imports</h4>
+<div class="highlight"><pre><span class="nb">require</span> <span class="s1">&#39;transducers&#39;</span>
+</pre></div>
+<h4>Location of the files</h4>
+<div class="highlight"><pre><span class="no">SRC_ROOT</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../../..&quot;</span><span class="p">),</span> <span class="s2">&quot;src&quot;</span><span class="p">,</span> <span class="s2">&quot;exercises-in-programming-style&quot;</span><span class="p">)</span>
+<span class="no">PRIDE_AND_PREJUDICE</span>   <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">SRC_ROOT</span><span class="p">,</span> <span class="s2">&quot;pride-and-prejudice.txt&quot;</span><span class="p">)</span>
+<span class="no">STOP_WORDS</span>            <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">SRC_ROOT</span><span class="p">,</span> <span class="s1">&#39;stop_words.txt&#39;</span><span class="p">)</span>
+</pre></div>
+<h4>Stop words</h4>
+<p>The <i>stop words</i> are the list of words and single letters that
+  appear in the test that we decide to ignore.</p>
+<div class="highlight"><pre><span class="c1"># load words to ignore</span>
+<span class="n">stop_words</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="no">STOP_WORDS</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+<span class="n">stop_words</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="o">.</span><span class="n">.</span><span class="s1">&#39;z&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">to_a</span> <span class="c1"># also alphabet</span>
+<span class="n">stop_words</span><span class="o">.</span><span class="n">flatten!</span><span class="o">.</span><span class="n">uniq!</span>
+</pre></div>
+<h3>Using Transducers</h3>
+<p>In order to determine the term frequency in the pride and prejudice
+  text, we will do the following transformations:</p>
+<ol>
+  <li>Create a collection of the lines from the raw body of text</li>
+  <li>Remove non-alphanumeric characters from the line</li>
+  <li>Split the line into words</li>
+  <li>Remove words which are considered to be <i>stop words</i></li>
+</ol>
+<p>Then as part of the reducing step:</p>
+<ol>
+  <li>Increment counter in <code>words_frequency</code> hash each time the word appears</li>
+  <li>Sort the words by frequency</li>
+  <li>Reverse the list</li>
+</ol>
+<p>Then from this list, we will take the top 25 terms and print them to stdout.</p>
+<h4>The Collection</h4>
+<p>The collection upon which we will be applying the transformations
+  are each one of the lines that exist in the text.</p>
+<div class="highlight"><pre><span class="n">lines</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="no">PRIDE_AND_PREJUDICE</span><span class="p">)</span><span class="o">.</span><span class="n">lines</span>
+</pre></div>
+<h4>The Reducer</h4>
+<p>From the <a href="https://github.com/cognitect-labs/transducers-ruby/blob/222686714cc55f984671af48bf506f1c130fc013/lib/transducers.rb#L24">source</a>:</p>
+<blockquote>
+  <p>A <span style="text-decoration:underline;">reducer</span> is an object with a `step` method that takes a result
+    (so far) and an input and returns a new result. This is similar to
+    the blocks we pass to Ruby&#8217;s `reduce` (a.k.a `inject`), and serves a
+    similar role in <span style="text-decoration:underline;">transducing process</span>.</p>
+</blockquote>
+<p>As part of its reducing step, the reducer will receive a list of words
+  in a line, then iterate over this list and increment the counter in
+  the <code>words_frequency</code> hash.</p>
+<p>Then, once the <code>words_frequency</code> has been computed, we returned the
+  result sorted by frequency in descending order.</p>
+<div class="highlight"><pre><span class="n">frequency_counter</span> <span class="o">=</span> <span class="no">Class</span><span class="o">.</span><span class="n">new</span> <span class="k">do</span>
+  <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="n">words_frequency</span><span class="p">,</span> <span class="n">words</span><span class="p">)</span>
+    <span class="n">words</span><span class="o">.</span><span class="n">each</span> <span class="p">{</span> <span class="o">|</span><span class="n">w</span><span class="o">|</span> <span class="n">words_frequency</span><span class="o">[</span><span class="n">w</span><span class="o">.</span><span class="n">downcase</span><span class="o">]</span> <span class="o">+=</span> <span class="mi">1</span> <span class="p">}</span>
+    <span class="n">words_frequency</span>
+  <span class="k">end</span>
+
+  <span class="k">def</span> <span class="nf">complete</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+     <span class="n">result</span><span class="o">.</span><span class="n">sort</span> <span class="p">{</span><span class="o">|</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="o">|</span> <span class="n">a</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span> <span class="o">&lt;=&gt;</span> <span class="n">b</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span><span class="p">}</span><span class="o">.</span><span class="n">reverse</span>
+  <span class="k">end</span>
+<span class="k">end</span><span class="o">.</span><span class="n">new</span>
+</pre></div>
+<h4>The Transducer</h4>
+<p>Again from the <a href="https://github.com/cognitect-labs/transducers-ruby/blob/222686714cc55f984671af48bf506f1c130fc013/lib/transducers.rb#L33">source</a>:</p>
+<blockquote>
+  <p>A <span style="text-decoration:underline;">handler</span> is an object with a `call` method that a reducer uses
+    to process input. In a `map` operation, this would transform the
+    input, and in a `filter` operation it would act as a predicate.</p>
+  <p>A <span style="text-decoration:underline;">transducer</span> is an object that transforms a reducer by adding
+    additional processing for each element in a collection of inputs.</p>
+  <p>A <span style="text-decoration:underline;">transducing process</span> is invoked by calling
+    `Transducers.transduce` with a transducer, a reducer, an optional
+    initial value, and an input collection.</p>
+</blockquote>
+<p>Our transducer will compose the functions which filter the
+  non-alphanumeric characters that exists on a line, as well as words
+  that should be ignored from the text.</p>
+<p>This results in the reducer receiving a list of words to compute the
+  term frequency list.</p>
+<div class="highlight"><pre><span class="n">t</span> <span class="o">=</span> <span class="no">Transducers</span><span class="o">.</span><span class="n">compose</span><span class="p">(</span>
+  <span class="no">Transducers</span><span class="o">.</span><span class="n">map</span> <span class="k">do</span> <span class="o">|</span><span class="n">line</span><span class="o">|</span>
+    <span class="n">line</span><span class="o">.</span><span class="n">gsub!</span><span class="p">(</span><span class="sr">/[^a-zA-Z0-9]/</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">)</span> <span class="c1"># remove non alphanumeric</span>
+    <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span>                 <span class="c1"># split into words</span>
+  <span class="k">end</span><span class="p">,</span>
+  <span class="no">Transducers</span><span class="o">.</span><span class="n">map</span> <span class="k">do</span> <span class="o">|</span><span class="n">words</span><span class="o">|</span>        <span class="c1"># remove stop words</span>
+    <span class="n">words</span><span class="o">.</span><span class="n">delete_if</span> <span class="p">{</span><span class="o">|</span><span class="n">w</span><span class="o">|</span> <span class="n">stop_words</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="n">w</span><span class="o">.</span><span class="n">downcase</span><span class="p">)</span> <span class="p">}</span>
+  <span class="k">end</span>
+<span class="p">)</span>
+
+<span class="n">words_frequency</span>  <span class="o">=</span> <span class="no">Hash</span><span class="o">.</span><span class="n">new</span> <span class="p">{</span><span class="o">|</span><span class="n">h</span><span class="p">,</span><span class="n">k</span><span class="o">|</span> <span class="n">h</span><span class="o">[</span><span class="n">k</span><span class="o">]</span> <span class="o">=</span> <span class="mi">0</span> <span class="p">}</span>
+<span class="n">words_frequency_list</span> <span class="o">=</span> <span class="no">Transducers</span><span class="o">.</span><span class="n">transduce</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">frequency_counter</span><span class="p">,</span> <span class="n">words_frequency</span><span class="p">,</span> <span class="n">lines</span><span class="p">)</span>
+</pre></div>
+<h4>Printing the results</h4>
+<p>To verify the results, we only want to check which were the top 25
+  terms that have the highest frequency</p>
+<div class="highlight"><pre><span class="c1"># Print the top 25 terms</span>
+<span class="n">words_frequency_list</span><span class="o">.</span><span class="n">to_a</span><span class="o">[</span><span class="mi">0</span><span class="o">.</span><span class="n">.</span><span class="o">.</span><span class="mi">25</span><span class="o">].</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="o">|</span>
+  <span class="nb">puts</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">k</span><span class="si">}</span><span class="s2">  -  </span><span class="si">#{</span><span class="n">v</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="k">end</span>
+</pre></div>
+
+
+
+</div>
+
+<div class="related">
+  <h2>Related Posts</h2>
+  <ul class="related-posts">
+    
+      <li>
+        <h3>
+          <a href="/posts/2014/11/17/basic-nats-client/">
+            Basic NATS
+            <small>17 Nov 2014</small>
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/posts/2014/10/16/counting-words-with-nats/">
+            Counting words with NATS
+            <small>16 Oct 2014</small>
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/posts/2014/10/10/hs-recap-1st-week/">
+            Hacker School - week #1 recap
+            <small>10 Oct 2014</small>
+          </a>
+        </h3>
+      </li>
+    
+  </ul>
+</div>
+
+    </div>
+
+  </body>
+</html>

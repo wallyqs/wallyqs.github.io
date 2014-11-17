@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+
+  <head>
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+  <!-- Enable responsiveness on mobile devices-->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  <title>
+    
+      Literate Infrastructure &middot; PaaS + Org mode
+    
+  </title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/public/css/poole.css">
+  <link rel="stylesheet" href="/public/css/syntax.css">
+  <link rel="stylesheet" href="/public/css/hyde.css">
+  <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+
+  <!-- Icons -->
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/public/apple-touch-icon-144-precomposed.png">
+                                 <link rel="shortcut icon" href="/public/favicon.ico">
+
+  <!-- RSS -->
+  <link rel="alternate" type="application/rss+xml" title="RSS" href="/atom.xml">
+</head>
+
+
+  <body>
+  <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-55629836-1', 'auto');
+    ga('send', 'pageview');
+
+  </script>
+    <div class="sidebar">
+  <div class="container sidebar-sticky">
+    <div class="sidebar-about">
+      <h2>
+        <a href="/">
+          Literate Infrastructure
+        </a>
+      </h2>
+      <p>PaaS + Org mode</p>
+      <p class="lead"><a href="https://twitter.com/wallyqs" target="_blank">@wallyqs</a></p>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="sidebar-nav-item active" href="/">Home</a>
+
+      
+      
+        
+          
+        
+      
+        
+          
+            <a class="sidebar-nav-item" href="/about.html">About</a>
+          
+        
+      
+        
+      
+        
+          
+        
+      
+        
+          
+            <a class="sidebar-nav-item" href="/posts/">Posts</a>
+          
+        
+      
+        
+          
+        
+      
+
+    </nav>
+
+    <p>&copy; 2014. All rights reserved.</p>
+  </div>
+</div>
+
+
+    <div class="content container">
+      <div class="posts">
+  
+  <div class="post">
+    <h1 class="post-title">
+      <a href="/posts/2014/11/17/basic-nats-client/">
+        Basic NATS
+      </a>
+    </h1>
+
+    <span class="post-date">17 Nov 2014</span>
+
+    
+<p>There aren&#8217;t many docs out there on <a href="http://nats.io/">NATS</a> even though it is
+  so awesome (and <a href="http://www.bravenewgeek.com/dissecting-message-queues/">fast</a>) so I thought I would share some notes
+  on what it is needed to implement a basic client for NATS,
+  (and maybe one day write a client for it&#8230;)</p>
+<h4>Connecting and receiving INFO</h4>
+<p>Let&#8217;s try a simple connecting test:</p>
+<div class="highlight"><pre><span class="nb">export </span><span class="nv">msgcounter</span><span class="o">=</span>0
+nc 127.0.0.1 4222 <span class="p">|</span> <span class="k">while </span><span class="nb">read </span>msg<span class="p">;</span> <span class="k">do</span>
+<span class="k">  </span><span class="nv">msgcounter</span><span class="o">=</span><span class="sb">`</span>expr <span class="nv">$msgcounter</span> + 1<span class="sb">`</span>
+  <span class="nb">echo</span> <span class="s2">&quot;$msgcounter :: &quot;</span> <span class="nv">$msg</span>
+<span class="k">done</span>
+</pre></div>
+<p>We can see that as soon as we establish the connection, the server will respond with
+  an <code>INFO</code> message, and then after <span style="text-decoration:underline;">2 minutes</span>, it will send its first <code>PING</code> message
+  to check the connection with the client.</p>
+<p>The server will try to send 3 more <code>PING</code> messages to the client,
+  and on the <span style="text-decoration:underline;">4th message</span>, it will close the connection.</p>
+<div class="highlight"><pre>[2014-11-16T14:17:12 -0500] run-nats-server -- 2014/11/16 14:17:12 [INFO] Starting gnatsd version 0.5.6
+[2014-11-16T14:17:12 -0500] run-nats-server -- 2014/11/16 14:17:12 [INFO] Listening for client connections on 0.0.0.0:4222
+[2014-11-16T14:17:12 -0500] run-nats-server -- 2014/11/16 14:17:12 [INFO] gnatsd is ready
+[2014-11-16T14:17:12 -0500] client          -- 1 ::  INFO {&quot;server_id&quot;:&quot;da9955fe007233fa724ec91a8978c44d&quot;,&quot;version&quot;:&quot;0.5.6&quot;,&quot;host&quot;:&quot;0.0.0.0&quot;,&quot;port&quot;:4222,&quot;auth_required&quot;:false,&quot;ssl_required&quot;:false,&quot;max_payload&quot;:1048576} 
+[2014-11-16T14:19:12 -0500] client          -- 2 ::  PING
+[2014-11-16T14:21:12 -0500] client          -- 3 ::  PING
+[2014-11-16T14:23:12 -0500] client          -- 4 ::  -ERR &#39;Stale Connection&#39;
+</pre></div>
+<h4>PING &lt;-&gt; PONG</h4>
+<p>After we have received the first <code>PING</code>, it is needed to reply with another <code>PONG</code>:</p>
+<p>To keep on using netcat for this examples, we will be relying on named
+  pipes and a multiprocess run.  Then, we will be using the named pipe to feed
+  the <code>PONG</code> when we receive a <code>PING</code> from NATS, otherwise the connection would be closed.</p>
+<div class="highlight"><pre><span class="o">[[</span> -e nats-in <span class="o">]]</span>  <span class="o">||</span> mkfifo nats-in
+<span class="o">[[</span> -e nats-out <span class="o">]]</span> <span class="o">||</span> mkfifo nats-out
+
+<span class="nb">echo</span> <span class="s2">&quot;Start client...&quot;</span>
+nc 127.0.0.1 4222 &lt;nats-in &gt;nats-out <span class="p">&amp;</span>
+
+<span class="c"># open nats-in for writing  on fd 3</span>
+<span class="c"># open nats-out for reading on fd 4</span>
+<span class="nb">exec </span>3&gt; nats-in 4&lt;nats-out
+
+<span class="nb">export </span><span class="nv">msgcounter</span><span class="o">=</span>0
+<span class="k">while </span><span class="nb">read </span>msg &lt;<span class="p">&amp;</span>4<span class="p">;</span> <span class="k">do</span>
+<span class="k">  </span><span class="nb">echo</span> <span class="s2">&quot;GOT ::&quot;</span> <span class="nv">$msg</span>
+
+  <span class="nb">export </span><span class="nv">msgcounter</span><span class="o">=</span><span class="sb">`</span>expr <span class="nv">$msgcounter</span> + 1<span class="sb">`</span>
+  <span class="nb">echo</span> <span class="s2">&quot;$msgcounter messages received&quot;</span>
+
+  <span class="c"># process ping</span>
+  <span class="nb">echo</span> <span class="nv">$msg</span> <span class="p">|</span> grep -q PING <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;PONG&quot;</span> &gt;<span class="p">&amp;</span>3 <span class="p">;</span>
+
+<span class="k">done</span>
+</pre></div>
+<h5>Sample output</h5>
+<div class="highlight"><pre>gnatsd		-- [INFO] Starting gnatsd version 0.5.7
+gnatsd		-- [INFO] Listening for client connections on 0.0.0.0:4222
+gnatsd		-- [INFO] gnatsd is ready
+nats-client	-- Start client..
+gnatsd		-- [DEBUG] Client connection created%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+nats-client	-- 1 messages received
+nats-client	-- GOT :: INFO {&quot;server_id&quot;:&quot;93f5d02d3b613ec2f6135e4ffcee199a&quot;,&quot;version&quot;:&quot;0.5.7&quot;,&quot;host&quot;:&quot;0.0.0.0&quot;,&quot;port&quot;:4222,&quot;auth_required&quot;:false,&quot;ssl_required&quot;:false,&quot;max_payload&quot;:1048576} 
+gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+nats-client    -- 2 messages received
+nats-client    -- GOT :: PING
+gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+nats-client    -- 3 messages received
+nats-client    -- GOT :: PING
+gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+nats-client    -- 4 messages received
+nats-client    -- GOT :: PING
+gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+nats-client    -- 5 messages received
+nats-client    -- GOT :: PING
+gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+nats-client    -- 6 messages received
+nats-client    -- GOT :: PING
+gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+nats-client    -- 7 messages received
+nats-client    -- GOT :: PING
+gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+nats-client    -- 8 messages received
+nats-client    -- GOT :: PING
+gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+nats-client    -- 9 messages received
+nats-client    -- GOT :: PING
+</pre></div>
+<h4>PUB  &lt;-&gt; SUB</h4>
+<p>As we have seen, we need to constantly be sending <code>PING</code>
+  otherwise the server will close the connection.</p>
+<p>Now let&#8217;s try creating a subscription!</p>
+<p>Another step that we need to handle is <code>CONNECT</code>,
+  so we do that before starting a subscription. After that,
+  we subscribe to the <code>hello.world</code> channel:</p>
+<div class="highlight"><pre><span class="nb">echo</span> <span class="s1">&#39;CONNECT {&quot;verbose&quot;:false,&quot;pedantic&quot;:false}&#39;</span> &gt; nats-in
+<span class="nb">echo</span> <span class="s2">&quot;SUB hello.world  2&quot;</span> &gt; nats-in
+</pre></div>
+<p>Now if we try to send a message to this channel by <code>nats-pub</code>&#8230;</p>
+<div class="highlight"><pre>nats-pub hello.world -s nats://127.0.0.1:4222 &quot;hoge hoge&quot;
+</pre></div>
+<p>&#8230;we get the following displayed on our netcat console:</p>
+<div class="highlight"><pre><span class="o">[</span>2014-11-16T23:14:20 -0500<span class="o">]</span> nats-client    -- GOT :: MSG hello.world 2 9
+<span class="o">[</span>2014-11-16T23:14:20 -0500<span class="o">]</span> nats-client    -- GOT :: hoge hoge
+</pre></div>
+<p>The <code>9</code> here represents the number of letters that were in the MSG.
+  Now let&#8217;s make them cooperate and send a <code>PUB</code> that says <code>fuga fuga</code>
+  soon after it gets the first message:</p>
+<div class="highlight"><pre><span class="o">[[</span> -e nats-in <span class="o">]]</span>  <span class="o">||</span> mkfifo nats-in
+<span class="o">[[</span> -e nats-out <span class="o">]]</span> <span class="o">||</span> mkfifo nats-out
+
+<span class="c"># cat &gt; nats-in</span>
+<span class="nb">echo</span> <span class="s2">&quot;Start client..&quot;</span>
+nc 127.0.0.1 4222 &lt;nats-in &gt;nats-out <span class="p">&amp;</span>
+
+<span class="c"># open nats-in for writing  on fd 3</span>
+<span class="c"># open nats-out for reading on fd 4</span>
+<span class="nb">exec </span>3&gt; nats-in 4&lt;nats-out
+
+<span class="nb">export </span><span class="nv">pingcounter</span><span class="o">=</span>0
+<span class="k">while </span><span class="nb">read </span>msg &lt;<span class="p">&amp;</span>4<span class="p">;</span> <span class="k">do</span>
+
+<span class="k">  </span><span class="nb">export </span><span class="nv">pingcounter</span><span class="o">=</span><span class="sb">`</span>expr <span class="nv">$pingcounter</span> + 1<span class="sb">`</span>
+  <span class="nb">echo</span> <span class="s2">&quot;$pingcounter messages received&quot;</span>
+  <span class="nb">echo</span> <span class="s2">&quot;GOT :: $msg&quot;</span>
+
+  <span class="c"># As soon as we get INFO, send CONNECT and subscriptions</span>
+  <span class="nb">echo</span> <span class="nv">$msg</span> <span class="p">|</span> grep -q INFO <span class="o">&amp;&amp;</span> <span class="o">{</span>
+    <span class="nb">echo</span> <span class="s1">&#39;CONNECT {&quot;verbose&quot;:false,&quot;pedantic&quot;:false}&#39;</span> &gt; nats-in
+    <span class="nb">echo</span> <span class="s2">&quot;SUB hello.world  2&quot;</span> &gt; nats-in
+  <span class="o">}</span>
+
+  <span class="c"># respond to PING</span>
+  <span class="nb">echo</span> <span class="nv">$msg</span> <span class="p">|</span> grep -q PING <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;PONG&quot;</span> &gt; nats-in
+
+  <span class="c"># respond to MSG hello.world</span>
+  <span class="nb">echo</span> <span class="nv">$msg</span> <span class="p">|</span> grep -q <span class="s2">&quot;MSG hello.world&quot;</span> <span class="o">&amp;&amp;</span> <span class="o">{</span>
+    <span class="nb">echo</span> <span class="s2">&quot;PONG&quot;</span> &gt; nats-in
+    <span class="nb">echo</span> -ne <span class="s1">&#39;PUB hello.world  9\r\nfuga fuga\r\n&#39;</span> &gt; nats-in
+    sleep 1
+  <span class="o">}</span>
+
+<span class="k">done</span>
+</pre></div>
+<h6>Using the special channel &#8217;<code>&gt;</code>&#8217;</h6>
+<p>Here we are subscribing to all channels by using <code>&gt;</code>,
+  which is kind of a special channel to match all:</p>
+<div class="highlight"><pre><span class="nb">echo</span> <span class="s1">&#39;CONNECT {&quot;verbose&quot;:false,&quot;pedantic&quot;:false}&#39;</span> &gt; nats-in
+<span class="nb">echo</span> <span class="s2">&quot;SUB &gt;  2&quot;</span> &gt; nats-in
+</pre></div>
+<h4>Replying to an <code>INBOX</code></h4>
+<p>Once having covered subscriptions and publishing,
+  we can try creating an <code>_INBOX</code> to support requests.</p>
+<p>Agents subscribed to the channel will get this message
+  and respond to to it, but from the client side it is
+  possible to stop receiving once we got enough.</p>
+<div class="highlight"><pre>$ nats-request hello.world -s nats://127.0.0.1:4222 -n 1
+
+SUB _INBOX.46bdca94dd22f452e836b5e1f6  2\r\n&quot;
+PUB hello.world _INBOX.46bdca94dd22f452e836b5e1f6 11\r\nHello World\r\n&quot;
+
+[#1] Replied with : &#39;trying to help&#39;
+</pre></div>
+<p>And in our client we handle it as</p>
+<pre class="example">
+MSG hello.world 2 _INBOX.e16d52026b72575471357cc17d 11
+</pre>
+<p>The client for this would look like this:</p>
+<div class="highlight"><pre><span class="o">[[</span> -e nats-in <span class="o">]]</span>  <span class="o">||</span> mkfifo nats-in
+<span class="o">[[</span> -e nats-out <span class="o">]]</span> <span class="o">||</span> mkfifo nats-out
+
+<span class="nb">echo</span> <span class="s2">&quot;Start client..&quot;</span>
+nc 127.0.0.1 4222 &lt;nats-in &gt;nats-out <span class="p">&amp;</span>
+
+<span class="c"># open nats-in for writing  on fd 3</span>
+<span class="c"># open nats-out for reading on fd 4</span>
+<span class="nb">exec </span>3&gt; nats-in 4&lt;nats-out
+
+<span class="nb">export </span><span class="nv">pingcounter</span><span class="o">=</span>0
+cat nats-out <span class="p">|</span> <span class="k">while </span><span class="nb">read </span>msg<span class="p">;</span> <span class="k">do</span>
+
+<span class="k">  </span><span class="nb">export </span><span class="nv">pingcounter</span><span class="o">=</span><span class="sb">`</span>expr <span class="nv">$pingcounter</span> + 1<span class="sb">`</span>
+  <span class="nb">echo</span> <span class="s2">&quot;$pingcounter messages received&quot;</span>
+  <span class="nb">echo</span> <span class="s2">&quot;GOT :: $msg&quot;</span>
+
+  <span class="c"># As soon as we get INFO, send CONNECT and subscriptions</span>
+  <span class="nb">echo</span> <span class="nv">$msg</span> <span class="p">|</span> grep -q INFO <span class="o">&amp;&amp;</span> <span class="o">{</span>
+    <span class="nb">echo</span> <span class="s1">&#39;CONNECT {&quot;verbose&quot;:false,&quot;pedantic&quot;:false}&#39;</span> &gt; nats-in
+    <span class="nb">echo</span> <span class="s2">&quot;SUB hello.world  2&quot;</span> &gt; nats-in
+  <span class="o">}</span>
+
+  <span class="c"># respond to PING</span>
+  <span class="nb">echo</span> <span class="nv">$msg</span> <span class="p">|</span> grep -q PING <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;PONG&quot;</span> &gt; nats-in
+
+  <span class="c"># respond to MSG hello.world</span>
+  <span class="nb">echo</span> <span class="nv">$msg</span> <span class="p">|</span> grep -q <span class="s2">&quot;MSG hello.world&quot;</span> <span class="o">&amp;&amp;</span> <span class="o">{</span>
+    <span class="nb">echo</span> <span class="s2">&quot;PONG&quot;</span> &gt; nats-in
+    <span class="nb">echo</span> -ne <span class="s2">&quot;PUB hello.world  9\r\nfuga fuga\r\n&quot;</span> &gt; nats-in
+    sleep 1
+  <span class="o">}</span>
+
+  <span class="c"># process MSG hello.world requests</span>
+  <span class="nb">echo</span> <span class="nv">$msg</span> <span class="p">|</span> grep -q <span class="s2">&quot;^MSG hello.world..._INBOX&quot;</span> <span class="o">&amp;&amp;</span> <span class="o">{</span>
+    <span class="nb">echo</span> <span class="s2">&quot;PONG&quot;</span> &gt; nats-in
+    <span class="nv">inbox</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$msg</span> <span class="p">|</span> awk <span class="s1">&#39;{print $4}&#39;</span><span class="sb">`</span>
+    <span class="nb">echo</span> -ne <span class="s2">&quot;PUB $inbox 14\r\ntrying to help\r\n&quot;</span> &gt; nats-in
+  <span class="o">}</span>
+
+<span class="k">done</span>
+</pre></div>
+<p>&#8230;which makes up for an extremely basic version of a NATS client :)</p>
+<div class="highlight"><pre>gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58802 - cid:7)
+nats-client	-- 134 messages received
+nats-client	-- GOT :: fuga fuga
+nats-client	-- 135 messages received
+nats-client	-- GOT :: MSG hello.world 2 9
+gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+nats-client	-- 136 messages received
+nats-client	-- GOT :: fuga fuga
+nats-client	-- 137 messages received
+</pre></div>
+
+
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
+      <a href="/posts/2014/10/16/counting-words-with-nats/">
+        Counting words with NATS
+      </a>
+    </h1>
+
+    <span class="post-date">16 Oct 2014</span>
+
+    
+<p>Still going through the <i><a href="http://www.amazon.com/Exercises-Programming-Style-Cristina-Videira/dp/1482227371/">Exercises in Programming Styles</a></i>, after
+  diving into <a href="https://github.com/wallyqs/exercises-in-org/blob/master/org/prog-styles/03-monolith/haskell.org">Haskell</a> and <a href="https://github.com/wallyqs/exercises-in-org/blob/master/org/prog-styles/transducers/ruby.org">Transducers</a> for a bit, and since I&#8217;ve
+  mentioned to other HackerSchoolers about <a href="https://github.com/derekcollison/nats">NATS</a>, I decided to use it for
+  the map reduce programming example.  It is somewhat loosely based on the
+  <a href="https://github.com/derekcollison/dist-adder">dist-adder</a> example from Derek.</p>
+<h3>NATS server</h3>
+<p>There is readily available <a href="https://registry.hub.docker.com/u/apcera/gnatsd/">gnatsd Docker container</a> that we can use to
+  start the server that will be used by the clients to communicate:</p>
+<div class="highlight"><pre>sudo docker run -p 4222:4222 apcera/gnatsd
+</pre></div>
+<h3>Aggregator</h3>
+<p>I call it the aggregator, but basically this process will be in charge
+  of dispatching a range of the lines in the text and dispatch the task
+  to another node so that it computes the word frequency computation.</p>
+<div class="highlight"><pre><span class="nb">require</span> <span class="s1">&#39;nats/client&#39;</span>
+<span class="nb">require</span> <span class="s1">&#39;json&#39;</span>
+
+<span class="no">NATS</span><span class="o">.</span><span class="n">start</span> <span class="p">{</span>
+
+  <span class="c1"># Run options</span>
+  <span class="vg">$stdout</span><span class="o">.</span><span class="n">sync</span> <span class="o">=</span> <span class="kp">true</span>
+  <span class="o">[</span><span class="s2">&quot;TERM&quot;</span><span class="p">,</span> <span class="s2">&quot;INT&quot;</span><span class="o">].</span><span class="n">each</span> <span class="p">{</span> <span class="o">|</span><span class="n">sig</span><span class="o">|</span> <span class="nb">trap</span><span class="p">(</span><span class="n">sig</span><span class="p">)</span> <span class="p">{</span> <span class="no">NATS</span><span class="o">.</span><span class="n">stop</span> <span class="p">}</span> <span class="p">}</span>
+  <span class="no">SRC_ROOT</span>   <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">),</span> <span class="s2">&quot;src&quot;</span><span class="p">,</span> <span class="s2">&quot;exercises-in-programming-style&quot;</span><span class="p">)</span>
+  <span class="no">PRIDE_AND_PREJUDICE</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">SRC_ROOT</span><span class="p">,</span> <span class="s2">&quot;pride-and-prejudice.txt&quot;</span><span class="p">)</span>
+  <span class="no">STOP_WORDS</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">SRC_ROOT</span><span class="p">,</span> <span class="s1">&#39;stop_words.txt&#39;</span><span class="p">)</span>
+
+  <span class="c1"># Compute the stop words once.</span>
+  <span class="c1"># This payload information is small enough that it will be transmitted</span>
+  <span class="c1"># to the frequency counters via the channel</span>
+  <span class="vi">@stop_words</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="no">STOP_WORDS</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+  <span class="vi">@stop_words</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="o">.</span><span class="n">.</span><span class="s1">&#39;z&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">to_a</span> <span class="c1"># also the alphabet</span>
+  <span class="vi">@stop_words</span><span class="o">.</span><span class="n">flatten!</span><span class="o">.</span><span class="n">uniq!</span>
+
+  <span class="c1"># Initialize</span>
+  <span class="vi">@words</span> <span class="o">=</span> <span class="no">Hash</span><span class="o">.</span><span class="n">new</span> <span class="p">{</span><span class="o">|</span><span class="n">h</span><span class="p">,</span><span class="n">k</span><span class="o">|</span> <span class="n">h</span><span class="o">[</span><span class="n">k</span><span class="o">]</span> <span class="o">=</span> <span class="mi">0</span> <span class="p">}</span>
+  <span class="vi">@available_computing_nodes</span> <span class="o">=</span> <span class="o">[]</span>
+
+  <span class="c1"># Discovery Channel</span>
+  <span class="no">NATS</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="s1">&#39;pride-prejudice.discovery&#39;</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">msg</span><span class="p">,</span> <span class="n">reply</span><span class="p">,</span> <span class="nb">sub</span><span class="o">|</span>
+    <span class="n">computing_node</span> <span class="o">=</span> <span class="no">JSON</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">unless</span> <span class="vi">@available_computing_nodes</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="n">computing_node</span><span class="p">)</span>
+      <span class="nb">puts</span> <span class="s2">&quot;[DISCOVERED]      :: </span><span class="si">#{</span><span class="n">computing_node</span><span class="si">}</span><span class="s2">&quot;</span>
+      <span class="vi">@available_computing_nodes</span> <span class="o">&lt;&lt;</span> <span class="n">computing_node</span>
+      <span class="nb">puts</span> <span class="s2">&quot;[AVAILABLE NODES] :: </span><span class="si">#{</span><span class="vi">@available_computing_nodes</span><span class="o">.</span><span class="n">count</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+
+  <span class="c1"># {&quot;id&quot;=&gt;3, &quot;results&quot;=&gt;{&quot;words&quot;=&gt;[{&quot;test&quot;=&gt;1}]}}</span>
+  <span class="no">NATS</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="s1">&#39;pride-prejudice.responses&#39;</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">msg</span><span class="p">,</span> <span class="n">reply</span><span class="p">,</span> <span class="nb">sub</span><span class="o">|</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="no">JSON</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="nb">puts</span> <span class="s2">&quot;[DONE]      :: Job </span><span class="si">#{</span><span class="n">results</span><span class="o">[</span><span class="s1">&#39;id&#39;</span><span class="o">]</span><span class="si">}</span><span class="s2"> is done.&quot;</span>
+
+    <span class="c1"># Mark the job as done</span>
+    <span class="vi">@chunks</span><span class="o">[</span><span class="n">results</span><span class="o">[</span><span class="s1">&#39;id&#39;</span><span class="o">]][</span><span class="ss">:done</span><span class="o">]</span>    <span class="o">=</span> <span class="kp">true</span>
+
+    <span class="k">begin</span>
+      <span class="c1"># Use the partial results and start to count the words</span>
+      <span class="n">counted_words</span> <span class="o">=</span> <span class="n">results</span><span class="o">[</span><span class="s1">&#39;results&#39;</span><span class="o">][</span><span class="s1">&#39;words&#39;</span><span class="o">]</span>
+      <span class="n">counted_words</span><span class="o">.</span><span class="n">each_pair</span> <span class="k">do</span> <span class="o">|</span><span class="n">w</span><span class="p">,</span> <span class="n">c</span><span class="o">|</span>
+        <span class="vi">@words</span><span class="o">[</span><span class="n">w</span><span class="o">]</span> <span class="o">+=</span> <span class="n">c</span>
+      <span class="k">end</span>
+    <span class="k">rescue</span> <span class="o">=&gt;</span> <span class="n">e</span>
+      <span class="nb">puts</span> <span class="s2">&quot;Error while trying to count the words...&quot;</span>
+      <span class="nb">puts</span> <span class="n">e</span>
+      <span class="nb">puts</span> <span class="n">e</span><span class="o">.</span><span class="n">backtrace</span>
+    <span class="k">end</span>
+
+    <span class="nb">puts</span> <span class="s2">&quot;TOP counted words so far&quot;</span>
+    <span class="vi">@words</span><span class="o">.</span><span class="n">sort</span> <span class="p">{</span><span class="o">|</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="o">|</span> <span class="n">a</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span> <span class="o">&lt;=&gt;</span> <span class="n">b</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span><span class="p">}</span><span class="o">.</span><span class="n">reverse</span><span class="o">[</span><span class="mi">0</span><span class="o">.</span><span class="n">.</span><span class="o">.</span><span class="mi">25</span><span class="o">].</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="o">|</span>
+      <span class="nb">puts</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">k</span><span class="si">}</span><span class="s2">  -  </span><span class="si">#{</span><span class="n">v</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+
+  <span class="nb">puts</span> <span class="s2">&quot;Waiting 5 seconds to get resources for the job...&quot;</span>
+  <span class="no">EM</span><span class="o">.</span><span class="n">add_timer</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span> <span class="k">do</span>
+    <span class="n">pride_and_prejudice_text</span>  <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="no">PRIDE_AND_PREJUDICE</span><span class="p">)</span>
+    <span class="n">total_lines</span> <span class="o">=</span> <span class="n">pride_and_prejudice_text</span><span class="o">.</span><span class="n">lines</span><span class="o">.</span><span class="n">count</span>
+    <span class="nb">puts</span> <span class="s2">&quot;Total lines to split: </span><span class="si">#{</span><span class="n">total_lines</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="c1"># Most likely cannot split the computation perfectly into the number of nodes,</span>
+    <span class="c1"># so we take the remaining lines and add them to the first batch</span>
+    <span class="n">chunk_size</span> <span class="o">=</span> <span class="n">total_lines</span> <span class="o">/</span> <span class="p">(</span><span class="vi">@available_computing_nodes</span><span class="o">.</span><span class="n">count</span><span class="p">)</span>
+    <span class="n">out_of_chunk</span> <span class="o">=</span> <span class="n">total_lines</span> <span class="o">%</span> <span class="vi">@available_computing_nodes</span><span class="o">.</span><span class="n">count</span>
+    <span class="nb">puts</span> <span class="s2">&quot;Chunk size per node: </span><span class="si">#{</span><span class="n">chunk_size</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="c1"># Read the file, count the number of lines, and divide in chunks</span>
+    <span class="c1"># according to the number of available nodes</span>
+    <span class="vi">@chunks</span> <span class="o">=</span> <span class="p">{}</span> <span class="c1"># {index =&gt; {:start, :end, :done, :stop_words }}</span>
+    <span class="n">chunk_start</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">chunk_end</span>   <span class="o">=</span> <span class="mi">0</span>
+    <span class="mi">1</span><span class="o">.</span><span class="n">upto</span><span class="p">(</span><span class="vi">@available_computing_nodes</span><span class="o">.</span><span class="n">count</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">n</span><span class="o">|</span>
+      <span class="n">chunk_end</span> <span class="o">+=</span> <span class="n">chunk_size</span>
+      <span class="k">if</span> <span class="n">out_of_chunk</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="n">chunk_size</span> <span class="o">+=</span> <span class="n">out_of_chunk</span>
+        <span class="n">out_of_chunk</span> <span class="o">=</span> <span class="mi">0</span>
+      <span class="k">end</span>
+      <span class="n">chunk_end</span>  <span class="o">=</span> <span class="o">[</span><span class="n">chunk_end</span><span class="p">,</span> <span class="n">total_lines</span><span class="o">].</span><span class="n">min</span>
+      <span class="vi">@chunks</span><span class="o">[</span><span class="n">n</span><span class="o">]</span>  <span class="o">=</span> <span class="p">{</span><span class="ss">:start</span> <span class="o">=&gt;</span> <span class="n">chunk_start</span><span class="p">,</span> <span class="ss">:end</span> <span class="o">=&gt;</span> <span class="n">chunk_end</span><span class="p">,</span> <span class="ss">:done</span> <span class="o">=&gt;</span> <span class="kp">false</span><span class="p">,</span> <span class="ss">:stop_words</span> <span class="o">=&gt;</span> <span class="vi">@stop_words</span> <span class="p">}</span>
+      <span class="n">chunk_start</span> <span class="o">=</span> <span class="n">chunk_end</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="k">end</span>
+
+    <span class="vi">@chunks</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">job</span><span class="o">|</span>
+      <span class="n">job_id</span><span class="p">,</span> <span class="n">range</span> <span class="o">=</span> <span class="n">job</span>
+
+      <span class="c1"># Only want one checker to respond to this</span>
+      <span class="no">NATS</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="s1">&#39;pride-prejudice.requests&#39;</span><span class="p">,</span> <span class="kp">nil</span><span class="p">,</span> <span class="ss">:max</span> <span class="o">=&gt;</span> <span class="mi">1</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">response</span><span class="o">|</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="no">JSON</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+        <span class="nb">puts</span> <span class="s2">&quot;[REQUEST]   :: Job #</span><span class="si">#{</span><span class="n">job_id</span><span class="si">}</span><span class="s2"> needs to be done. Anyone can help? Range is (</span><span class="si">#{</span><span class="n">range</span><span class="o">[</span><span class="ss">:start</span><span class="o">]</span><span class="si">}</span><span class="s2">:</span><span class="si">#{</span><span class="n">range</span><span class="o">[</span><span class="ss">:end</span><span class="o">]</span><span class="si">}</span><span class="s2">)&quot;</span>
+        <span class="no">NATS</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s2">&quot;pride-prejudice.</span><span class="si">#{</span><span class="n">node</span><span class="o">[</span><span class="s1">&#39;id&#39;</span><span class="o">]</span><span class="si">}</span><span class="s2">.compute&quot;</span><span class="p">,</span> <span class="n">job</span><span class="o">.</span><span class="n">to_json</span><span class="p">)</span> <span class="k">do</span>
+          <span class="nb">puts</span> <span class="s2">&quot;[HOPING]    :: </span><span class="si">#{</span><span class="n">range</span><span class="o">[</span><span class="ss">:start</span><span class="o">]</span><span class="si">}</span><span class="s2"> -- </span><span class="si">#{</span><span class="n">range</span><span class="o">[</span><span class="ss">:end</span><span class="o">]</span><span class="si">}</span><span class="s2"> to be done by </span><span class="si">#{</span><span class="n">node</span><span class="o">[</span><span class="s1">&#39;id&#39;</span><span class="o">]</span><span class="si">}</span><span class="s2">.&quot;</span>
+        <span class="k">end</span>
+      <span class="k">end</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+<span class="p">}</span>
+</pre></div>
+<h3>Word Frequency Counter</h3>
+<p>Then each one of the counters, will receive a chunk of words to
+  process and ignore, then reply with the partial computed frequency when done.</p>
+<p>While receiving tasks, we counter taints itself a little
+  according to the number of tasks that it is in charge of processing.</p>
+<div class="highlight"><pre><span class="nb">require</span> <span class="s1">&#39;nats/client&#39;</span>
+<span class="nb">require</span> <span class="s1">&#39;securerandom&#39;</span>
+<span class="nb">require</span> <span class="s1">&#39;json&#39;</span>
+
+<span class="vg">$stdout</span><span class="o">.</span><span class="n">sync</span> <span class="o">=</span> <span class="kp">true</span>
+<span class="o">[</span><span class="s2">&quot;TERM&quot;</span><span class="p">,</span> <span class="s2">&quot;INT&quot;</span><span class="o">].</span><span class="n">each</span> <span class="p">{</span> <span class="o">|</span><span class="n">sig</span><span class="o">|</span> <span class="nb">trap</span><span class="p">(</span><span class="n">sig</span><span class="p">)</span> <span class="p">{</span> <span class="no">NATS</span><span class="o">.</span><span class="n">stop</span> <span class="p">}</span> <span class="p">}</span>
+<span class="no">SRC_ROOT</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">),</span> <span class="s2">&quot;src&quot;</span><span class="p">,</span> <span class="s2">&quot;exercises-in-programming-style&quot;</span><span class="p">)</span>
+<span class="no">PRIDE_AND_PREJUDICE</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">SRC_ROOT</span><span class="p">,</span> <span class="s2">&quot;pride-and-prejudice.txt&quot;</span><span class="p">)</span>
+
+<span class="no">ID</span>   <span class="o">=</span> <span class="no">SecureRandom</span><span class="o">.</span><span class="n">uuid</span>
+<span class="no">INFO</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;id&#39;</span> <span class="o">=&gt;</span> <span class="no">ID</span> <span class="p">}</span>
+
+<span class="k">def</span> <span class="nf">compute</span><span class="p">(</span><span class="n">range</span><span class="p">)</span>
+  <span class="n">range_start</span>     <span class="o">=</span> <span class="n">range</span><span class="o">[</span><span class="s1">&#39;start&#39;</span><span class="o">].</span><span class="n">to_i</span>
+  <span class="n">range_end</span>       <span class="o">=</span> <span class="n">range</span><span class="o">[</span><span class="s1">&#39;end&#39;</span><span class="o">].</span><span class="n">to_i</span>
+  <span class="n">stop_words</span>      <span class="o">=</span> <span class="n">range</span><span class="o">[</span><span class="s1">&#39;stop_words&#39;</span><span class="o">]</span>
+  <span class="n">words_frequency</span> <span class="o">=</span> <span class="no">Hash</span><span class="o">.</span><span class="n">new</span> <span class="p">{</span><span class="o">|</span><span class="n">h</span><span class="p">,</span><span class="n">k</span><span class="o">|</span> <span class="n">h</span><span class="o">[</span><span class="n">k</span><span class="o">]</span> <span class="o">=</span> <span class="mi">0</span> <span class="p">}</span>
+
+  <span class="c1"># Read local copy of the document and fetch that range of lines</span>
+  <span class="n">lines</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="no">PRIDE_AND_PREJUDICE</span><span class="p">)</span><span class="o">.</span><span class="n">lines</span><span class="o">[</span><span class="n">range_start</span><span class="o">.</span><span class="n">.range_end</span><span class="o">]</span>
+  <span class="n">lines</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">line</span><span class="o">|</span>
+    <span class="n">line</span><span class="o">.</span><span class="n">gsub!</span><span class="p">(</span><span class="sr">/[^a-zA-Z0-9]/</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">)</span> <span class="c1"># remove non alphanumeric</span>
+    <span class="n">words</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
+    <span class="n">words</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">w</span><span class="o">|</span>
+      <span class="k">next</span> <span class="k">if</span> <span class="n">stop_words</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="n">w</span><span class="o">.</span><span class="n">downcase</span><span class="p">)</span>
+      <span class="n">words_frequency</span><span class="o">[</span><span class="n">w</span><span class="o">.</span><span class="n">downcase</span><span class="o">]</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+
+  <span class="n">results</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;words&#39;</span> <span class="o">=&gt;</span> <span class="n">words_frequency</span> <span class="p">}</span>
+
+  <span class="n">results</span>
+<span class="k">end</span>
+
+<span class="no">NATS</span><span class="o">.</span><span class="n">start</span> <span class="k">do</span>
+
+  <span class="vi">@offerings</span> <span class="o">=</span> <span class="mi">0</span>
+
+  <span class="no">EM</span><span class="o">.</span><span class="n">add_periodic_timer</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="k">do</span>
+    <span class="no">NATS</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s1">&#39;pride-prejudice.discovery&#39;</span><span class="p">,</span> <span class="no">INFO</span><span class="o">.</span><span class="n">to_json</span><span class="p">)</span>
+  <span class="k">end</span>
+
+  <span class="no">NATS</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="s1">&#39;pride-prejudice.requests&#39;</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">msg</span><span class="p">,</span> <span class="n">reply</span><span class="p">,</span> <span class="nb">sub</span><span class="o">|</span>
+    <span class="no">EM</span><span class="o">.</span><span class="n">add_timer</span><span class="p">(</span><span class="vi">@offerings</span><span class="p">)</span> <span class="p">{</span> <span class="no">NATS</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="n">reply</span><span class="p">,</span> <span class="no">INFO</span><span class="o">.</span><span class="n">to_json</span><span class="p">)</span> <span class="p">}</span>
+    <span class="vi">@offerings</span> <span class="o">+=</span> <span class="mi">1</span> <span class="c1"># decrease taint delay</span>
+  <span class="k">end</span>
+
+  <span class="no">NATS</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="s2">&quot;pride-prejudice.</span><span class="si">#{</span><span class="no">ID</span><span class="si">}</span><span class="s2">.compute&quot;</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">msg</span><span class="p">,</span> <span class="n">reply</span><span class="p">,</span> <span class="nb">sub</span><span class="o">|</span>
+    <span class="n">job</span> <span class="o">=</span> <span class="no">JSON</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="n">job_id</span><span class="p">,</span> <span class="n">range</span> <span class="o">=</span> <span class="n">job</span>
+    <span class="nb">puts</span> <span class="s2">&quot;[OK]        :: Start to work on (</span><span class="si">#{</span><span class="n">range</span><span class="o">[</span><span class="s1">&#39;start&#39;</span><span class="o">]</span><span class="si">}</span><span class="s2">:</span><span class="si">#{</span><span class="n">range</span><span class="o">[</span><span class="s1">&#39;end&#39;</span><span class="o">]</span><span class="si">}</span><span class="s2">)&quot;</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">compute</span><span class="p">(</span><span class="n">range</span><span class="p">)</span>
+    <span class="vi">@offerings</span> <span class="o">-=</span> <span class="mi">1</span> <span class="c1"># delay ourselves according to the number of task being done</span>
+
+    <span class="n">job_done</span> <span class="o">=</span> <span class="p">{</span>
+     <span class="ss">:id</span>      <span class="o">=&gt;</span> <span class="n">job_id</span><span class="p">,</span>
+     <span class="ss">:results</span> <span class="o">=&gt;</span> <span class="n">results</span>
+    <span class="p">}</span>
+    <span class="no">NATS</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s2">&quot;pride-prejudice.responses&quot;</span><span class="p">,</span> <span class="n">job_done</span><span class="o">.</span><span class="n">to_json</span><span class="p">)</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</pre></div>
+<h3>Output</h3>
+<p>Once the run is done the output would look something similar to this:</p>
+<div class="highlight"><pre>nats-server         -- started with pid 15660
+aggregator          -- Waiting 5 seconds to get resources for the job...
+aggregator          -- [DISCOVERED]      :: {&quot;id&quot;=&gt;&quot;251adacb-0605-4e96-8904-9fd5f239fce2&quot;}
+aggregator          -- [AVAILABLE NODES] :: 1
+aggregator          -- [DISCOVERED]      :: {&quot;id&quot;=&gt;&quot;a97518f9-2c10-4362-9800-5ec8e57651b9&quot;}
+aggregator          -- [AVAILABLE NODES] :: 2
+aggregator          -- [DISCOVERED]      :: {&quot;id&quot;=&gt;&quot;4ce45026-3cba-4209-a17b-e27e425366c0&quot;}
+aggregator          -- [AVAILABLE NODES] :: 3
+aggregator          -- Total lines to split: 13426
+aggregator          -- Chunk size per node: 4475
+aggregator          -- [REQUEST]   :: Job #1 needs to be done. Anyone can help? Range is (0:4475)
+aggregator          -- [HOPING]    :: 0 -- 4475 to be done by 4ce45026-3cba-4209-a17b-e27e425366c0.
+frequency-counter:1 -- [OK]        :: Start to work on (0:4475)
+aggregator          -- [DONE]      :: Job 1 is done.
+aggregator          -- TOP counted words so far
+aggregator          -- mr  -  395
+aggregator          -- elizabeth  -  202
+aggregator          -- very  -  198
+aggregator          -- bingley  -  181
+aggregator          -- darcy  -  162
+aggregator          -- bennet  -  160
+aggregator          -- miss  -  142
+aggregator          -- such  -  131
+aggregator          -- much  -  130
+aggregator          -- mrs  -  121
+aggregator          -- jane  -  105
+aggregator          -- more  -  102
+aggregator          -- collins  -  95
+aggregator          -- one  -  95
+aggregator          -- though  -  77
+aggregator          -- think  -  74
+aggregator          -- being  -  73
+aggregator          -- know  -  72
+aggregator          -- never  -  71
+aggregator          -- lady  -  70
+aggregator          -- well  -  69
+aggregator          -- good  -  67
+aggregator          -- man  -  65
+aggregator          -- soon  -  64
+aggregator          -- before  -  63
+aggregator          -- [REQUEST]   :: Job #2 needs to be done. Anyone can help? Range is (4476:8951)
+aggregator          -- [HOPING]    :: 4476 -- 8951 to be done by 251adacb-0605-4e96-8904-9fd5f239fce2.
+frequency-counter:3 -- [OK]        :: Start to work on (4476:8951)
+aggregator          -- [DONE]      :: Job 2 is done.
+aggregator          -- TOP counted words so far
+aggregator          -- mr  -  630
+aggregator          -- elizabeth  -  437
+aggregator          -- very  -  378
+aggregator          -- darcy  -  327
+aggregator          -- such  -  251
+aggregator          -- bingley  -  245
+aggregator          -- much  -  243
+aggregator          -- miss  -  240
+aggregator          -- mrs  -  239
+aggregator          -- more  -  218
+aggregator          -- bennet  -  206
+aggregator          -- one  -  187
+aggregator          -- jane  -  185
+aggregator          -- herself  -  173
+aggregator          -- collins  -  167
+aggregator          -- think  -  152
+aggregator          -- lady  -  149
+aggregator          -- before  -  146
+aggregator          -- though  -  143
+aggregator          -- well  -  141
+aggregator          -- never  -  140
+aggregator          -- sister  -  139
+aggregator          -- little  -  136
+aggregator          -- soon  -  133
+aggregator          -- know  -  133
+aggregator          -- [REQUEST]   :: Job #3 needs to be done. Anyone can help? Range is (8952:13426)
+aggregator          -- [HOPING]    :: 8952 -- 13426 to be done by 251adacb-0605-4e96-8904-9fd5f239fce2.
+frequency-counter:3 -- [OK]        :: Start to work on (8952:13426)
+aggregator          -- [DONE]      :: Job 3 is done.
+aggregator          -- TOP counted words so far
+aggregator          -- mr  -  786
+aggregator          -- elizabeth  -  635
+aggregator          -- very  -  488
+aggregator          -- darcy  -  418
+aggregator          -- such  -  395
+aggregator          -- mrs  -  343
+aggregator          -- much  -  329
+aggregator          -- more  -  327
+aggregator          -- bennet  -  323
+aggregator          -- bingley  -  306
+aggregator          -- jane  -  295
+aggregator          -- miss  -  283
+aggregator          -- one  -  275
+aggregator          -- know  -  239
+aggregator          -- before  -  229
+aggregator          -- herself  -  227
+aggregator          -- though  -  226
+aggregator          -- well  -  224
+aggregator          -- never  -  220
+aggregator          -- sister  -  218
+aggregator          -- soon  -  216
+aggregator          -- think  -  211
+aggregator          -- now  -  209
+aggregator          -- time  -  203
+aggregator          -- good  -  201
+</pre></div>
+<h3>Further work</h3>
+<ul>
+  <li>Extend this example so that it becomes resilient to fault tolerance,
+    and see how does defending against this impact the style.</li>
+  <li>Dispatch to other nodes with using a different client.</li>
+</ul>
+
+
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
+      <a href="/posts/2014/10/11/transducers-in-ruby/">
+        Term Frequency with Transducers gem in Ruby
+      </a>
+    </h1>
+
+    <span class="post-date">11 Oct 2014</span>
+
+    
+<p>Yesterday, Cognitect <a href="https://twitter.com/cognitect/status/520644214116212736https://twitter.com/cognitect/status/520644214116212736">announced</a> about a Ruby implementation among
+  others of the transducers concept that Rich Hickey <a href="https://www.youtube.com/watch?v=6mTbuzafcII">talked about at StrangeLoop</a>.</p>
+<p>After watching the talk a number of times and reading a little the source of the <a href="https://github.com/cognitect-labs/transducers-ruby/blob/master/lib/transducers.rb">gem</a>,
+  I gave it a shot at using it to solve the term frequency exercise
+  from the <i><a href="http://www.amazon.com/Exercises-Programming-Style-Cristina-Videira/dp/1482227371/">Exercises in Programming Styles</a></i> book.</p>
+<h2>Transducers usage in Ruby</h2>
+<p>The full example looks as follows: (explanation of the steps is further below).</p>
+<div class="highlight"><pre><span class="nb">require</span> <span class="s1">&#39;transducers&#39;</span>
+
+<span class="no">SRC_ROOT</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../../..&quot;</span><span class="p">),</span> <span class="s2">&quot;src&quot;</span><span class="p">,</span> <span class="s2">&quot;exercises-in-programming-style&quot;</span><span class="p">)</span>
+<span class="no">PRIDE_AND_PREJUDICE</span>   <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">SRC_ROOT</span><span class="p">,</span> <span class="s2">&quot;pride-and-prejudice.txt&quot;</span><span class="p">)</span>
+<span class="no">STOP_WORDS</span>            <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">SRC_ROOT</span><span class="p">,</span> <span class="s1">&#39;stop_words.txt&#39;</span><span class="p">)</span>
+
+<span class="c1"># load words to ignore</span>
+<span class="n">stop_words</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="no">STOP_WORDS</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+<span class="n">stop_words</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="o">.</span><span class="n">.</span><span class="s1">&#39;z&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">to_a</span> <span class="c1"># also alphabet</span>
+<span class="n">stop_words</span><span class="o">.</span><span class="n">flatten!</span><span class="o">.</span><span class="n">uniq!</span>
+
+<span class="n">lines</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="no">PRIDE_AND_PREJUDICE</span><span class="p">)</span><span class="o">.</span><span class="n">lines</span>
+<span class="n">frequency_counter</span> <span class="o">=</span> <span class="no">Class</span><span class="o">.</span><span class="n">new</span> <span class="k">do</span>
+  <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="n">words_frequency</span><span class="p">,</span> <span class="n">words</span><span class="p">)</span>
+    <span class="n">words</span><span class="o">.</span><span class="n">each</span> <span class="p">{</span> <span class="o">|</span><span class="n">w</span><span class="o">|</span> <span class="n">words_frequency</span><span class="o">[</span><span class="n">w</span><span class="o">.</span><span class="n">downcase</span><span class="o">]</span> <span class="o">+=</span> <span class="mi">1</span> <span class="p">}</span>
+    <span class="n">words_frequency</span>
+  <span class="k">end</span>
+
+  <span class="k">def</span> <span class="nf">complete</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+    <span class="n">result</span><span class="o">.</span><span class="n">sort</span> <span class="p">{</span><span class="o">|</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="o">|</span> <span class="n">a</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span> <span class="o">&lt;=&gt;</span> <span class="n">b</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span><span class="p">}</span><span class="o">.</span><span class="n">reverse</span>
+  <span class="k">end</span>
+<span class="k">end</span><span class="o">.</span><span class="n">new</span>
+
+<span class="n">t</span> <span class="o">=</span> <span class="no">Transducers</span><span class="o">.</span><span class="n">compose</span><span class="p">(</span>
+      <span class="no">Transducers</span><span class="o">.</span><span class="n">map</span> <span class="k">do</span> <span class="o">|</span><span class="n">line</span><span class="o">|</span>
+        <span class="n">line</span><span class="o">.</span><span class="n">gsub!</span><span class="p">(</span><span class="sr">/[^a-zA-Z0-9]/</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">)</span> <span class="c1"># remove non alphanumeric</span>
+        <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span>                 <span class="c1"># split into words</span>
+      <span class="k">end</span><span class="p">,</span>
+      <span class="no">Transducers</span><span class="o">.</span><span class="n">map</span> <span class="k">do</span> <span class="o">|</span><span class="n">words</span><span class="o">|</span>        <span class="c1"># remove stop words</span>
+        <span class="n">words</span><span class="o">.</span><span class="n">delete_if</span> <span class="p">{</span><span class="o">|</span><span class="n">w</span><span class="o">|</span> <span class="n">stop_words</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="n">w</span><span class="o">.</span><span class="n">downcase</span><span class="p">)</span> <span class="p">}</span>
+      <span class="k">end</span><span class="p">)</span>
+
+<span class="n">words_frequency</span>  <span class="o">=</span> <span class="no">Hash</span><span class="o">.</span><span class="n">new</span> <span class="p">{</span><span class="o">|</span><span class="n">h</span><span class="p">,</span><span class="n">k</span><span class="o">|</span> <span class="n">h</span><span class="o">[</span><span class="n">k</span><span class="o">]</span> <span class="o">=</span> <span class="mi">0</span> <span class="p">}</span>
+<span class="n">words_frequency_list</span> <span class="o">=</span> <span class="no">Transducers</span><span class="o">.</span><span class="n">transduce</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">frequency_counter</span><span class="p">,</span> <span class="n">words_frequency</span><span class="p">,</span> <span class="n">lines</span><span class="p">)</span>
+
+<span class="c1"># Print the top 25 terms</span>
+<span class="n">words_frequency_list</span><span class="o">.</span><span class="n">to_a</span><span class="o">[</span><span class="mi">0</span><span class="o">.</span><span class="n">.</span><span class="o">.</span><span class="mi">25</span><span class="o">].</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="o">|</span>
+  <span class="nb">puts</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">k</span><span class="si">}</span><span class="s2">  -  </span><span class="si">#{</span><span class="n">v</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="k">end</span>
+</pre></div>
+<h2>Going over the steps of the implementatoin</h2>
+<h3>Dependencies and definitions</h3>
+<h4><code>Gemfile</code></h4>
+<div class="highlight"><pre><span class="n">source</span> <span class="s2">&quot;http://rubygems.org&quot;</span>
+
+<span class="n">gem</span> <span class="s1">&#39;transducers&#39;</span>
+</pre></div>
+<h4>Imports</h4>
+<div class="highlight"><pre><span class="nb">require</span> <span class="s1">&#39;transducers&#39;</span>
+</pre></div>
+<h4>Location of the files</h4>
+<div class="highlight"><pre><span class="no">SRC_ROOT</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../../..&quot;</span><span class="p">),</span> <span class="s2">&quot;src&quot;</span><span class="p">,</span> <span class="s2">&quot;exercises-in-programming-style&quot;</span><span class="p">)</span>
+<span class="no">PRIDE_AND_PREJUDICE</span>   <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">SRC_ROOT</span><span class="p">,</span> <span class="s2">&quot;pride-and-prejudice.txt&quot;</span><span class="p">)</span>
+<span class="no">STOP_WORDS</span>            <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">SRC_ROOT</span><span class="p">,</span> <span class="s1">&#39;stop_words.txt&#39;</span><span class="p">)</span>
+</pre></div>
+<h4>Stop words</h4>
+<p>The <i>stop words</i> are the list of words and single letters that
+  appear in the test that we decide to ignore.</p>
+<div class="highlight"><pre><span class="c1"># load words to ignore</span>
+<span class="n">stop_words</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="no">STOP_WORDS</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+<span class="n">stop_words</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="o">.</span><span class="n">.</span><span class="s1">&#39;z&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">to_a</span> <span class="c1"># also alphabet</span>
+<span class="n">stop_words</span><span class="o">.</span><span class="n">flatten!</span><span class="o">.</span><span class="n">uniq!</span>
+</pre></div>
+<h3>Using Transducers</h3>
+<p>In order to determine the term frequency in the pride and prejudice
+  text, we will do the following transformations:</p>
+<ol>
+  <li>Create a collection of the lines from the raw body of text</li>
+  <li>Remove non-alphanumeric characters from the line</li>
+  <li>Split the line into words</li>
+  <li>Remove words which are considered to be <i>stop words</i></li>
+</ol>
+<p>Then as part of the reducing step:</p>
+<ol>
+  <li>Increment counter in <code>words_frequency</code> hash each time the word appears</li>
+  <li>Sort the words by frequency</li>
+  <li>Reverse the list</li>
+</ol>
+<p>Then from this list, we will take the top 25 terms and print them to stdout.</p>
+<h4>The Collection</h4>
+<p>The collection upon which we will be applying the transformations
+  are each one of the lines that exist in the text.</p>
+<div class="highlight"><pre><span class="n">lines</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="no">PRIDE_AND_PREJUDICE</span><span class="p">)</span><span class="o">.</span><span class="n">lines</span>
+</pre></div>
+<h4>The Reducer</h4>
+<p>From the <a href="https://github.com/cognitect-labs/transducers-ruby/blob/222686714cc55f984671af48bf506f1c130fc013/lib/transducers.rb#L24">source</a>:</p>
+<blockquote>
+  <p>A <span style="text-decoration:underline;">reducer</span> is an object with a `step` method that takes a result
+    (so far) and an input and returns a new result. This is similar to
+    the blocks we pass to Ruby&#8217;s `reduce` (a.k.a `inject`), and serves a
+    similar role in <span style="text-decoration:underline;">transducing process</span>.</p>
+</blockquote>
+<p>As part of its reducing step, the reducer will receive a list of words
+  in a line, then iterate over this list and increment the counter in
+  the <code>words_frequency</code> hash.</p>
+<p>Then, once the <code>words_frequency</code> has been computed, we returned the
+  result sorted by frequency in descending order.</p>
+<div class="highlight"><pre><span class="n">frequency_counter</span> <span class="o">=</span> <span class="no">Class</span><span class="o">.</span><span class="n">new</span> <span class="k">do</span>
+  <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="n">words_frequency</span><span class="p">,</span> <span class="n">words</span><span class="p">)</span>
+    <span class="n">words</span><span class="o">.</span><span class="n">each</span> <span class="p">{</span> <span class="o">|</span><span class="n">w</span><span class="o">|</span> <span class="n">words_frequency</span><span class="o">[</span><span class="n">w</span><span class="o">.</span><span class="n">downcase</span><span class="o">]</span> <span class="o">+=</span> <span class="mi">1</span> <span class="p">}</span>
+    <span class="n">words_frequency</span>
+  <span class="k">end</span>
+
+  <span class="k">def</span> <span class="nf">complete</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+     <span class="n">result</span><span class="o">.</span><span class="n">sort</span> <span class="p">{</span><span class="o">|</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="o">|</span> <span class="n">a</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span> <span class="o">&lt;=&gt;</span> <span class="n">b</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span><span class="p">}</span><span class="o">.</span><span class="n">reverse</span>
+  <span class="k">end</span>
+<span class="k">end</span><span class="o">.</span><span class="n">new</span>
+</pre></div>
+<h4>The Transducer</h4>
+<p>Again from the <a href="https://github.com/cognitect-labs/transducers-ruby/blob/222686714cc55f984671af48bf506f1c130fc013/lib/transducers.rb#L33">source</a>:</p>
+<blockquote>
+  <p>A <span style="text-decoration:underline;">handler</span> is an object with a `call` method that a reducer uses
+    to process input. In a `map` operation, this would transform the
+    input, and in a `filter` operation it would act as a predicate.</p>
+  <p>A <span style="text-decoration:underline;">transducer</span> is an object that transforms a reducer by adding
+    additional processing for each element in a collection of inputs.</p>
+  <p>A <span style="text-decoration:underline;">transducing process</span> is invoked by calling
+    `Transducers.transduce` with a transducer, a reducer, an optional
+    initial value, and an input collection.</p>
+</blockquote>
+<p>Our transducer will compose the functions which filter the
+  non-alphanumeric characters that exists on a line, as well as words
+  that should be ignored from the text.</p>
+<p>This results in the reducer receiving a list of words to compute the
+  term frequency list.</p>
+<div class="highlight"><pre><span class="n">t</span> <span class="o">=</span> <span class="no">Transducers</span><span class="o">.</span><span class="n">compose</span><span class="p">(</span>
+  <span class="no">Transducers</span><span class="o">.</span><span class="n">map</span> <span class="k">do</span> <span class="o">|</span><span class="n">line</span><span class="o">|</span>
+    <span class="n">line</span><span class="o">.</span><span class="n">gsub!</span><span class="p">(</span><span class="sr">/[^a-zA-Z0-9]/</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">)</span> <span class="c1"># remove non alphanumeric</span>
+    <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span>                 <span class="c1"># split into words</span>
+  <span class="k">end</span><span class="p">,</span>
+  <span class="no">Transducers</span><span class="o">.</span><span class="n">map</span> <span class="k">do</span> <span class="o">|</span><span class="n">words</span><span class="o">|</span>        <span class="c1"># remove stop words</span>
+    <span class="n">words</span><span class="o">.</span><span class="n">delete_if</span> <span class="p">{</span><span class="o">|</span><span class="n">w</span><span class="o">|</span> <span class="n">stop_words</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="n">w</span><span class="o">.</span><span class="n">downcase</span><span class="p">)</span> <span class="p">}</span>
+  <span class="k">end</span>
+<span class="p">)</span>
+
+<span class="n">words_frequency</span>  <span class="o">=</span> <span class="no">Hash</span><span class="o">.</span><span class="n">new</span> <span class="p">{</span><span class="o">|</span><span class="n">h</span><span class="p">,</span><span class="n">k</span><span class="o">|</span> <span class="n">h</span><span class="o">[</span><span class="n">k</span><span class="o">]</span> <span class="o">=</span> <span class="mi">0</span> <span class="p">}</span>
+<span class="n">words_frequency_list</span> <span class="o">=</span> <span class="no">Transducers</span><span class="o">.</span><span class="n">transduce</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">frequency_counter</span><span class="p">,</span> <span class="n">words_frequency</span><span class="p">,</span> <span class="n">lines</span><span class="p">)</span>
+</pre></div>
+<h4>Printing the results</h4>
+<p>To verify the results, we only want to check which were the top 25
+  terms that have the highest frequency</p>
+<div class="highlight"><pre><span class="c1"># Print the top 25 terms</span>
+<span class="n">words_frequency_list</span><span class="o">.</span><span class="n">to_a</span><span class="o">[</span><span class="mi">0</span><span class="o">.</span><span class="n">.</span><span class="o">.</span><span class="mi">25</span><span class="o">].</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="o">|</span>
+  <span class="nb">puts</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">k</span><span class="si">}</span><span class="s2">  -  </span><span class="si">#{</span><span class="n">v</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="k">end</span>
+</pre></div>
+
+
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
+      <a href="/posts/2014/10/10/hs-recap-1st-week/">
+        Hacker School - week #1 recap
+      </a>
+    </h1>
+
+    <span class="post-date">10 Oct 2014</span>
+
+    
+<p>It&#8217;s been almost a week since I came to New York to join
+  HackerSchool, a quick recap:</p>
+<h3>Week of [2014-10-06]&#8211;[2014-10-10]</h3>
+<ul>
+  <li><a href="https://twitter.com/cristalopes">Crista Lopes</a> was the resident during this week and she talked about
+    her <i><a href="http://www.amazon.com/Exercises-Programming-Style-Cristina-Videira/dp/1482227371/">Exercises in Programming Styles</a></i> book during the first days.
+    I&#8217;m not even halfway through the book yet, though I have to say that
+    the book has already left a mark.
+    <p>Crista then went on to concisely explain theoretical concepts
+      around types, data structures, and even monads in Haskell.</p>
+    <p>I also shared a bit about Org Babel, which may have to do something
+      to do with the following tweet:</p>
+  <blockquote class="twitter-tweet" lang="en"><p>Note to self: set this up in my emacs and learn more about it <a href="http://t.co/HIaegQ5bHp">http://t.co/HIaegQ5bHp</a></p>&mdash; Crista Lopes (@cristalopes) <a href="https://twitter.com/cristalopes/status/519971789422997505">October 8, 2014</a></blockquote>
+  <script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script>
+  </li>
+  <li>Right now I&#8217;m working through the exercises <a href="https://github.com/wallyqs/exercises-in-org/tree/master/org/prog-styles">here</a> (of course, in Org mode).
+    I named it <i>Exercises in Org</i> to keep the scope open
+    to other exercises, though focusing on the <i>programming styles</i> book at this moment.</li>
+  <li>I took a bit of time to revamp my blog yet again.  This time using
+    Hyde as the the theme and the <code>org/</code>, <code>src/</code> folder structure that I
+    have been practicing lately.  Repo at <a href="https://github.com/wallyqs/org-hyde">wallyqs/org-hyde</a>.</li>
+  <li>Another great thing of being in NYC is the amount of meetups that there are.
+    I assisted to the Mesos NYC meetup at the Twitter offices to hear
+    about the practical usage of Aurora and Mesos, as presented by <a href="https://twitter.com/wfarner">Bill Farner</a>.
+    In the following weeks I will be diving more into Mesos, so this was
+    a good opportunity to ask directly to those who operate regarding
+    its practical usage.</li>
+  <li>Living in NYC related:
+    <ul>
+      <li>Got my Airbnbs setup until the beginnings of December.</li>
+      <li>Discovered <a href="http://www.gasolinealleycoffee.com/">Gasoline Alley Coffee</a> which is just around the corner of HackerSchool.</li>
+    </ul>
+  </li>
+  <li>Overall, having a great time.  The <a href="https://www.hackerschool.com/manual#sub-sec-social-rules">social rules being applied</a> (no feigning, no subtleisms, &#8230;)
+    make up for an comfortable environment of collaboration which I had not experienced before,
+    at least definitely not on this level.</li>
+</ul>
+
+
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
+      <a href="/posts/2014/10/08/moved-to-hyde/">
+        Switching to Hyde
+      </a>
+    </h1>
+
+    <span class="post-date">08 Oct 2014</span>
+
+    
+<p>Here is a modified version of the original Hyde fit for my flow
+  to continue doing things with mostly Org mode.</p>
+<p>The repo can be found here: <a href="https://github.com/wallyqs/org-hyde">https://github.com/wallyqs/org-hyde</a></p>
+
+
+
+  </div>
+  
+</div>
+
+<div class="pagination">
+  
+    <a class="pagination-item older" href="/page2">Older</a>
+  
+  
+    <span class="pagination-item newer">Newer</span>
+  
+</div>
+    </div>
+
+  </body>
+</html>

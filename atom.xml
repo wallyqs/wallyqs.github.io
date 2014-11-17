@@ -1,0 +1,958 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+ <title>Literate Infrastructure</title>
+ <link href="/atom.xml" rel="self"/>
+ <link href="/"/>
+ <updated>2014-11-17T16:01:08-05:00</updated>
+ <id></id>
+ <author>
+   <name>Waldemar Quevedo</name>
+   <email></email>
+ </author>
+
+ 
+ <entry>
+   <title>Basic NATS</title>
+   <link href="/posts/2014/11/17/basic-nats-client/"/>
+   <updated>2014-11-17T00:00:00-05:00</updated>
+   <id>/posts/2014/11/17/basic-nats-client</id>
+   <content type="html">
+&lt;p&gt;There aren&amp;#8217;t many docs out there on &lt;a href=&quot;http://nats.io/&quot;&gt;NATS&lt;/a&gt; even though it is
+  so awesome (and &lt;a href=&quot;http://www.bravenewgeek.com/dissecting-message-queues/&quot;&gt;fast&lt;/a&gt;) so I thought I would share some notes
+  on what it is needed to implement a basic client for NATS,
+  (and maybe one day write a client for it&amp;#8230;)&lt;/p&gt;
+&lt;h4&gt;Connecting and receiving INFO&lt;/h4&gt;
+&lt;p&gt;Let&amp;#8217;s try a simple connecting test:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;nb&quot;&gt;export &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;msgcounter&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;0
+nc 127.0.0.1 4222 &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;while &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;read &lt;/span&gt;msg&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;  &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;msgcounter&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;sb&quot;&gt;`&lt;/span&gt;expr &lt;span class=&quot;nv&quot;&gt;$msgcounter&lt;/span&gt; + 1&lt;span class=&quot;sb&quot;&gt;`&lt;/span&gt;
+  &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;$msgcounter :: &amp;quot;&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$msg&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;done&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;We can see that as soon as we establish the connection, the server will respond with
+  an &lt;code&gt;INFO&lt;/code&gt; message, and then after &lt;span style=&quot;text-decoration:underline;&quot;&gt;2 minutes&lt;/span&gt;, it will send its first &lt;code&gt;PING&lt;/code&gt; message
+  to check the connection with the client.&lt;/p&gt;
+&lt;p&gt;The server will try to send 3 more &lt;code&gt;PING&lt;/code&gt; messages to the client,
+  and on the &lt;span style=&quot;text-decoration:underline;&quot;&gt;4th message&lt;/span&gt;, it will close the connection.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;[2014-11-16T14:17:12 -0500] run-nats-server -- 2014/11/16 14:17:12 [INFO] Starting gnatsd version 0.5.6
+[2014-11-16T14:17:12 -0500] run-nats-server -- 2014/11/16 14:17:12 [INFO] Listening for client connections on 0.0.0.0:4222
+[2014-11-16T14:17:12 -0500] run-nats-server -- 2014/11/16 14:17:12 [INFO] gnatsd is ready
+[2014-11-16T14:17:12 -0500] client          -- 1 ::  INFO {&amp;quot;server_id&amp;quot;:&amp;quot;da9955fe007233fa724ec91a8978c44d&amp;quot;,&amp;quot;version&amp;quot;:&amp;quot;0.5.6&amp;quot;,&amp;quot;host&amp;quot;:&amp;quot;0.0.0.0&amp;quot;,&amp;quot;port&amp;quot;:4222,&amp;quot;auth_required&amp;quot;:false,&amp;quot;ssl_required&amp;quot;:false,&amp;quot;max_payload&amp;quot;:1048576} 
+[2014-11-16T14:19:12 -0500] client          -- 2 ::  PING
+[2014-11-16T14:21:12 -0500] client          -- 3 ::  PING
+[2014-11-16T14:23:12 -0500] client          -- 4 ::  -ERR &amp;#39;Stale Connection&amp;#39;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h4&gt;PING &amp;lt;-&amp;gt; PONG&lt;/h4&gt;
+&lt;p&gt;After we have received the first &lt;code&gt;PING&lt;/code&gt;, it is needed to reply with another &lt;code&gt;PONG&lt;/code&gt;:&lt;/p&gt;
+&lt;p&gt;To keep on using netcat for this examples, we will be relying on named
+  pipes and a multiprocess run.  Then, we will be using the named pipe to feed
+  the &lt;code&gt;PONG&lt;/code&gt; when we receive a &lt;code&gt;PING&lt;/code&gt; from NATS, otherwise the connection would be closed.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;o&quot;&gt;[[&lt;/span&gt; -e nats-in &lt;span class=&quot;o&quot;&gt;]]&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;||&lt;/span&gt; mkfifo nats-in
+&lt;span class=&quot;o&quot;&gt;[[&lt;/span&gt; -e nats-out &lt;span class=&quot;o&quot;&gt;]]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;||&lt;/span&gt; mkfifo nats-out
+
+&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;Start client...&amp;quot;&lt;/span&gt;
+nc 127.0.0.1 4222 &amp;lt;nats-in &amp;gt;nats-out &lt;span class=&quot;p&quot;&gt;&amp;amp;&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;# open nats-in for writing  on fd 3&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# open nats-out for reading on fd 4&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;exec &lt;/span&gt;3&amp;gt; nats-in 4&amp;lt;nats-out
+
+&lt;span class=&quot;nb&quot;&gt;export &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;msgcounter&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;0
+&lt;span class=&quot;k&quot;&gt;while &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;read &lt;/span&gt;msg &amp;lt;&lt;span class=&quot;p&quot;&gt;&amp;amp;&lt;/span&gt;4&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;  &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;GOT ::&amp;quot;&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$msg&lt;/span&gt;
+
+  &lt;span class=&quot;nb&quot;&gt;export &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;msgcounter&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;sb&quot;&gt;`&lt;/span&gt;expr &lt;span class=&quot;nv&quot;&gt;$msgcounter&lt;/span&gt; + 1&lt;span class=&quot;sb&quot;&gt;`&lt;/span&gt;
+  &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;$msgcounter messages received&amp;quot;&lt;/span&gt;
+
+  &lt;span class=&quot;c&quot;&gt;# process ping&lt;/span&gt;
+  &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$msg&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; grep -q PING &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;PONG&amp;quot;&lt;/span&gt; &amp;gt;&lt;span class=&quot;p&quot;&gt;&amp;amp;&lt;/span&gt;3 &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;done&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h5&gt;Sample output&lt;/h5&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;gnatsd		-- [INFO] Starting gnatsd version 0.5.7
+gnatsd		-- [INFO] Listening for client connections on 0.0.0.0:4222
+gnatsd		-- [INFO] gnatsd is ready
+nats-client	-- Start client..
+gnatsd		-- [DEBUG] Client connection created%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+nats-client	-- 1 messages received
+nats-client	-- GOT :: INFO {&amp;quot;server_id&amp;quot;:&amp;quot;93f5d02d3b613ec2f6135e4ffcee199a&amp;quot;,&amp;quot;version&amp;quot;:&amp;quot;0.5.7&amp;quot;,&amp;quot;host&amp;quot;:&amp;quot;0.0.0.0&amp;quot;,&amp;quot;port&amp;quot;:4222,&amp;quot;auth_required&amp;quot;:false,&amp;quot;ssl_required&amp;quot;:false,&amp;quot;max_payload&amp;quot;:1048576} 
+gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+nats-client    -- 2 messages received
+nats-client    -- GOT :: PING
+gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+nats-client    -- 3 messages received
+nats-client    -- GOT :: PING
+gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+nats-client    -- 4 messages received
+nats-client    -- GOT :: PING
+gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+nats-client    -- 5 messages received
+nats-client    -- GOT :: PING
+gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+nats-client    -- 6 messages received
+nats-client    -- GOT :: PING
+gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+nats-client    -- 7 messages received
+nats-client    -- GOT :: PING
+gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+nats-client    -- 8 messages received
+nats-client    -- GOT :: PING
+gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+nats-client    -- 9 messages received
+nats-client    -- GOT :: PING
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h4&gt;PUB  &amp;lt;-&amp;gt; SUB&lt;/h4&gt;
+&lt;p&gt;As we have seen, we need to constantly be sending &lt;code&gt;PING&lt;/code&gt;
+  otherwise the server will close the connection.&lt;/p&gt;
+&lt;p&gt;Now let&amp;#8217;s try creating a subscription!&lt;/p&gt;
+&lt;p&gt;Another step that we need to handle is &lt;code&gt;CONNECT&lt;/code&gt;,
+  so we do that before starting a subscription. After that,
+  we subscribe to the &lt;code&gt;hello.world&lt;/code&gt; channel:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;CONNECT {&amp;quot;verbose&amp;quot;:false,&amp;quot;pedantic&amp;quot;:false}&amp;#39;&lt;/span&gt; &amp;gt; nats-in
+&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;SUB hello.world  2&amp;quot;&lt;/span&gt; &amp;gt; nats-in
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Now if we try to send a message to this channel by &lt;code&gt;nats-pub&lt;/code&gt;&amp;#8230;&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;nats-pub hello.world -s nats://127.0.0.1:4222 &amp;quot;hoge hoge&amp;quot;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;&amp;#8230;we get the following displayed on our netcat console:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;2014-11-16T23:14:20 -0500&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; nats-client    -- GOT :: MSG hello.world 2 9
+&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;2014-11-16T23:14:20 -0500&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; nats-client    -- GOT :: hoge hoge
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;The &lt;code&gt;9&lt;/code&gt; here represents the number of letters that were in the MSG.
+  Now let&amp;#8217;s make them cooperate and send a &lt;code&gt;PUB&lt;/code&gt; that says &lt;code&gt;fuga fuga&lt;/code&gt;
+  soon after it gets the first message:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;o&quot;&gt;[[&lt;/span&gt; -e nats-in &lt;span class=&quot;o&quot;&gt;]]&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;||&lt;/span&gt; mkfifo nats-in
+&lt;span class=&quot;o&quot;&gt;[[&lt;/span&gt; -e nats-out &lt;span class=&quot;o&quot;&gt;]]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;||&lt;/span&gt; mkfifo nats-out
+
+&lt;span class=&quot;c&quot;&gt;# cat &amp;gt; nats-in&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;Start client..&amp;quot;&lt;/span&gt;
+nc 127.0.0.1 4222 &amp;lt;nats-in &amp;gt;nats-out &lt;span class=&quot;p&quot;&gt;&amp;amp;&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;# open nats-in for writing  on fd 3&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# open nats-out for reading on fd 4&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;exec &lt;/span&gt;3&amp;gt; nats-in 4&amp;lt;nats-out
+
+&lt;span class=&quot;nb&quot;&gt;export &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;pingcounter&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;0
+&lt;span class=&quot;k&quot;&gt;while &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;read &lt;/span&gt;msg &amp;lt;&lt;span class=&quot;p&quot;&gt;&amp;amp;&lt;/span&gt;4&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;  &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;export &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;pingcounter&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;sb&quot;&gt;`&lt;/span&gt;expr &lt;span class=&quot;nv&quot;&gt;$pingcounter&lt;/span&gt; + 1&lt;span class=&quot;sb&quot;&gt;`&lt;/span&gt;
+  &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;$pingcounter messages received&amp;quot;&lt;/span&gt;
+  &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;GOT :: $msg&amp;quot;&lt;/span&gt;
+
+  &lt;span class=&quot;c&quot;&gt;# As soon as we get INFO, send CONNECT and subscriptions&lt;/span&gt;
+  &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$msg&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; grep -q INFO &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;CONNECT {&amp;quot;verbose&amp;quot;:false,&amp;quot;pedantic&amp;quot;:false}&amp;#39;&lt;/span&gt; &amp;gt; nats-in
+    &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;SUB hello.world  2&amp;quot;&lt;/span&gt; &amp;gt; nats-in
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+  &lt;span class=&quot;c&quot;&gt;# respond to PING&lt;/span&gt;
+  &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$msg&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; grep -q PING &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;PONG&amp;quot;&lt;/span&gt; &amp;gt; nats-in
+
+  &lt;span class=&quot;c&quot;&gt;# respond to MSG hello.world&lt;/span&gt;
+  &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$msg&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; grep -q &lt;span class=&quot;s2&quot;&gt;&amp;quot;MSG hello.world&amp;quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;PONG&amp;quot;&lt;/span&gt; &amp;gt; nats-in
+    &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; -ne &lt;span class=&quot;s1&quot;&gt;&amp;#39;PUB hello.world  9\r\nfuga fuga\r\n&amp;#39;&lt;/span&gt; &amp;gt; nats-in
+    sleep 1
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;done&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h6&gt;Using the special channel &amp;#8217;&lt;code&gt;&amp;gt;&lt;/code&gt;&amp;#8217;&lt;/h6&gt;
+&lt;p&gt;Here we are subscribing to all channels by using &lt;code&gt;&amp;gt;&lt;/code&gt;,
+  which is kind of a special channel to match all:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;CONNECT {&amp;quot;verbose&amp;quot;:false,&amp;quot;pedantic&amp;quot;:false}&amp;#39;&lt;/span&gt; &amp;gt; nats-in
+&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;SUB &amp;gt;  2&amp;quot;&lt;/span&gt; &amp;gt; nats-in
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h4&gt;Replying to an &lt;code&gt;INBOX&lt;/code&gt;&lt;/h4&gt;
+&lt;p&gt;Once having covered subscriptions and publishing,
+  we can try creating an &lt;code&gt;_INBOX&lt;/code&gt; to support requests.&lt;/p&gt;
+&lt;p&gt;Agents subscribed to the channel will get this message
+  and respond to to it, but from the client side it is
+  possible to stop receiving once we got enough.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;$ nats-request hello.world -s nats://127.0.0.1:4222 -n 1
+
+SUB _INBOX.46bdca94dd22f452e836b5e1f6  2\r\n&amp;quot;
+PUB hello.world _INBOX.46bdca94dd22f452e836b5e1f6 11\r\nHello World\r\n&amp;quot;
+
+[#1] Replied with : &amp;#39;trying to help&amp;#39;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;And in our client we handle it as&lt;/p&gt;
+&lt;pre class=&quot;example&quot;&gt;
+MSG hello.world 2 _INBOX.e16d52026b72575471357cc17d 11
+&lt;/pre&gt;
+&lt;p&gt;The client for this would look like this:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;o&quot;&gt;[[&lt;/span&gt; -e nats-in &lt;span class=&quot;o&quot;&gt;]]&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;||&lt;/span&gt; mkfifo nats-in
+&lt;span class=&quot;o&quot;&gt;[[&lt;/span&gt; -e nats-out &lt;span class=&quot;o&quot;&gt;]]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;||&lt;/span&gt; mkfifo nats-out
+
+&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;Start client..&amp;quot;&lt;/span&gt;
+nc 127.0.0.1 4222 &amp;lt;nats-in &amp;gt;nats-out &lt;span class=&quot;p&quot;&gt;&amp;amp;&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;# open nats-in for writing  on fd 3&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# open nats-out for reading on fd 4&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;exec &lt;/span&gt;3&amp;gt; nats-in 4&amp;lt;nats-out
+
+&lt;span class=&quot;nb&quot;&gt;export &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;pingcounter&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;0
+cat nats-out &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;while &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;read &lt;/span&gt;msg&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;  &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;export &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;pingcounter&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;sb&quot;&gt;`&lt;/span&gt;expr &lt;span class=&quot;nv&quot;&gt;$pingcounter&lt;/span&gt; + 1&lt;span class=&quot;sb&quot;&gt;`&lt;/span&gt;
+  &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;$pingcounter messages received&amp;quot;&lt;/span&gt;
+  &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;GOT :: $msg&amp;quot;&lt;/span&gt;
+
+  &lt;span class=&quot;c&quot;&gt;# As soon as we get INFO, send CONNECT and subscriptions&lt;/span&gt;
+  &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$msg&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; grep -q INFO &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;CONNECT {&amp;quot;verbose&amp;quot;:false,&amp;quot;pedantic&amp;quot;:false}&amp;#39;&lt;/span&gt; &amp;gt; nats-in
+    &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;SUB hello.world  2&amp;quot;&lt;/span&gt; &amp;gt; nats-in
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+  &lt;span class=&quot;c&quot;&gt;# respond to PING&lt;/span&gt;
+  &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$msg&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; grep -q PING &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;PONG&amp;quot;&lt;/span&gt; &amp;gt; nats-in
+
+  &lt;span class=&quot;c&quot;&gt;# respond to MSG hello.world&lt;/span&gt;
+  &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$msg&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; grep -q &lt;span class=&quot;s2&quot;&gt;&amp;quot;MSG hello.world&amp;quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;PONG&amp;quot;&lt;/span&gt; &amp;gt; nats-in
+    &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; -ne &lt;span class=&quot;s2&quot;&gt;&amp;quot;PUB hello.world  9\r\nfuga fuga\r\n&amp;quot;&lt;/span&gt; &amp;gt; nats-in
+    sleep 1
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+  &lt;span class=&quot;c&quot;&gt;# process MSG hello.world requests&lt;/span&gt;
+  &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$msg&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; grep -q &lt;span class=&quot;s2&quot;&gt;&amp;quot;^MSG hello.world..._INBOX&amp;quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;PONG&amp;quot;&lt;/span&gt; &amp;gt; nats-in
+    &lt;span class=&quot;nv&quot;&gt;inbox&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;sb&quot;&gt;`&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$msg&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; awk &lt;span class=&quot;s1&quot;&gt;&amp;#39;{print $4}&amp;#39;&lt;/span&gt;&lt;span class=&quot;sb&quot;&gt;`&lt;/span&gt;
+    &lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; -ne &lt;span class=&quot;s2&quot;&gt;&amp;quot;PUB $inbox 14\r\ntrying to help\r\n&amp;quot;&lt;/span&gt; &amp;gt; nats-in
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;done&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;&amp;#8230;which makes up for an extremely basic version of a NATS client :)&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58802 - cid:7)
+nats-client	-- 134 messages received
+nats-client	-- GOT :: fuga fuga
+nats-client	-- 135 messages received
+nats-client	-- GOT :: MSG hello.world 2 9
+gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+nats-client	-- 136 messages received
+nats-client	-- GOT :: fuga fuga
+nats-client	-- 137 messages received
+&lt;/pre&gt;&lt;/div&gt;
+
+
+</content>
+ </entry>
+ 
+ <entry>
+   <title>Counting words with NATS</title>
+   <link href="/posts/2014/10/16/counting-words-with-nats/"/>
+   <updated>2014-10-16T00:00:00-04:00</updated>
+   <id>/posts/2014/10/16/counting-words-with-nats</id>
+   <content type="html">
+&lt;p&gt;Still going through the &lt;i&gt;&lt;a href=&quot;http://www.amazon.com/Exercises-Programming-Style-Cristina-Videira/dp/1482227371/&quot;&gt;Exercises in Programming Styles&lt;/a&gt;&lt;/i&gt;, after
+  diving into &lt;a href=&quot;https://github.com/wallyqs/exercises-in-org/blob/master/org/prog-styles/03-monolith/haskell.org&quot;&gt;Haskell&lt;/a&gt; and &lt;a href=&quot;https://github.com/wallyqs/exercises-in-org/blob/master/org/prog-styles/transducers/ruby.org&quot;&gt;Transducers&lt;/a&gt; for a bit, and since I&amp;#8217;ve
+  mentioned to other HackerSchoolers about &lt;a href=&quot;https://github.com/derekcollison/nats&quot;&gt;NATS&lt;/a&gt;, I decided to use it for
+  the map reduce programming example.  It is somewhat loosely based on the
+  &lt;a href=&quot;https://github.com/derekcollison/dist-adder&quot;&gt;dist-adder&lt;/a&gt; example from Derek.&lt;/p&gt;
+&lt;h3&gt;NATS server&lt;/h3&gt;
+&lt;p&gt;There is readily available &lt;a href=&quot;https://registry.hub.docker.com/u/apcera/gnatsd/&quot;&gt;gnatsd Docker container&lt;/a&gt; that we can use to
+  start the server that will be used by the clients to communicate:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;sudo docker run -p 4222:4222 apcera/gnatsd
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h3&gt;Aggregator&lt;/h3&gt;
+&lt;p&gt;I call it the aggregator, but basically this process will be in charge
+  of dispatching a range of the lines in the text and dispatch the task
+  to another node so that it computes the word frequency computation.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;nb&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;nats/client&amp;#39;&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;json&amp;#39;&lt;/span&gt;
+
+&lt;span class=&quot;no&quot;&gt;NATS&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;start&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;# Run options&lt;/span&gt;
+  &lt;span class=&quot;vg&quot;&gt;$stdout&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sync&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kp&quot;&gt;true&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;TERM&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;INT&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;each&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sig&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;trap&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sig&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;NATS&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;stop&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;no&quot;&gt;SRC_ROOT&lt;/span&gt;   &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;join&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;expand_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;.&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;src&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;exercises-in-programming-style&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;no&quot;&gt;PRIDE_AND_PREJUDICE&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;join&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;SRC_ROOT&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;pride-and-prejudice.txt&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;no&quot;&gt;STOP_WORDS&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;join&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;SRC_ROOT&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;stop_words.txt&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;# Compute the stop words once.&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;# This payload information is small enough that it will be transmitted&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;# to the frequency counters via the channel&lt;/span&gt;
+  &lt;span class=&quot;vi&quot;&gt;@stop_words&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;read&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;STOP_WORDS&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;,&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;vi&quot;&gt;@stop_words&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;a&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;z&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;to_a&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;# also the alphabet&lt;/span&gt;
+  &lt;span class=&quot;vi&quot;&gt;@stop_words&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;flatten!&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;uniq!&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;# Initialize&lt;/span&gt;
+  &lt;span class=&quot;vi&quot;&gt;@words&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Hash&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;h&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;k&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;h&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;k&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;vi&quot;&gt;@available_computing_nodes&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;[]&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;# Discovery Channel&lt;/span&gt;
+  &lt;span class=&quot;no&quot;&gt;NATS&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;subscribe&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;pride-prejudice.discovery&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;msg&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;reply&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;sub&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;computing_node&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;JSON&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;parse&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;msg&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;unless&lt;/span&gt; &lt;span class=&quot;vi&quot;&gt;@available_computing_nodes&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;include?&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;computing_node&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;nb&quot;&gt;puts&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;[DISCOVERED]      :: &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;computing_node&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;
+      &lt;span class=&quot;vi&quot;&gt;@available_computing_nodes&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;computing_node&lt;/span&gt;
+      &lt;span class=&quot;nb&quot;&gt;puts&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;[AVAILABLE NODES] :: &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;vi&quot;&gt;@available_computing_nodes&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;count&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;# {&amp;quot;id&amp;quot;=&amp;gt;3, &amp;quot;results&amp;quot;=&amp;gt;{&amp;quot;words&amp;quot;=&amp;gt;[{&amp;quot;test&amp;quot;=&amp;gt;1}]}}&lt;/span&gt;
+  &lt;span class=&quot;no&quot;&gt;NATS&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;subscribe&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;pride-prejudice.responses&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;msg&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;reply&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;sub&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;results&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;JSON&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;parse&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;msg&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;nb&quot;&gt;puts&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;[DONE]      :: Job &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;results&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;id&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt; is done.&amp;quot;&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;# Mark the job as done&lt;/span&gt;
+    &lt;span class=&quot;vi&quot;&gt;@chunks&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;results&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;id&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]][&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:done&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;    &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kp&quot;&gt;true&lt;/span&gt;
+
+    &lt;span class=&quot;k&quot;&gt;begin&lt;/span&gt;
+      &lt;span class=&quot;c1&quot;&gt;# Use the partial results and start to count the words&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;counted_words&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;results&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;results&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;][&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;words&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;counted_words&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;each_pair&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;w&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+        &lt;span class=&quot;vi&quot;&gt;@words&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;w&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;c&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;rescue&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;e&lt;/span&gt;
+      &lt;span class=&quot;nb&quot;&gt;puts&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;Error while trying to count the words...&amp;quot;&lt;/span&gt;
+      &lt;span class=&quot;nb&quot;&gt;puts&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;e&lt;/span&gt;
+      &lt;span class=&quot;nb&quot;&gt;puts&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;e&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;backtrace&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+    &lt;span class=&quot;nb&quot;&gt;puts&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;TOP counted words so far&amp;quot;&lt;/span&gt;
+    &lt;span class=&quot;vi&quot;&gt;@words&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sort&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;reverse&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;25&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;each&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;k&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;v&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+      &lt;span class=&quot;nb&quot;&gt;puts&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;k&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;  -  &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+  &lt;span class=&quot;nb&quot;&gt;puts&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;Waiting 5 seconds to get resources for the job...&amp;quot;&lt;/span&gt;
+  &lt;span class=&quot;no&quot;&gt;EM&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;add_timer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;pride_and_prejudice_text&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;read&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;PRIDE_AND_PREJUDICE&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;total_lines&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pride_and_prejudice_text&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lines&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;count&lt;/span&gt;
+    &lt;span class=&quot;nb&quot;&gt;puts&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;Total lines to split: &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;total_lines&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;# Most likely cannot split the computation perfectly into the number of nodes,&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;# so we take the remaining lines and add them to the first batch&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;chunk_size&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;total_lines&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;vi&quot;&gt;@available_computing_nodes&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;count&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;out_of_chunk&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;total_lines&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;%&lt;/span&gt; &lt;span class=&quot;vi&quot;&gt;@available_computing_nodes&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;count&lt;/span&gt;
+    &lt;span class=&quot;nb&quot;&gt;puts&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;Chunk size per node: &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;chunk_size&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;# Read the file, count the number of lines, and divide in chunks&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;# according to the number of available nodes&lt;/span&gt;
+    &lt;span class=&quot;vi&quot;&gt;@chunks&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{}&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;# {index =&amp;gt; {:start, :end, :done, :stop_words }}&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;chunk_start&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;chunk_end&lt;/span&gt;   &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;
+    &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;upto&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;vi&quot;&gt;@available_computing_nodes&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;count&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;n&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;chunk_end&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;chunk_size&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;out_of_chunk&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;chunk_size&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;out_of_chunk&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;out_of_chunk&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;chunk_end&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;chunk_end&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;total_lines&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;min&lt;/span&gt;
+      &lt;span class=&quot;vi&quot;&gt;@chunks&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;n&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:start&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;chunk_start&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:end&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;chunk_end&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:done&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;kp&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:stop_words&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;vi&quot;&gt;@stop_words&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;chunk_start&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;chunk_end&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+    &lt;span class=&quot;vi&quot;&gt;@chunks&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;each&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;job&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;job_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;range&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;job&lt;/span&gt;
+
+      &lt;span class=&quot;c1&quot;&gt;# Only want one checker to respond to this&lt;/span&gt;
+      &lt;span class=&quot;no&quot;&gt;NATS&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;request&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;pride-prejudice.requests&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;kp&quot;&gt;nil&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:max&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;response&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;node&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;JSON&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;parse&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;response&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;nb&quot;&gt;puts&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;[REQUEST]   :: Job #&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;job_id&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt; needs to be done. Anyone can help? Range is (&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;range&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:start&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;range&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:end&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;)&amp;quot;&lt;/span&gt;
+        &lt;span class=&quot;no&quot;&gt;NATS&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;publish&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;pride-prejudice.&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;node&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;id&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;.compute&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;job&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;to_json&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+          &lt;span class=&quot;nb&quot;&gt;puts&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;[HOPING]    :: &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;range&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:start&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt; -- &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;range&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:end&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt; to be done by &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;node&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;id&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;.&amp;quot;&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h3&gt;Word Frequency Counter&lt;/h3&gt;
+&lt;p&gt;Then each one of the counters, will receive a chunk of words to
+  process and ignore, then reply with the partial computed frequency when done.&lt;/p&gt;
+&lt;p&gt;While receiving tasks, we counter taints itself a little
+  according to the number of tasks that it is in charge of processing.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;nb&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;nats/client&amp;#39;&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;securerandom&amp;#39;&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;json&amp;#39;&lt;/span&gt;
+
+&lt;span class=&quot;vg&quot;&gt;$stdout&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sync&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kp&quot;&gt;true&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;TERM&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;INT&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;each&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sig&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;trap&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sig&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;NATS&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;stop&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;no&quot;&gt;SRC_ROOT&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;join&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;expand_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;.&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;src&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;exercises-in-programming-style&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;no&quot;&gt;PRIDE_AND_PREJUDICE&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;join&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;SRC_ROOT&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;pride-and-prejudice.txt&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;no&quot;&gt;ID&lt;/span&gt;   &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;SecureRandom&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;uuid&lt;/span&gt;
+&lt;span class=&quot;no&quot;&gt;INFO&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;id&amp;#39;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;ID&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;compute&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;range&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;range_start&lt;/span&gt;     &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;range&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;start&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;to_i&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;range_end&lt;/span&gt;       &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;range&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;end&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;to_i&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;stop_words&lt;/span&gt;      &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;range&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;stop_words&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;words_frequency&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Hash&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;h&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;k&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;h&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;k&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;# Read local copy of the document and fetch that range of lines&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;lines&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;read&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;PRIDE_AND_PREJUDICE&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lines&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;range_start&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;.range_end&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;lines&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;each&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;line&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;line&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;gsub!&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sr&quot;&gt;/[^a-zA-Z0-9]/&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot; &amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;# remove non alphanumeric&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;words&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;line&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot; &amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;words&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;each&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;w&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;next&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;stop_words&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;include?&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;w&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;downcase&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;words_frequency&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;w&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;downcase&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+  &lt;span class=&quot;n&quot;&gt;results&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;words&amp;#39;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;words_frequency&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+  &lt;span class=&quot;n&quot;&gt;results&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+&lt;span class=&quot;no&quot;&gt;NATS&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;start&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+
+  &lt;span class=&quot;vi&quot;&gt;@offerings&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;
+
+  &lt;span class=&quot;no&quot;&gt;EM&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;add_periodic_timer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;no&quot;&gt;NATS&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;publish&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;pride-prejudice.discovery&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;INFO&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;to_json&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+  &lt;span class=&quot;no&quot;&gt;NATS&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;subscribe&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;pride-prejudice.requests&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;msg&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;reply&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;sub&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+    &lt;span class=&quot;no&quot;&gt;EM&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;add_timer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;vi&quot;&gt;@offerings&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;NATS&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;publish&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;reply&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;INFO&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;to_json&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;vi&quot;&gt;@offerings&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;# decrease taint delay&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+  &lt;span class=&quot;no&quot;&gt;NATS&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;subscribe&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;pride-prejudice.&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;ID&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;.compute&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;msg&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;reply&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;sub&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;job&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;JSON&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;parse&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;msg&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+    &lt;span class=&quot;n&quot;&gt;job_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;range&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;job&lt;/span&gt;
+    &lt;span class=&quot;nb&quot;&gt;puts&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;[OK]        :: Start to work on (&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;range&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;start&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;range&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;end&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;)&amp;quot;&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;results&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;compute&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;range&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;vi&quot;&gt;@offerings&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;# delay ourselves according to the number of task being done&lt;/span&gt;
+
+    &lt;span class=&quot;n&quot;&gt;job_done&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+     &lt;span class=&quot;ss&quot;&gt;:id&lt;/span&gt;      &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;job_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+     &lt;span class=&quot;ss&quot;&gt;:results&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;results&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;no&quot;&gt;NATS&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;publish&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;pride-prejudice.responses&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;job_done&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;to_json&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h3&gt;Output&lt;/h3&gt;
+&lt;p&gt;Once the run is done the output would look something similar to this:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;nats-server         -- started with pid 15660
+aggregator          -- Waiting 5 seconds to get resources for the job...
+aggregator          -- [DISCOVERED]      :: {&amp;quot;id&amp;quot;=&amp;gt;&amp;quot;251adacb-0605-4e96-8904-9fd5f239fce2&amp;quot;}
+aggregator          -- [AVAILABLE NODES] :: 1
+aggregator          -- [DISCOVERED]      :: {&amp;quot;id&amp;quot;=&amp;gt;&amp;quot;a97518f9-2c10-4362-9800-5ec8e57651b9&amp;quot;}
+aggregator          -- [AVAILABLE NODES] :: 2
+aggregator          -- [DISCOVERED]      :: {&amp;quot;id&amp;quot;=&amp;gt;&amp;quot;4ce45026-3cba-4209-a17b-e27e425366c0&amp;quot;}
+aggregator          -- [AVAILABLE NODES] :: 3
+aggregator          -- Total lines to split: 13426
+aggregator          -- Chunk size per node: 4475
+aggregator          -- [REQUEST]   :: Job #1 needs to be done. Anyone can help? Range is (0:4475)
+aggregator          -- [HOPING]    :: 0 -- 4475 to be done by 4ce45026-3cba-4209-a17b-e27e425366c0.
+frequency-counter:1 -- [OK]        :: Start to work on (0:4475)
+aggregator          -- [DONE]      :: Job 1 is done.
+aggregator          -- TOP counted words so far
+aggregator          -- mr  -  395
+aggregator          -- elizabeth  -  202
+aggregator          -- very  -  198
+aggregator          -- bingley  -  181
+aggregator          -- darcy  -  162
+aggregator          -- bennet  -  160
+aggregator          -- miss  -  142
+aggregator          -- such  -  131
+aggregator          -- much  -  130
+aggregator          -- mrs  -  121
+aggregator          -- jane  -  105
+aggregator          -- more  -  102
+aggregator          -- collins  -  95
+aggregator          -- one  -  95
+aggregator          -- though  -  77
+aggregator          -- think  -  74
+aggregator          -- being  -  73
+aggregator          -- know  -  72
+aggregator          -- never  -  71
+aggregator          -- lady  -  70
+aggregator          -- well  -  69
+aggregator          -- good  -  67
+aggregator          -- man  -  65
+aggregator          -- soon  -  64
+aggregator          -- before  -  63
+aggregator          -- [REQUEST]   :: Job #2 needs to be done. Anyone can help? Range is (4476:8951)
+aggregator          -- [HOPING]    :: 4476 -- 8951 to be done by 251adacb-0605-4e96-8904-9fd5f239fce2.
+frequency-counter:3 -- [OK]        :: Start to work on (4476:8951)
+aggregator          -- [DONE]      :: Job 2 is done.
+aggregator          -- TOP counted words so far
+aggregator          -- mr  -  630
+aggregator          -- elizabeth  -  437
+aggregator          -- very  -  378
+aggregator          -- darcy  -  327
+aggregator          -- such  -  251
+aggregator          -- bingley  -  245
+aggregator          -- much  -  243
+aggregator          -- miss  -  240
+aggregator          -- mrs  -  239
+aggregator          -- more  -  218
+aggregator          -- bennet  -  206
+aggregator          -- one  -  187
+aggregator          -- jane  -  185
+aggregator          -- herself  -  173
+aggregator          -- collins  -  167
+aggregator          -- think  -  152
+aggregator          -- lady  -  149
+aggregator          -- before  -  146
+aggregator          -- though  -  143
+aggregator          -- well  -  141
+aggregator          -- never  -  140
+aggregator          -- sister  -  139
+aggregator          -- little  -  136
+aggregator          -- soon  -  133
+aggregator          -- know  -  133
+aggregator          -- [REQUEST]   :: Job #3 needs to be done. Anyone can help? Range is (8952:13426)
+aggregator          -- [HOPING]    :: 8952 -- 13426 to be done by 251adacb-0605-4e96-8904-9fd5f239fce2.
+frequency-counter:3 -- [OK]        :: Start to work on (8952:13426)
+aggregator          -- [DONE]      :: Job 3 is done.
+aggregator          -- TOP counted words so far
+aggregator          -- mr  -  786
+aggregator          -- elizabeth  -  635
+aggregator          -- very  -  488
+aggregator          -- darcy  -  418
+aggregator          -- such  -  395
+aggregator          -- mrs  -  343
+aggregator          -- much  -  329
+aggregator          -- more  -  327
+aggregator          -- bennet  -  323
+aggregator          -- bingley  -  306
+aggregator          -- jane  -  295
+aggregator          -- miss  -  283
+aggregator          -- one  -  275
+aggregator          -- know  -  239
+aggregator          -- before  -  229
+aggregator          -- herself  -  227
+aggregator          -- though  -  226
+aggregator          -- well  -  224
+aggregator          -- never  -  220
+aggregator          -- sister  -  218
+aggregator          -- soon  -  216
+aggregator          -- think  -  211
+aggregator          -- now  -  209
+aggregator          -- time  -  203
+aggregator          -- good  -  201
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h3&gt;Further work&lt;/h3&gt;
+&lt;ul&gt;
+  &lt;li&gt;Extend this example so that it becomes resilient to fault tolerance,
+    and see how does defending against this impact the style.&lt;/li&gt;
+  &lt;li&gt;Dispatch to other nodes with using a different client.&lt;/li&gt;
+&lt;/ul&gt;
+
+
+</content>
+ </entry>
+ 
+ <entry>
+   <title>Term Frequency with Transducers gem in Ruby</title>
+   <link href="/posts/2014/10/11/transducers-in-ruby/"/>
+   <updated>2014-10-11T00:00:00-04:00</updated>
+   <id>/posts/2014/10/11/transducers-in-ruby</id>
+   <content type="html">
+&lt;p&gt;Yesterday, Cognitect &lt;a href=&quot;https://twitter.com/cognitect/status/520644214116212736https://twitter.com/cognitect/status/520644214116212736&quot;&gt;announced&lt;/a&gt; about a Ruby implementation among
+  others of the transducers concept that Rich Hickey &lt;a href=&quot;https://www.youtube.com/watch?v=6mTbuzafcII&quot;&gt;talked about at StrangeLoop&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;After watching the talk a number of times and reading a little the source of the &lt;a href=&quot;https://github.com/cognitect-labs/transducers-ruby/blob/master/lib/transducers.rb&quot;&gt;gem&lt;/a&gt;,
+  I gave it a shot at using it to solve the term frequency exercise
+  from the &lt;i&gt;&lt;a href=&quot;http://www.amazon.com/Exercises-Programming-Style-Cristina-Videira/dp/1482227371/&quot;&gt;Exercises in Programming Styles&lt;/a&gt;&lt;/i&gt; book.&lt;/p&gt;
+&lt;h2&gt;Transducers usage in Ruby&lt;/h2&gt;
+&lt;p&gt;The full example looks as follows: (explanation of the steps is further below).&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;nb&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;transducers&amp;#39;&lt;/span&gt;
+
+&lt;span class=&quot;no&quot;&gt;SRC_ROOT&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;join&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;expand_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;../../..&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;src&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;exercises-in-programming-style&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;no&quot;&gt;PRIDE_AND_PREJUDICE&lt;/span&gt;   &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;join&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;SRC_ROOT&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;pride-and-prejudice.txt&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;no&quot;&gt;STOP_WORDS&lt;/span&gt;            &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;join&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;SRC_ROOT&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;stop_words.txt&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# load words to ignore&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;stop_words&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;read&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;STOP_WORDS&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;,&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;stop_words&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;a&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;z&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;to_a&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;# also alphabet&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;stop_words&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;flatten!&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;uniq!&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;lines&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;read&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;PRIDE_AND_PREJUDICE&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lines&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;frequency_counter&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Class&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;step&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;words_frequency&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;words&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;words&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;each&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;w&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;words_frequency&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;w&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;downcase&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;words_frequency&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+  &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;complete&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;result&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sort&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;reverse&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;new&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;t&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Transducers&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;compose&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+      &lt;span class=&quot;no&quot;&gt;Transducers&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;map&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;line&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;line&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;gsub!&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sr&quot;&gt;/[^a-zA-Z0-9]/&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot; &amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;# remove non alphanumeric&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;line&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39; &amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;# split into words&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;no&quot;&gt;Transducers&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;map&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;words&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;        &lt;span class=&quot;c1&quot;&gt;# remove stop words&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;words&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;delete_if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;w&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;stop_words&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;include?&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;w&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;downcase&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;words_frequency&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Hash&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;h&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;k&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;h&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;k&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;words_frequency_list&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Transducers&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;transduce&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;frequency_counter&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;words_frequency&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;lines&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# Print the top 25 terms&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;words_frequency_list&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;to_a&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;25&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;each&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;k&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;v&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+  &lt;span class=&quot;nb&quot;&gt;puts&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;k&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;  -  &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h2&gt;Going over the steps of the implementatoin&lt;/h2&gt;
+&lt;h3&gt;Dependencies and definitions&lt;/h3&gt;
+&lt;h4&gt;&lt;code&gt;Gemfile&lt;/code&gt;&lt;/h4&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;n&quot;&gt;source&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;http://rubygems.org&amp;quot;&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;gem&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;transducers&amp;#39;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h4&gt;Imports&lt;/h4&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;nb&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;transducers&amp;#39;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h4&gt;Location of the files&lt;/h4&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;no&quot;&gt;SRC_ROOT&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;join&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;expand_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;../../..&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;src&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;exercises-in-programming-style&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;no&quot;&gt;PRIDE_AND_PREJUDICE&lt;/span&gt;   &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;join&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;SRC_ROOT&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;pride-and-prejudice.txt&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;no&quot;&gt;STOP_WORDS&lt;/span&gt;            &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;join&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;SRC_ROOT&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;stop_words.txt&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h4&gt;Stop words&lt;/h4&gt;
+&lt;p&gt;The &lt;i&gt;stop words&lt;/i&gt; are the list of words and single letters that
+  appear in the test that we decide to ignore.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;c1&quot;&gt;# load words to ignore&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;stop_words&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;read&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;STOP_WORDS&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;,&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;stop_words&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;a&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;z&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;to_a&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;# also alphabet&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;stop_words&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;flatten!&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;uniq!&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h3&gt;Using Transducers&lt;/h3&gt;
+&lt;p&gt;In order to determine the term frequency in the pride and prejudice
+  text, we will do the following transformations:&lt;/p&gt;
+&lt;ol&gt;
+  &lt;li&gt;Create a collection of the lines from the raw body of text&lt;/li&gt;
+  &lt;li&gt;Remove non-alphanumeric characters from the line&lt;/li&gt;
+  &lt;li&gt;Split the line into words&lt;/li&gt;
+  &lt;li&gt;Remove words which are considered to be &lt;i&gt;stop words&lt;/i&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Then as part of the reducing step:&lt;/p&gt;
+&lt;ol&gt;
+  &lt;li&gt;Increment counter in &lt;code&gt;words_frequency&lt;/code&gt; hash each time the word appears&lt;/li&gt;
+  &lt;li&gt;Sort the words by frequency&lt;/li&gt;
+  &lt;li&gt;Reverse the list&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Then from this list, we will take the top 25 terms and print them to stdout.&lt;/p&gt;
+&lt;h4&gt;The Collection&lt;/h4&gt;
+&lt;p&gt;The collection upon which we will be applying the transformations
+  are each one of the lines that exist in the text.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;n&quot;&gt;lines&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;read&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;PRIDE_AND_PREJUDICE&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lines&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h4&gt;The Reducer&lt;/h4&gt;
+&lt;p&gt;From the &lt;a href=&quot;https://github.com/cognitect-labs/transducers-ruby/blob/222686714cc55f984671af48bf506f1c130fc013/lib/transducers.rb#L24&quot;&gt;source&lt;/a&gt;:&lt;/p&gt;
+&lt;blockquote&gt;
+  &lt;p&gt;A &lt;span style=&quot;text-decoration:underline;&quot;&gt;reducer&lt;/span&gt; is an object with a `step` method that takes a result
+    (so far) and an input and returns a new result. This is similar to
+    the blocks we pass to Ruby&amp;#8217;s `reduce` (a.k.a `inject`), and serves a
+    similar role in &lt;span style=&quot;text-decoration:underline;&quot;&gt;transducing process&lt;/span&gt;.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;As part of its reducing step, the reducer will receive a list of words
+  in a line, then iterate over this list and increment the counter in
+  the &lt;code&gt;words_frequency&lt;/code&gt; hash.&lt;/p&gt;
+&lt;p&gt;Then, once the &lt;code&gt;words_frequency&lt;/code&gt; has been computed, we returned the
+  result sorted by frequency in descending order.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;n&quot;&gt;frequency_counter&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Class&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;step&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;words_frequency&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;words&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;words&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;each&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;w&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;words_frequency&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;w&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;downcase&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;words_frequency&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+  &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;complete&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;result&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+     &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sort&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;reverse&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;new&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h4&gt;The Transducer&lt;/h4&gt;
+&lt;p&gt;Again from the &lt;a href=&quot;https://github.com/cognitect-labs/transducers-ruby/blob/222686714cc55f984671af48bf506f1c130fc013/lib/transducers.rb#L33&quot;&gt;source&lt;/a&gt;:&lt;/p&gt;
+&lt;blockquote&gt;
+  &lt;p&gt;A &lt;span style=&quot;text-decoration:underline;&quot;&gt;handler&lt;/span&gt; is an object with a `call` method that a reducer uses
+    to process input. In a `map` operation, this would transform the
+    input, and in a `filter` operation it would act as a predicate.&lt;/p&gt;
+  &lt;p&gt;A &lt;span style=&quot;text-decoration:underline;&quot;&gt;transducer&lt;/span&gt; is an object that transforms a reducer by adding
+    additional processing for each element in a collection of inputs.&lt;/p&gt;
+  &lt;p&gt;A &lt;span style=&quot;text-decoration:underline;&quot;&gt;transducing process&lt;/span&gt; is invoked by calling
+    `Transducers.transduce` with a transducer, a reducer, an optional
+    initial value, and an input collection.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Our transducer will compose the functions which filter the
+  non-alphanumeric characters that exists on a line, as well as words
+  that should be ignored from the text.&lt;/p&gt;
+&lt;p&gt;This results in the reducer receiving a list of words to compute the
+  term frequency list.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;n&quot;&gt;t&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Transducers&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;compose&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+  &lt;span class=&quot;no&quot;&gt;Transducers&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;map&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;line&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;line&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;gsub!&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;sr&quot;&gt;/[^a-zA-Z0-9]/&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot; &amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;# remove non alphanumeric&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;line&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39; &amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;                 &lt;span class=&quot;c1&quot;&gt;# split into words&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;no&quot;&gt;Transducers&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;map&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;words&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;        &lt;span class=&quot;c1&quot;&gt;# remove stop words&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;words&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;delete_if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;w&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;stop_words&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;include?&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;w&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;downcase&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;words_frequency&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Hash&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;h&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;k&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;h&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;k&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;words_frequency_list&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Transducers&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;transduce&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;frequency_counter&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;words_frequency&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;lines&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h4&gt;Printing the results&lt;/h4&gt;
+&lt;p&gt;To verify the results, we only want to check which were the top 25
+  terms that have the highest frequency&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;c1&quot;&gt;# Print the top 25 terms&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;words_frequency_list&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;to_a&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;25&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;each&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;k&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;v&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+  &lt;span class=&quot;nb&quot;&gt;puts&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;k&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;  -  &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+</content>
+ </entry>
+ 
+ <entry>
+   <title>Hacker School - week #1 recap</title>
+   <link href="/posts/2014/10/10/hs-recap-1st-week/"/>
+   <updated>2014-10-10T00:00:00-04:00</updated>
+   <id>/posts/2014/10/10/hs-recap-1st-week</id>
+   <content type="html">
+&lt;p&gt;It&amp;#8217;s been almost a week since I came to New York to join
+  HackerSchool, a quick recap:&lt;/p&gt;
+&lt;h3&gt;Week of [2014-10-06]&amp;#8211;[2014-10-10]&lt;/h3&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://twitter.com/cristalopes&quot;&gt;Crista Lopes&lt;/a&gt; was the resident during this week and she talked about
+    her &lt;i&gt;&lt;a href=&quot;http://www.amazon.com/Exercises-Programming-Style-Cristina-Videira/dp/1482227371/&quot;&gt;Exercises in Programming Styles&lt;/a&gt;&lt;/i&gt; book during the first days.
+    I&amp;#8217;m not even halfway through the book yet, though I have to say that
+    the book has already left a mark.
+    &lt;p&gt;Crista then went on to concisely explain theoretical concepts
+      around types, data structures, and even monads in Haskell.&lt;/p&gt;
+    &lt;p&gt;I also shared a bit about Org Babel, which may have to do something
+      to do with the following tweet:&lt;/p&gt;
+  &lt;blockquote class=&quot;twitter-tweet&quot; lang=&quot;en&quot;&gt;&lt;p&gt;Note to self: set this up in my emacs and learn more about it &lt;a href=&quot;http://t.co/HIaegQ5bHp&quot;&gt;http://t.co/HIaegQ5bHp&lt;/a&gt;&lt;/p&gt;&amp;mdash; Crista Lopes (@cristalopes) &lt;a href=&quot;https://twitter.com/cristalopes/status/519971789422997505&quot;&gt;October 8, 2014&lt;/a&gt;&lt;/blockquote&gt;
+  &lt;script async src=&quot;//platform.twitter.com/widgets.js&quot; charset=&quot;utf-8&quot;&gt;&lt;/script&gt;
+  &lt;/li&gt;
+  &lt;li&gt;Right now I&amp;#8217;m working through the exercises &lt;a href=&quot;https://github.com/wallyqs/exercises-in-org/tree/master/org/prog-styles&quot;&gt;here&lt;/a&gt; (of course, in Org mode).
+    I named it &lt;i&gt;Exercises in Org&lt;/i&gt; to keep the scope open
+    to other exercises, though focusing on the &lt;i&gt;programming styles&lt;/i&gt; book at this moment.&lt;/li&gt;
+  &lt;li&gt;I took a bit of time to revamp my blog yet again.  This time using
+    Hyde as the the theme and the &lt;code&gt;org/&lt;/code&gt;, &lt;code&gt;src/&lt;/code&gt; folder structure that I
+    have been practicing lately.  Repo at &lt;a href=&quot;https://github.com/wallyqs/org-hyde&quot;&gt;wallyqs/org-hyde&lt;/a&gt;.&lt;/li&gt;
+  &lt;li&gt;Another great thing of being in NYC is the amount of meetups that there are.
+    I assisted to the Mesos NYC meetup at the Twitter offices to hear
+    about the practical usage of Aurora and Mesos, as presented by &lt;a href=&quot;https://twitter.com/wfarner&quot;&gt;Bill Farner&lt;/a&gt;.
+    In the following weeks I will be diving more into Mesos, so this was
+    a good opportunity to ask directly to those who operate regarding
+    its practical usage.&lt;/li&gt;
+  &lt;li&gt;Living in NYC related:
+    &lt;ul&gt;
+      &lt;li&gt;Got my Airbnbs setup until the beginnings of December.&lt;/li&gt;
+      &lt;li&gt;Discovered &lt;a href=&quot;http://www.gasolinealleycoffee.com/&quot;&gt;Gasoline Alley Coffee&lt;/a&gt; which is just around the corner of HackerSchool.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;Overall, having a great time.  The &lt;a href=&quot;https://www.hackerschool.com/manual#sub-sec-social-rules&quot;&gt;social rules being applied&lt;/a&gt; (no feigning, no subtleisms, &amp;#8230;)
+    make up for an comfortable environment of collaboration which I had not experienced before,
+    at least definitely not on this level.&lt;/li&gt;
+&lt;/ul&gt;
+
+
+</content>
+ </entry>
+ 
+ <entry>
+   <title>Switching to Hyde</title>
+   <link href="/posts/2014/10/08/moved-to-hyde/"/>
+   <updated>2014-10-08T00:00:00-04:00</updated>
+   <id>/posts/2014/10/08/moved-to-hyde</id>
+   <content type="html">
+&lt;p&gt;Here is a modified version of the original Hyde fit for my flow
+  to continue doing things with mostly Org mode.&lt;/p&gt;
+&lt;p&gt;The repo can be found here: &lt;a href=&quot;https://github.com/wallyqs/org-hyde&quot;&gt;https://github.com/wallyqs/org-hyde&lt;/a&gt;&lt;/p&gt;
+
+
+</content>
+ </entry>
+ 
+ <entry>
+   <title>At Hacker School in NY</title>
+   <link href="/posts/2014/10/06/first-day-at-hackerschool/"/>
+   <updated>2014-10-06T00:00:00-04:00</updated>
+   <id>/posts/2014/10/06/first-day-at-hackerschool</id>
+   <content type="html">
+&lt;p&gt;I managed to get into the Fall batch from Hacker School.
+  Lots of things to focus on!&lt;/p&gt;
+&lt;p&gt;Some links:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://twitter.com/cristalopes&quot;&gt;Crista Lopes&lt;/a&gt; talk from StrangeLoop about &lt;a href=&quot;http://www.infoq.com/presentations/style-methodology&quot;&gt;programming styles&lt;/a&gt;, which
+    are in the end nothing but constraints.
+    (I was there at that StrangeLoop but somehow missed the talk&amp;#8230;)&lt;/li&gt;
+  &lt;li&gt;And accompanying exercises
+    &lt;a href=&quot;https://github.com/crista/exercises-in-programming-style&quot;&gt;https://github.com/crista/exercises-in-programming-style&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;Talk on Monads in Haskell, (there are Haskell books everywhere&amp;#8230;)
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;http://www.haskell.org/haskellwiki/Monad&quot;&gt;http://www.haskell.org/haskellwiki/Monad&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;Styles &lt;a href=&quot;https://github.com/crista/exercises-in-programming-style/tree/master/09-the-one&quot;&gt;#9&lt;/a&gt; and &lt;a href=&quot;https://github.com/crista/exercises-in-programming-style/tree/master/24-quarantine&quot;&gt;#24&lt;/a&gt; from Crista&amp;#8217;s book.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;SICP
+    &lt;ul&gt;
+      &lt;li&gt;Morning group to cover it.&lt;/li&gt;
+      &lt;li&gt;Version of the book at: &lt;a href=&quot;http://sarabander.github.io/sicp/&quot;&gt;http://sarabander.github.io/sicp/&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+
+</content>
+ </entry>
+ 
+ <entry>
+   <title>Replacing Jekyll YAML headers with Org mode buffer settings</title>
+   <link href="/posts/2013/12/06/jekyll-without-yaml/"/>
+   <updated>2013-12-06T00:00:00-05:00</updated>
+   <id>/posts/2013/12/06/jekyll-without-yaml</id>
+   <content type="html">
+&lt;p&gt;I took a quick look at what would be required
+  to avoid having to use &lt;code&gt;YAML&lt;/code&gt; headers for Jekyll and using
+  only Org mode buffer settings to set the layout, title
+  from a Jekyll post.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;k&quot;&gt;module&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;Jekyll&lt;/span&gt;
+ &lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Post&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;read_yaml&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;base&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;opts&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{})&lt;/span&gt;
+      &lt;span class=&quot;nb&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;content&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;read_with_options&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;join&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;base&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;
+                                            &lt;span class=&quot;n&quot;&gt;merged_file_read_opts&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;opts&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+      &lt;span class=&quot;nb&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;data&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;||=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{}&lt;/span&gt;
+
+      &lt;span class=&quot;n&quot;&gt;org_text&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Orgmode&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Parser&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;new&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;content&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;org_text&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;in_buffer_settings&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;each_pair&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;key&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;value&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+        &lt;span class=&quot;nb&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;data&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;key&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;downcase&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;value&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+      &lt;span class=&quot;nb&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;extracted_excerpt&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;extract_excerpt&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;rescue&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;e&lt;/span&gt;
+      &lt;span class=&quot;nb&quot;&gt;puts&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;Error converting file &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;join&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;base&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;: &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;e&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;message&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;This way, instead of having to write&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;nn&quot;&gt;---&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;title&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;something&lt;/span&gt;
+&lt;span class=&quot;nn&quot;&gt;---&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;I can just continue to use Org mode syntax:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;c1&quot;&gt;#+title: Replacing Jekyll YAML headers with Org mode buffer settings&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;My fork of &lt;code&gt;jekyll-org&lt;/code&gt; which has this feature enabled is &lt;a href=&quot;https://github.com/wallyqs/jekyll-org/blob/54e1e19697e12d73e9765fb96db37522666af274/convert.rb&quot;&gt;here&lt;/a&gt;.&lt;/p&gt;
+&lt;h2&gt;Update [2013-12-07 Sat]&lt;/h2&gt;
+&lt;p&gt;I did some modifications again to plugin for converting Org mode
+  texts:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;Disable using Liquid tags and rely mostly on Org mode syntax for
+    exporting&lt;/li&gt;
+  &lt;li&gt;Remove the &lt;code&gt;#+TITLE&lt;/code&gt; from in buffer settings to exporting it 2 times
+    with different styles&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The resulting plugin is here:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;nb&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;org-ruby&amp;#39;&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;module&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;Jekyll&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;# This overrides having to use YAML in the posts&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;# and instead use in buffer settings from Org mode&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Post&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;read_yaml&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;base&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;opts&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{})&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;content&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;read_with_options&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;join&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;base&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;
+                                       &lt;span class=&quot;n&quot;&gt;merged_file_read_opts&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;opts&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+      &lt;span class=&quot;nb&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;data&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;||=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{}&lt;/span&gt;
+
+      &lt;span class=&quot;n&quot;&gt;org_text&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Orgmode&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Parser&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;new&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;content&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;org_text&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;in_buffer_settings&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;each_pair&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;key&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;value&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+        &lt;span class=&quot;c1&quot;&gt;# Remove #+TITLE from the buffer settings to avoid double exporting&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;org_text&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;in_buffer_settings&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;delete&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;key&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;key&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=~&lt;/span&gt; &lt;span class=&quot;sr&quot;&gt;/title/i&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;buffer_setting&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;key&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;downcase&lt;/span&gt;
+        &lt;span class=&quot;nb&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;data&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;buffer_setting&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;value&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+      &lt;span class=&quot;c1&quot;&gt;# Disable Liquid tags from the output&lt;/span&gt;
+      &lt;span class=&quot;nb&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;content&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;ORG&lt;/span&gt;
+&lt;span class=&quot;sh&quot;&gt;{％ raw ％}&lt;/span&gt;
+&lt;span class=&quot;sh&quot;&gt;#{org_text.to_html}&lt;/span&gt;
+&lt;span class=&quot;sh&quot;&gt;{％ endraw ％}&lt;/span&gt;
+&lt;span class=&quot;no&quot;&gt;ORG&lt;/span&gt;
+      &lt;span class=&quot;nb&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;extracted_excerpt&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;extract_excerpt&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;rescue&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;e&lt;/span&gt;
+      &lt;span class=&quot;nb&quot;&gt;puts&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;Error converting file &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;join&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;base&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;: &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;e&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;message&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt; &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;e&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;backtrace&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;# Based from https://github.com/eggcaker/jekyll-org&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;OrgConverter&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Converter&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;safe&lt;/span&gt; &lt;span class=&quot;kp&quot;&gt;true&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;priority&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:low&lt;/span&gt;
+
+    &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;matches&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ext&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;ext&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=~&lt;/span&gt; &lt;span class=&quot;sr&quot;&gt;/org/i&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+    &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;output_ext&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ext&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;.html&amp;quot;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+    &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;convert&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;content&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;content&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+  &lt;span class=&quot;k&quot;&gt;module&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;Filters&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;restify&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;input&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;site&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;vi&quot;&gt;@context&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;registers&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:site&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;converter&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;site&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;getConverterImpl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Jekyll&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;OrgConverter&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;converter&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;convert&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;input&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+</content>
+ </entry>
+ 
+ <entry>
+   <title>Started to blog with Jekyll</title>
+   <link href="/posts/2013/11/24/hello/"/>
+   <updated>2013-11-24T00:00:00-05:00</updated>
+   <id>/posts/2013/11/24/hello</id>
+   <content type="html">
+&lt;p&gt;Starting a blog using the &lt;a href=&quot;https://github.com/holman/left&quot;&gt;Left&lt;/a&gt; theme for &lt;a href=&quot;https://github.com/mojombo/jekyll&quot;&gt;Jekyll&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Compared to other solutions, this uses the &lt;code&gt;org-ruby&lt;/code&gt; parser
+  to export &lt;code&gt;.org&lt;/code&gt; files into HTML. You can check the source
+  for this site here: &lt;a href=&quot;https://github.com/wallyqs/wallyqs.github.io&quot;&gt;https://github.com/wallyqs/wallyqs.github.io&lt;/a&gt;&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;nb&quot;&gt;puts&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;Syntax highlighting works!&amp;quot;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;There are still some pending things that I would like to improve:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;Use the &lt;a href=&quot;https://github.com/wallyqs/re-org&quot;&gt;re-org&lt;/a&gt; tool to create and organize the posts that
+    would finally go into the &lt;code&gt;_posts&lt;/code&gt; directory for publishing.
+    I think in the end using a YAML file would have been better than
+    having to use environment variables.&lt;/li&gt;
+  &lt;li&gt;Try to extend or patch Jekyll so that I can avoid having to write:
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;---
+layout: post
+title:  Hello world
+category: posts
+---
+&lt;/pre&gt;&lt;/div&gt;
+    &lt;p&gt;And instead cover this with Org syntax like:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;#+layout:   post
+#+title:    Hello world
+#+category: posts
+&lt;/pre&gt;&lt;/div&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Other than that, the setup promises to be very comfortable for
+  writing, I&amp;#8217;ll see how it goes.&lt;/p&gt;
+
+
+</content>
+ </entry>
+ 
+
+</feed>
