@@ -1,0 +1,278 @@
+# -*- mode: org;  mode: auto-fill -*-
+#+TITLE:	Basic NATS
+#+CATEGORY:	posts
+#+LAYOUT:	post
+
+There aren't many docs out there on [[http://nats.io/][NATS]] even though it is 
+so awesome (and [[http://www.bravenewgeek.com/dissecting-message-queues/][fast]]) so I thought I would share some notes 
+on what it is needed to implement a basic client for NATS, 
+(and maybe one day write a client for it...)
+
+**** Connecting and receiving INFO
+
+Let's try a simple connecting test:
+
+#+name: nats-client
+#+BEGIN_SRC sh :sleep 3
+export msgcounter=0
+nc 127.0.0.1 4222 | while read msg; do
+  msgcounter=`expr $msgcounter + 1`
+  echo "$msgcounter :: " $msg
+done
+#+END_SRC
+
+We can see that as soon as we establish the connection, the server will respond with
+an =INFO= message, and then after _2 minutes_, it will send its first =PING= message
+to check the connection with the client.
+
+The server will try to send 3 more =PING= messages to the client,
+and on the _4th message_, it will close the connection.
+
+#+BEGIN_SRC 
+[2014-11-16T14:17:12 -0500] run-nats-server -- 2014/11/16 14:17:12 [INFO] Starting gnatsd version 0.5.6
+[2014-11-16T14:17:12 -0500] run-nats-server -- 2014/11/16 14:17:12 [INFO] Listening for client connections on 0.0.0.0:4222
+[2014-11-16T14:17:12 -0500] run-nats-server -- 2014/11/16 14:17:12 [INFO] gnatsd is ready
+[2014-11-16T14:17:12 -0500] client          -- 1 ::  INFO {"server_id":"da9955fe007233fa724ec91a8978c44d","version":"0.5.6","host":"0.0.0.0","port":4222,"auth_required":false,"ssl_required":false,"max_payload":1048576} 
+[2014-11-16T14:19:12 -0500] client          -- 2 ::  PING
+[2014-11-16T14:21:12 -0500] client          -- 3 ::  PING
+[2014-11-16T14:23:12 -0500] client          -- 4 ::  -ERR 'Stale Connection'
+#+END_SRC
+
+**** PING <-> PONG
+
+After we have received the first =PING=, it is needed to reply with another =PONG=:
+
+To keep on using netcat for this examples, we will be relying on named
+pipes and a multiprocess run.  Then, we will be using the named pipe to feed
+the =PONG= when we receive a =PING= from NATS, otherwise the connection would be closed.
+
+#+name: nats-client
+#+BEGIN_SRC sh :sleep 7
+
+[[ -e nats-in ]]  || mkfifo nats-in
+[[ -e nats-out ]] || mkfifo nats-out
+
+echo "Start client..."
+nc 127.0.0.1 4222 <nats-in >nats-out &
+
+# open nats-in for writing  on fd 3
+# open nats-out for reading on fd 4
+exec 3> nats-in 4<nats-out
+
+export msgcounter=0
+while read msg <&4; do
+  echo "GOT ::" $msg
+
+  export msgcounter=`expr $msgcounter + 1`
+  echo "$msgcounter messages received"
+
+  # process ping
+  echo $msg | grep -q PING && echo "PONG" >&3 ;
+
+done
+
+#+END_SRC
+
+***** Sample output
+
+#+BEGIN_SRC conf
+ gnatsd		-- [INFO] Starting gnatsd version 0.5.7
+ gnatsd		-- [INFO] Listening for client connections on 0.0.0.0:4222
+ gnatsd		-- [INFO] gnatsd is ready
+ nats-client	-- Start client..
+ gnatsd		-- [DEBUG] Client connection created%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+ nats-client	-- 1 messages received
+ nats-client	-- GOT :: INFO {"server_id":"93f5d02d3b613ec2f6135e4ffcee199a","version":"0.5.7","host":"0.0.0.0","port":4222,"auth_required":false,"ssl_required":false,"max_payload":1048576} 
+ gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+ nats-client    -- 2 messages received
+ nats-client    -- GOT :: PING
+ gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+ nats-client    -- 3 messages received
+ nats-client    -- GOT :: PING
+ gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+ nats-client    -- 4 messages received
+ nats-client    -- GOT :: PING
+ gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+ nats-client    -- 5 messages received
+ nats-client    -- GOT :: PING
+ gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+ nats-client    -- 6 messages received
+ nats-client    -- GOT :: PING
+ gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+ nats-client    -- 7 messages received
+ nats-client    -- GOT :: PING
+ gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+ nats-client    -- 8 messages received
+ nats-client    -- GOT :: PING
+ gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+ nats-client    -- 9 messages received
+ nats-client    -- GOT :: PING
+#+END_SRC
+
+**** PUB  <-> SUB
+
+As we have seen, we need to constantly be sending =PING=
+otherwise the server will close the connection.
+
+Now let's try creating a subscription!
+
+Another step that we need to handle is =CONNECT=,
+so we do that before starting a subscription. After that, 
+we subscribe to the =hello.world= channel:
+
+#+BEGIN_SRC sh
+echo 'CONNECT {"verbose":false,"pedantic":false}' > nats-in
+echo "SUB hello.world  2" > nats-in
+#+END_SRC
+
+Now if we try to send a message to this channel by =nats-pub=...
+
+#+BEGIN_SRC conf
+nats-pub hello.world -s nats://127.0.0.1:4222 "hoge hoge"
+#+END_SRC
+
+...we get the following displayed on our netcat console:
+
+#+BEGIN_SRC sh
+[2014-11-16T23:14:20 -0500] nats-client    -- GOT :: MSG hello.world 2 9
+[2014-11-16T23:14:20 -0500] nats-client    -- GOT :: hoge hoge
+#+END_SRC
+
+The =9= here represents the number of letters that were in the MSG.
+Now let's make them cooperate and send a =PUB= that says =fuga fuga=
+soon after it gets the first message:
+
+#+name: nats-client
+#+BEGIN_SRC sh :sleep 7
+
+[[ -e nats-in ]]  || mkfifo nats-in
+[[ -e nats-out ]] || mkfifo nats-out
+
+# cat > nats-in
+echo "Start client.."
+nc 127.0.0.1 4222 <nats-in >nats-out &
+
+# open nats-in for writing  on fd 3
+# open nats-out for reading on fd 4
+exec 3> nats-in 4<nats-out
+
+export pingcounter=0
+while read msg <&4; do
+
+  export pingcounter=`expr $pingcounter + 1`
+  echo "$pingcounter messages received"
+  echo "GOT :: $msg"
+
+  # As soon as we get INFO, send CONNECT and subscriptions
+  echo $msg | grep -q INFO && {
+    echo 'CONNECT {"verbose":false,"pedantic":false}' > nats-in
+    echo "SUB hello.world  2" > nats-in
+  }
+
+  # respond to PING
+  echo $msg | grep -q PING && echo "PONG" > nats-in
+
+  # respond to MSG hello.world
+  echo $msg | grep -q "MSG hello.world" && {
+    echo "PONG" > nats-in
+    echo -ne 'PUB hello.world  9\r\nfuga fuga\r\n' > nats-in
+    sleep 1
+  }
+
+done
+#+END_SRC
+
+****** Using the special channel '=>='
+
+Here we are subscribing to all channels by using =>=,
+which is kind of a special channel to match all:
+
+#+name: subscribe
+#+BEGIN_SRC sh :sleep 9
+echo 'CONNECT {"verbose":false,"pedantic":false}' > nats-in
+echo "SUB >  2" > nats-in
+#+END_SRC
+
+**** Replying to an =INBOX=
+
+Once having covered subscriptions and publishing,
+we can try creating an =_INBOX= to support requests.
+
+Agents subscribed to the channel will get this message
+and respond to to it, but from the client side it is
+possible to stop receiving once we got enough.
+
+#+BEGIN_SRC 
+$ nats-request hello.world -s nats://127.0.0.1:4222 -n 1
+
+SUB _INBOX.46bdca94dd22f452e836b5e1f6  2\r\n"
+PUB hello.world _INBOX.46bdca94dd22f452e836b5e1f6 11\r\nHello World\r\n"
+
+[#1] Replied with : 'trying to help'
+#+END_SRC
+
+And in our client we handle it as
+
+: MSG hello.world 2 _INBOX.e16d52026b72575471357cc17d 11
+
+The client for this would look like this:
+
+#+name: nats-client
+#+BEGIN_SRC sh :sleep 7
+
+[[ -e nats-in ]]  || mkfifo nats-in
+[[ -e nats-out ]] || mkfifo nats-out
+
+echo "Start client.."
+nc 127.0.0.1 4222 <nats-in >nats-out &
+
+# open nats-in for writing  on fd 3
+# open nats-out for reading on fd 4
+exec 3> nats-in 4<nats-out
+
+export pingcounter=0
+cat nats-out | while read msg; do
+
+  export pingcounter=`expr $pingcounter + 1`
+  echo "$pingcounter messages received"
+  echo "GOT :: $msg"
+
+  # As soon as we get INFO, send CONNECT and subscriptions
+  echo $msg | grep -q INFO && {
+    echo 'CONNECT {"verbose":false,"pedantic":false}' > nats-in
+    echo "SUB hello.world  2" > nats-in
+  }
+
+  # respond to PING
+  echo $msg | grep -q PING && echo "PONG" > nats-in
+
+  # respond to MSG hello.world
+  echo $msg | grep -q "MSG hello.world" && {
+    echo "PONG" > nats-in
+    echo -ne "PUB hello.world  9\r\nfuga fuga\r\n" > nats-in
+    sleep 1
+  }
+
+  # process MSG hello.world requests
+  echo $msg | grep -q "^MSG hello.world..._INBOX" && {
+    echo "PONG" > nats-in
+    inbox=`echo $msg | awk '{print $4}'`
+    echo -ne "PUB $inbox 14\r\ntrying to help\r\n" > nats-in
+  }
+
+done
+#+END_SRC
+
+...which makes up for an extremely basic version of a NATS client :)
+
+#+BEGIN_SRC 
+gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58802 - cid:7)
+nats-client	-- 134 messages received
+nats-client	-- GOT :: fuga fuga
+nats-client	-- 135 messages received
+nats-client	-- GOT :: MSG hello.world 2 9
+gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
+nats-client	-- 136 messages received
+nats-client	-- GOT :: fuga fuga
+nats-client	-- 137 messages received
+#+END_SRC
