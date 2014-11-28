@@ -4,7 +4,7 @@
  <title>Literate Infrastructure</title>
  <link href="/atom.xml" rel="self"/>
  <link href="/"/>
- <updated>2014-11-17T16:01:08-05:00</updated>
+ <updated>2014-11-28T13:30:14-05:00</updated>
  <id></id>
  <author>
    <name>Waldemar Quevedo</name>
@@ -799,6 +799,142 @@ aggregator          -- good  -  201
     &lt;/ul&gt;
   &lt;/li&gt;
 &lt;/ul&gt;
+
+
+</content>
+ </entry>
+ 
+ <entry>
+   <title>About Org Converge</title>
+   <link href="/posts/2014/06/04/org-converge-post/"/>
+   <updated>2014-06-04T00:00:00-04:00</updated>
+   <id>/posts/2014/06/04/org-converge-post</id>
+   <content type="html">
+&lt;p&gt;In a past release from Org Ruby, I added the functionality to be able
+  to turn off exporting the results attached to a code block. For
+  example, here only the actual code would make it to the export:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;#+begin_src sh :results code
+echo &amp;#39;hello&amp;#39;
+#+end_src
+
+#+RESULTS:
+#+BEGIN_SRC sh
+hello
+#+END_SRC
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Doing this involved adding support to parse the header arguments from
+  a code block, so I decided to start playing with the idea of
+  implementing tangling code blocks:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;#+begin_src sh :tangle /etc/component.yml
+port: 4000
+#+end_src
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;This is just a subset of the functionality provided by the powerful
+  Org Babel mode, and still very basic since it does not
+  support &lt;code&gt;#+MACROS&lt;/code&gt; for example, which would make feature more
+  convenient.&lt;/p&gt;
+&lt;p&gt;After doing this, and since this is all Ruby, I imagined that since
+  there is good interop with other reliable Ruby tools, it would be
+  interesting to reopen foreman for actually running the blocks.&lt;/p&gt;
+&lt;p&gt;All this functionality is wrapped into a gem named &lt;a href=&quot;https://github.com/wallyqs/org-converge&quot;&gt;org-converge&lt;/a&gt;,
+  named that way in the sense that all reproducible runs should
+  converge into a state.&lt;/p&gt;
+&lt;p&gt;In the future, I hope to have more Chef/Puppet/Ansible
+  like features, like &lt;a href=&quot;https://github.com/wallyqs/org-converge/commit/5393c76127c7a38bc071c14dbd54de9b8665f343&quot;&gt;idempotency&lt;/a&gt;:&lt;/p&gt;
+&lt;h3&gt;Idempotency example via &lt;code&gt;:if&lt;/code&gt; and &lt;code&gt;:unless&lt;/code&gt; switches&lt;/h3&gt;
+&lt;p&gt;The way this work is by linking 2 different code blocks,
+  so that one can define whether the second one should be executed.&lt;/p&gt;
+&lt;p&gt;In order to achieve this, for now the blocks need to be defined sequentially
+  and use the exit status to check whether it should be run or not.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;#+name: install-package
+#+begin_src sh
+echo &amp;quot;brew install something...&amp;quot;
+echo &amp;quot;package is installed&amp;quot; &amp;gt; installed
+#+end_src
+
+#+name: package-already-installed
+#+begin_src sh
+if [[ -e installed ]]; then
+  echo &amp;quot;Already installed&amp;quot;
+  exit 0
+else
+  echo &amp;quot;Needs install&amp;quot;
+  exit 1
+fi
+#+end_src
+
+#+name: install-package-once-again
+#+begin_src sh :unless package-already-installed
+echo &amp;quot;Installing the package once again...&amp;quot;
+echo &amp;quot;not run&amp;quot; &amp;gt;&amp;gt; installed
+#+end_src
+
+#+name: do-everything-even-if-package-installed
+#+begin_src sh :if package-already-installed
+echo &amp;quot;Doing this even if installed already...&amp;quot; 
+echo &amp;quot;eof&amp;quot; &amp;gt;&amp;gt; installed
+#+end_src
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Now when we run it the first time, we would get the following output:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;gem install org-converge
+
+org-converge idempotent-run.org
+
+&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;2014-11-28T13:18:13 -0500&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; package-already-installed -- Needs install
+&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;2014-11-28T13:18:13 -0500&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; package-already-installed -- started with pid 47963
+&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;2014-11-28T13:18:13 -0500&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; package-already-installed -- exited with code 1
+&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;2014-11-28T13:18:13 -0500&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; install-package -- started with pid 47967
+&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;2014-11-28T13:18:13 -0500&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; install-package -- Installing the package...
+&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;2014-11-28T13:18:13 -0500&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; install-package -- exited with code 0
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;&amp;#8230;but if we run it again, we would get the following:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;org-converge idempotent-run.org
+
+&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;2014-11-28T13:19:07 -0500&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; package-already-installed -- started with pid 48474
+&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;2014-11-28T13:19:07 -0500&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; package-already-installed -- Already installed
+&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;2014-11-28T13:19:07 -0500&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; package-already-installed -- exited with code 0
+&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;2014-11-28T13:19:07 -0500&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; install-package -- Skipped since :unless clause matches check from &lt;span class=&quot;s1&quot;&gt;&amp;#39;package-already-installed&amp;#39;&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;2014-11-28T13:19:07 -0500&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; Run has completed successfully.
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h3&gt;Multiprocess run usage&lt;/h3&gt;
+&lt;p&gt;I also have been using lately for doing multi process running,
+  and I have found it pretty comfortable for when practicing
+  literate programming with Org Babel.&lt;/p&gt;
+&lt;p&gt;An example, the following 3 scripts should be run in parallel
+  with all output being flushed to the screen.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;- Count some numbers with bash
+
+#+name: bash_counter
+#+begin_src sh :shebang #!/bin/bash
+
+for i in `seq 1 5`; do 
+  echo &amp;quot;Writing! $i&amp;quot;
+  echo &amp;quot;hello $i from bash&amp;quot;
+  sleep $(($RANDOM % 5))
+done
+
+#+end_src
+
+- Count some numbers with ruby
+
+#+name: ruby_counter
+#+begin_src ruby :shebang #!/usr/bin/ruby
+$stdout.sync = true
+
+10.times do |n|
+  puts &amp;quot;And now writing! #{n}&amp;quot;
+  puts &amp;quot;Hello from Ruby&amp;quot;
+  sleep 0.5
+end
+#+end_src
+
+- Print some numbers with python
+
+#+name: python_counter
+#+begin_src python :shebang #!/usr/bin/python
+for i in range(0, 20):
+  print &amp;quot;From Python&amp;quot;
+&lt;/pre&gt;&lt;/div&gt;
 
 
 </content>

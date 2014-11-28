@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+
+  <head>
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+  <!-- Enable responsiveness on mobile devices-->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  <title>
+    
+      About Org Converge &middot; Literate Infrastructure
+    
+  </title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/public/css/poole.css">
+  <link rel="stylesheet" href="/public/css/syntax.css">
+  <link rel="stylesheet" href="/public/css/hyde.css">
+  <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+
+  <!-- Icons -->
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/public/apple-touch-icon-144-precomposed.png">
+                                 <link rel="shortcut icon" href="/public/favicon.ico">
+
+  <!-- RSS -->
+  <link rel="alternate" type="application/rss+xml" title="RSS" href="/atom.xml">
+</head>
+
+
+  <body>
+  <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-55629836-1', 'auto');
+    ga('send', 'pageview');
+
+  </script>
+    <div class="sidebar">
+  <div class="container sidebar-sticky">
+    <div class="sidebar-about">
+      <h2>
+        <a href="/">
+          Literate Infrastructure
+        </a>
+      </h2>
+      <p>PaaS + Org mode</p>
+      <p class="lead"><a href="https://twitter.com/wallyqs" target="_blank">@wallyqs</a></p>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="sidebar-nav-item" href="/">Home</a>
+
+      
+      
+        
+          
+        
+      
+        
+          
+            <a class="sidebar-nav-item" href="/about.html">About</a>
+          
+        
+      
+        
+      
+        
+          
+        
+      
+        
+          
+            <a class="sidebar-nav-item" href="/posts/">Posts</a>
+          
+        
+      
+        
+          
+        
+      
+
+    </nav>
+
+    <p>&copy; 2014. All rights reserved.</p>
+  </div>
+</div>
+
+
+    <div class="content container">
+      <div class="post">
+  <h1 class="post-title">About Org Converge</h1>
+  <span class="post-date">04 Jun 2014</span>
+  
+<p>In a past release from Org Ruby, I added the functionality to be able
+  to turn off exporting the results attached to a code block. For
+  example, here only the actual code would make it to the export:</p>
+<div class="highlight"><pre>#+begin_src sh :results code
+echo &#39;hello&#39;
+#+end_src
+
+#+RESULTS:
+#+BEGIN_SRC sh
+hello
+#+END_SRC
+</pre></div>
+<p>Doing this involved adding support to parse the header arguments from
+  a code block, so I decided to start playing with the idea of
+  implementing tangling code blocks:</p>
+<div class="highlight"><pre>#+begin_src sh :tangle /etc/component.yml
+port: 4000
+#+end_src
+</pre></div>
+<p>This is just a subset of the functionality provided by the powerful
+  Org Babel mode, and still very basic since it does not
+  support <code>#+MACROS</code> for example, which would make feature more
+  convenient.</p>
+<p>After doing this, and since this is all Ruby, I imagined that since
+  there is good interop with other reliable Ruby tools, it would be
+  interesting to reopen foreman for actually running the blocks.</p>
+<p>All this functionality is wrapped into a gem named <a href="https://github.com/wallyqs/org-converge">org-converge</a>,
+  named that way in the sense that all reproducible runs should
+  converge into a state.</p>
+<p>In the future, I hope to have more Chef/Puppet/Ansible
+  like features, like <a href="https://github.com/wallyqs/org-converge/commit/5393c76127c7a38bc071c14dbd54de9b8665f343">idempotency</a>:</p>
+<h3>Idempotency example via <code>:if</code> and <code>:unless</code> switches</h3>
+<p>The way this work is by linking 2 different code blocks,
+  so that one can define whether the second one should be executed.</p>
+<p>In order to achieve this, for now the blocks need to be defined sequentially
+  and use the exit status to check whether it should be run or not.</p>
+<div class="highlight"><pre>#+name: install-package
+#+begin_src sh
+echo &quot;brew install something...&quot;
+echo &quot;package is installed&quot; &gt; installed
+#+end_src
+
+#+name: package-already-installed
+#+begin_src sh
+if [[ -e installed ]]; then
+  echo &quot;Already installed&quot;
+  exit 0
+else
+  echo &quot;Needs install&quot;
+  exit 1
+fi
+#+end_src
+
+#+name: install-package-once-again
+#+begin_src sh :unless package-already-installed
+echo &quot;Installing the package once again...&quot;
+echo &quot;not run&quot; &gt;&gt; installed
+#+end_src
+
+#+name: do-everything-even-if-package-installed
+#+begin_src sh :if package-already-installed
+echo &quot;Doing this even if installed already...&quot; 
+echo &quot;eof&quot; &gt;&gt; installed
+#+end_src
+</pre></div>
+<p>Now when we run it the first time, we would get the following output:</p>
+<div class="highlight"><pre>gem install org-converge
+
+org-converge idempotent-run.org
+
+<span class="o">[</span>2014-11-28T13:18:13 -0500<span class="o">]</span> package-already-installed -- Needs install
+<span class="o">[</span>2014-11-28T13:18:13 -0500<span class="o">]</span> package-already-installed -- started with pid 47963
+<span class="o">[</span>2014-11-28T13:18:13 -0500<span class="o">]</span> package-already-installed -- exited with code 1
+<span class="o">[</span>2014-11-28T13:18:13 -0500<span class="o">]</span> install-package -- started with pid 47967
+<span class="o">[</span>2014-11-28T13:18:13 -0500<span class="o">]</span> install-package -- Installing the package...
+<span class="o">[</span>2014-11-28T13:18:13 -0500<span class="o">]</span> install-package -- exited with code 0
+</pre></div>
+<p>&#8230;but if we run it again, we would get the following:</p>
+<div class="highlight"><pre>org-converge idempotent-run.org
+
+<span class="o">[</span>2014-11-28T13:19:07 -0500<span class="o">]</span> package-already-installed -- started with pid 48474
+<span class="o">[</span>2014-11-28T13:19:07 -0500<span class="o">]</span> package-already-installed -- Already installed
+<span class="o">[</span>2014-11-28T13:19:07 -0500<span class="o">]</span> package-already-installed -- exited with code 0
+<span class="o">[</span>2014-11-28T13:19:07 -0500<span class="o">]</span> install-package -- Skipped since :unless clause matches check from <span class="s1">&#39;package-already-installed&#39;</span>
+<span class="o">[</span>2014-11-28T13:19:07 -0500<span class="o">]</span> Run has completed successfully.
+</pre></div>
+<h3>Multiprocess run usage</h3>
+<p>I also have been using lately for doing multi process running,
+  and I have found it pretty comfortable for when practicing
+  literate programming with Org Babel.</p>
+<p>An example, the following 3 scripts should be run in parallel
+  with all output being flushed to the screen.</p>
+<div class="highlight"><pre>- Count some numbers with bash
+
+#+name: bash_counter
+#+begin_src sh :shebang #!/bin/bash
+
+for i in `seq 1 5`; do 
+  echo &quot;Writing! $i&quot;
+  echo &quot;hello $i from bash&quot;
+  sleep $(($RANDOM % 5))
+done
+
+#+end_src
+
+- Count some numbers with ruby
+
+#+name: ruby_counter
+#+begin_src ruby :shebang #!/usr/bin/ruby
+$stdout.sync = true
+
+10.times do |n|
+  puts &quot;And now writing! #{n}&quot;
+  puts &quot;Hello from Ruby&quot;
+  sleep 0.5
+end
+#+end_src
+
+- Print some numbers with python
+
+#+name: python_counter
+#+begin_src python :shebang #!/usr/bin/python
+for i in range(0, 20):
+  print &quot;From Python&quot;
+</pre></div>
+
+
+
+</div>
+
+<div class="related">
+  <h2>Related Posts</h2>
+  <ul class="related-posts">
+    
+      <li>
+        <h3>
+          <a href="/posts/2014/11/17/basic-nats-client/">
+            Basic NATS
+            <small>17 Nov 2014</small>
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/posts/2014/10/16/counting-words-with-nats/">
+            Counting words with NATS
+            <small>16 Oct 2014</small>
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/posts/2014/10/11/transducers-in-ruby/">
+            Term Frequency with Transducers gem in Ruby
+            <small>11 Oct 2014</small>
+          </a>
+        </h3>
+      </li>
+    
+  </ul>
+</div>
+
+    </div>
+
+  </body>
+</html>
