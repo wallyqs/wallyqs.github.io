@@ -4,13 +4,229 @@
  <title>Literate Infrastructure</title>
  <link href="/atom.xml" rel="self"/>
  <link href="/"/>
- <updated>2014-11-28T13:30:14-05:00</updated>
+ <updated>2014-12-04T06:04:58-05:00</updated>
  <id></id>
  <author>
    <name>Waldemar Quevedo</name>
    <email></email>
  </author>
 
+ 
+ <entry>
+   <title>Gradually adopting Org mode, part 1</title>
+   <link href="/posts/2014/12/04/using-org-babel/"/>
+   <updated>2014-12-04T00:00:00-05:00</updated>
+   <id>/posts/2014/12/04/using-org-babel</id>
+   <content type="html">
+&lt;p&gt;Like most Org mode users, I started using Org mode as a TODO list.
+  Though for a while now, the Org Babel mode has become an intrinsic
+  part of my flow as well, to the point that outside doing code reading
+  of other projects, I rarely visit files anymore and spend most of my
+  time within Org mode buffers.&lt;/p&gt;
+&lt;p&gt;In this post I will attempt to document such progression to this style
+  of using Org mode, and should also serve as a kind of tutorial for
+  those without familiarity to Org mode.&lt;/p&gt;
+&lt;h4&gt;Basic elements of Org mode&lt;/h4&gt;
+&lt;p&gt;Org mode has a &lt;i&gt;ton&lt;/i&gt; of features, so rather than explaining
+  each one of the features of Org mode, I will describe what
+  are the building blocks that we can choose from
+  when authoring an Org mode document.&lt;/p&gt;
+&lt;p&gt;Some of the most basic elements of an Org mode document are:&lt;/p&gt;
+&lt;dl&gt;
+  &lt;dt&gt;Org mode markup paragraphs&lt;/dt&gt;&lt;dd&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;Similar to other markup languages, we can write text in /italics/, *bold*, 
+_underline_, =code= or ~verbatim~, and even super and subscript: n_1, n^2
+&lt;/pre&gt;&lt;/div&gt;
+  &lt;/dd&gt;
+  &lt;dt&gt;headlines and sections&lt;/dt&gt;&lt;dd&gt;
+    &lt;p&gt;A section in Org mode is started by a headline. Headlines start
+      with one or more asterisks.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;* A headline
+
+Paragraph within a /headline/ 
+&lt;/pre&gt;&lt;/div&gt;
+    &lt;p&gt;We can set a TODO state to a headline to define whether something
+      is done or not:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;* TODO Need to do this!
+* DONE Needed to do this!
+&lt;/pre&gt;&lt;/div&gt;
+  &lt;/dd&gt;
+  &lt;dt&gt;blocks&lt;/dt&gt;&lt;dd&gt;
+    &lt;p&gt;A block is how we group together a bunch of lines that are not
+      meant to be only paragraphs.  Some of the builtin blocks that we can have
+      in Org mode are: src, example, verse, quote and html.&lt;/p&gt;
+    &lt;p&gt;A block will start &lt;code&gt;#+begin_...&lt;/code&gt; and end with &lt;code&gt;#+end_...&lt;/code&gt;.&lt;/p&gt;
+    &lt;p&gt;One of the coolest features of the Org mode code blocks is that
+      we can add metadata to them, such as which kind of language is
+      being used inside of it (in case of src an example code blocks).&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;#+begin_src ruby
+&amp;quot;Hello world&amp;quot;
+#+end_src
+&lt;/pre&gt;&lt;/div&gt;
+    &lt;p&gt;In order for syntax highlighting to work, it is needed to include
+      the following in the Emacs configuration file (or just eval it
+      during boot):&lt;/p&gt;
+    &lt;pre class=&quot;example&quot;&gt;
+(setq org-src-fontify-natively t)
+    &lt;/pre&gt;
+    &lt;p&gt;It is also required that the Emacs install has the special mode
+      for it.&lt;/p&gt;
+  &lt;/dd&gt;
+  &lt;dt&gt;lists&lt;/dt&gt;&lt;dd&gt;
+    &lt;p&gt;A list can be an unordered, ordered or definition list:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;   - first level
+
+     Org mode /markup/
+
+     + second level
+       1) third level
+          1. fourth level
+   - back to first level
+     + a definition list :: 
+	   some definition
+&lt;/pre&gt;&lt;/div&gt;
+    &lt;p&gt;By putting empty brackets  &lt;code&gt;[ ]&lt;/code&gt;, &lt;code&gt;[/]&lt;/code&gt;, or &lt;code&gt;[%]&lt;/code&gt; at the beginning of a list, it
+      can become a task list.  Pressing &lt;code&gt;C-c C-C&lt;/code&gt; on an item would
+      update its value:&lt;/p&gt;
+    &lt;p&gt;Before:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;- [0/1] one
+  + [ ] two 
+- [0%] three
+  * [ ] four
+&lt;/pre&gt;&lt;/div&gt;
+    &lt;p&gt;After:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;- [1/1] one
+  + [X] two 
+- [100%] three
+  * [X] four
+&lt;/pre&gt;&lt;/div&gt;
+  &lt;/dd&gt;
+  &lt;dt&gt;tables&lt;/dt&gt;&lt;dd&gt;
+    An Org mode table:
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;| apples  | 10 |
+| oranges | 20 |
+&lt;/pre&gt;&lt;/div&gt;
+    &lt;p&gt;Tables in Org mode are very powerful.  They are not meant to be
+      only for authoring tables, but they have spreadsheet
+      functionality as well.  The following table would have its formulas
+      evaluated after pressing TAB on it:&lt;/p&gt;
+    &lt;p&gt;Before:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;| fruit   |      quantity | price per fruit | COST          |
+| apples  |            10 |               5 | =$2 * $3      |
+| oranges |            20 |               7 | =$2 * $3      |
+| TOTAL   | =vsum(@2..@3) |                 |               |
+&lt;/pre&gt;&lt;/div&gt;
+    &lt;p&gt;After:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;| fruit   |      quantity | price per fruit | COST     |
+| apples  |            10 |               5 | 50       |
+| oranges |            20 |               7 | 140      |
+| TOTAL   |            30 |                 |          |
+#+TBLFM: $2=vsum(@2..@3)::$4=$2 * $3
+&lt;/pre&gt;&lt;/div&gt;
+  &lt;/dd&gt;
+&lt;/dl&gt;
+&lt;h5&gt;Basic usage of Org mode for TODO lists&lt;/h5&gt;
+&lt;p&gt;At the beginning of my Org mode usage, my documents used to look like
+  this I think:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;* TODO Reply email from Alice
+
+** TODO Reply
+
+Dear Alice...
+
+* TODO Capacity planning
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;One of the features I first adopted is the use of &lt;code&gt;CLOCKS&lt;/code&gt;.
+  You can start a clock by pressing: &lt;code&gt;C-c C-x TAB&lt;/code&gt;,
+  then we you are done you clock out with &lt;code&gt;C-c C-x C-o&lt;/code&gt;.
+  Then you can use  &lt;code&gt;C-c C-x C-d&lt;/code&gt; to heck the total time spent.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;* DONE Reply email from Alice
+  CLOCK: [2014-12-04 Thu 15:45]--[2014-12-04 Thu 15:50] =&amp;gt;  0:05
+
+** DONE Reply
+   CLOCK: [2014-12-04 Thu 16:00]--[2014-12-04 Thu 17:00] =&amp;gt;  1:00
+
+Dear Alice...
+
+* TODO Capacity planning
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Another helpful feature is &lt;i&gt;narrowing down&lt;/i&gt; to a headline so that
+  other headlines are not shown. This can be done by pressing &lt;code&gt;C-x n s&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Having covered these basic I&amp;#8217;ll go on to talk about Org Babel.&lt;/p&gt;
+&lt;h4&gt;Start using Org mode for reproducible documents&lt;/h4&gt;
+&lt;p&gt;The key thing about when using Org mode and for literate programming
+  is when you care about making things reproducible.&lt;/p&gt;
+&lt;p&gt;Eric Schulte paper has more background on how the project started: &lt;a href=&quot;http://www.jstatsoft.org/v46/i03&quot;&gt;http://www.jstatsoft.org/v46/i03&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;In order to use Org Babel we first need to enable it.  This is how my
+  &lt;code&gt;.emacs&lt;/code&gt; looks for this:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;setq&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;org-src-fontify-natively&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;setq&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;org-confirm-babel-evaluate&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nil&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;org-babel-do-load-languages&lt;/span&gt;
+      &lt;span class=&quot;ss&quot;&gt;&amp;#39;org-babel-load-languages&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;emacs-lisp&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;clojure&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;R&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;C&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;sh&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;ruby&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;python&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;js&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;dot&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;haskell&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;scala&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Note that in order for the above to work, there have to be major modes
+  in Emacs for those specific languages. Comment out or remove the
+  language that is not on your setup.&lt;/p&gt;
+&lt;h5&gt;Making the document active by giving things a name&lt;/h5&gt;
+&lt;p&gt;To adopt Org mode literate programming mode, we need to start
+  using &lt;code&gt;#+name&lt;/code&gt; on top of some Org mode elements.  By doing this,
+  it is possible to reference later on to that part of the document.&lt;/p&gt;
+&lt;p&gt;For example we can have a code block and eval it with &lt;code&gt;C-c C-c&lt;/code&gt;:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;#+BEGIN_SRC ruby
+1 + 1
+#+END_SRC
+
+#+RESULTS:
+: 2
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;But by giving it a name, we can reuse this code block:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;#+name: sum
+#+BEGIN_SRC ruby :var arg1=1 :var arg2=2
+arg1 + arg2
+#+END_SRC
+
+#+RESULTS:
+: 2
+
+#+call: sum(10, 100)
+
+#+RESULTS:
+: 110
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Or chain it with a table:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;#+name: fruits
+| apples  | 10 |
+| oranges | 20 |
+
+#+name: show-fruits
+#+BEGIN_SRC ruby :var fruitstable=fruits :results output code
+fruits = Hash[fruitstable]
+
+p fruits
+#+END_SRC
+
+#+RESULTS: show-fruits
+#+BEGIN_SRC ruby
+{&amp;quot;apples&amp;quot;=&amp;gt;10, &amp;quot;oranges&amp;quot;=&amp;gt;20}
+#+END_SRC
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;To be continued&amp;#8230;&lt;/p&gt;
+
+
+</content>
+ </entry>
  
  <entry>
    <title>Basic NATS</title>

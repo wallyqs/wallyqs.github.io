@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+
+  <head>
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+  <!-- Enable responsiveness on mobile devices-->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  <title>
+    
+      Gradually adopting Org mode, part 1 &middot; Literate Infrastructure
+    
+  </title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/public/css/poole.css">
+  <link rel="stylesheet" href="/public/css/syntax.css">
+  <link rel="stylesheet" href="/public/css/hyde.css">
+  <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+
+  <!-- Icons -->
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/public/apple-touch-icon-144-precomposed.png">
+                                 <link rel="shortcut icon" href="/public/favicon.ico">
+
+  <!-- RSS -->
+  <link rel="alternate" type="application/rss+xml" title="RSS" href="/atom.xml">
+</head>
+
+
+  <body>
+  <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-55629836-1', 'auto');
+    ga('send', 'pageview');
+
+  </script>
+    <div class="sidebar">
+  <div class="container sidebar-sticky">
+    <div class="sidebar-about">
+      <h2>
+        <a href="/">
+          Literate Infrastructure
+        </a>
+      </h2>
+      <p>PaaS + Org mode</p>
+      <p class="lead"><a href="https://twitter.com/wallyqs" target="_blank">@wallyqs</a></p>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="sidebar-nav-item" href="/">Home</a>
+
+      
+      
+        
+          
+        
+      
+        
+          
+            <a class="sidebar-nav-item" href="/about.html">About</a>
+          
+        
+      
+        
+      
+        
+          
+        
+      
+        
+          
+            <a class="sidebar-nav-item" href="/posts/">Posts</a>
+          
+        
+      
+        
+          
+        
+      
+
+    </nav>
+
+    <p>&copy; 2014. All rights reserved.</p>
+  </div>
+</div>
+
+
+    <div class="content container">
+      <div class="post">
+  <h1 class="post-title">Gradually adopting Org mode, part 1</h1>
+  <span class="post-date">04 Dec 2014</span>
+  
+<p>Like most Org mode users, I started using Org mode as a TODO list.
+  Though for a while now, the Org Babel mode has become an intrinsic
+  part of my flow as well, to the point that outside doing code reading
+  of other projects, I rarely visit files anymore and spend most of my
+  time within Org mode buffers.</p>
+<p>In this post I will attempt to document such progression to this style
+  of using Org mode, and should also serve as a kind of tutorial for
+  those without familiarity to Org mode.</p>
+<h4>Basic elements of Org mode</h4>
+<p>Org mode has a <i>ton</i> of features, so rather than explaining
+  each one of the features of Org mode, I will describe what
+  are the building blocks that we can choose from
+  when authoring an Org mode document.</p>
+<p>Some of the most basic elements of an Org mode document are:</p>
+<dl>
+  <dt>Org mode markup paragraphs</dt><dd>
+<div class="highlight"><pre>Similar to other markup languages, we can write text in /italics/, *bold*, 
+_underline_, =code= or ~verbatim~, and even super and subscript: n_1, n^2
+</pre></div>
+  </dd>
+  <dt>headlines and sections</dt><dd>
+    <p>A section in Org mode is started by a headline. Headlines start
+      with one or more asterisks.</p>
+<div class="highlight"><pre>* A headline
+
+Paragraph within a /headline/ 
+</pre></div>
+    <p>We can set a TODO state to a headline to define whether something
+      is done or not:</p>
+<div class="highlight"><pre>* TODO Need to do this!
+* DONE Needed to do this!
+</pre></div>
+  </dd>
+  <dt>blocks</dt><dd>
+    <p>A block is how we group together a bunch of lines that are not
+      meant to be only paragraphs.  Some of the builtin blocks that we can have
+      in Org mode are: src, example, verse, quote and html.</p>
+    <p>A block will start <code>#+begin_...</code> and end with <code>#+end_...</code>.</p>
+    <p>One of the coolest features of the Org mode code blocks is that
+      we can add metadata to them, such as which kind of language is
+      being used inside of it (in case of src an example code blocks).</p>
+<div class="highlight"><pre>#+begin_src ruby
+&quot;Hello world&quot;
+#+end_src
+</pre></div>
+    <p>In order for syntax highlighting to work, it is needed to include
+      the following in the Emacs configuration file (or just eval it
+      during boot):</p>
+    <pre class="example">
+(setq org-src-fontify-natively t)
+    </pre>
+    <p>It is also required that the Emacs install has the special mode
+      for it.</p>
+  </dd>
+  <dt>lists</dt><dd>
+    <p>A list can be an unordered, ordered or definition list:</p>
+<div class="highlight"><pre>   - first level
+
+     Org mode /markup/
+
+     + second level
+       1) third level
+          1. fourth level
+   - back to first level
+     + a definition list :: 
+	   some definition
+</pre></div>
+    <p>By putting empty brackets  <code>[ ]</code>, <code>[/]</code>, or <code>[%]</code> at the beginning of a list, it
+      can become a task list.  Pressing <code>C-c C-C</code> on an item would
+      update its value:</p>
+    <p>Before:</p>
+<div class="highlight"><pre>- [0/1] one
+  + [ ] two 
+- [0%] three
+  * [ ] four
+</pre></div>
+    <p>After:</p>
+<div class="highlight"><pre>- [1/1] one
+  + [X] two 
+- [100%] three
+  * [X] four
+</pre></div>
+  </dd>
+  <dt>tables</dt><dd>
+    An Org mode table:
+<div class="highlight"><pre>| apples  | 10 |
+| oranges | 20 |
+</pre></div>
+    <p>Tables in Org mode are very powerful.  They are not meant to be
+      only for authoring tables, but they have spreadsheet
+      functionality as well.  The following table would have its formulas
+      evaluated after pressing TAB on it:</p>
+    <p>Before:</p>
+<div class="highlight"><pre>| fruit   |      quantity | price per fruit | COST          |
+| apples  |            10 |               5 | =$2 * $3      |
+| oranges |            20 |               7 | =$2 * $3      |
+| TOTAL   | =vsum(@2..@3) |                 |               |
+</pre></div>
+    <p>After:</p>
+<div class="highlight"><pre>| fruit   |      quantity | price per fruit | COST     |
+| apples  |            10 |               5 | 50       |
+| oranges |            20 |               7 | 140      |
+| TOTAL   |            30 |                 |          |
+#+TBLFM: $2=vsum(@2..@3)::$4=$2 * $3
+</pre></div>
+  </dd>
+</dl>
+<h5>Basic usage of Org mode for TODO lists</h5>
+<p>At the beginning of my Org mode usage, my documents used to look like
+  this I think:</p>
+<div class="highlight"><pre>* TODO Reply email from Alice
+
+** TODO Reply
+
+Dear Alice...
+
+* TODO Capacity planning
+</pre></div>
+<p>One of the features I first adopted is the use of <code>CLOCKS</code>.
+  You can start a clock by pressing: <code>C-c C-x TAB</code>,
+  then we you are done you clock out with <code>C-c C-x C-o</code>.
+  Then you can use  <code>C-c C-x C-d</code> to heck the total time spent.</p>
+<div class="highlight"><pre>* DONE Reply email from Alice
+  CLOCK: [2014-12-04 Thu 15:45]--[2014-12-04 Thu 15:50] =&gt;  0:05
+
+** DONE Reply
+   CLOCK: [2014-12-04 Thu 16:00]--[2014-12-04 Thu 17:00] =&gt;  1:00
+
+Dear Alice...
+
+* TODO Capacity planning
+</pre></div>
+<p>Another helpful feature is <i>narrowing down</i> to a headline so that
+  other headlines are not shown. This can be done by pressing <code>C-x n s</code>.</p>
+<p>Having covered these basic I&#8217;ll go on to talk about Org Babel.</p>
+<h4>Start using Org mode for reproducible documents</h4>
+<p>The key thing about when using Org mode and for literate programming
+  is when you care about making things reproducible.</p>
+<p>Eric Schulte paper has more background on how the project started: <a href="http://www.jstatsoft.org/v46/i03">http://www.jstatsoft.org/v46/i03</a></p>
+<p>In order to use Org Babel we first need to enable it.  This is how my
+  <code>.emacs</code> looks for this:</p>
+<div class="highlight"><pre><span class="p">(</span><span class="nf">setq</span> <span class="nv">org-src-fontify-natively</span> <span class="nv">t</span><span class="p">)</span>
+<span class="p">(</span><span class="nf">setq</span> <span class="nv">org-confirm-babel-evaluate</span> <span class="nv">nil</span><span class="p">)</span>
+<span class="p">(</span><span class="nf">org-babel-do-load-languages</span>
+      <span class="ss">&#39;org-babel-load-languages</span>
+      <span class="o">&#39;</span><span class="p">((</span><span class="nf">emacs-lisp</span> <span class="o">.</span> <span class="nv">t</span><span class="p">)</span>
+	<span class="p">(</span><span class="nf">clojure</span> <span class="o">.</span> <span class="nv">t</span><span class="p">)</span>
+        <span class="p">(</span><span class="nf">R</span> <span class="o">.</span> <span class="nv">t</span><span class="p">)</span>
+        <span class="p">(</span><span class="nf">C</span> <span class="o">.</span> <span class="nv">t</span><span class="p">)</span>
+        <span class="p">(</span><span class="nf">sh</span> <span class="o">.</span> <span class="nv">t</span><span class="p">)</span>
+        <span class="p">(</span><span class="nf">ruby</span> <span class="o">.</span> <span class="nv">t</span><span class="p">)</span>
+        <span class="p">(</span><span class="nf">python</span> <span class="o">.</span> <span class="nv">t</span><span class="p">)</span>
+        <span class="p">(</span><span class="nf">js</span> <span class="o">.</span> <span class="nv">t</span><span class="p">)</span>
+        <span class="p">(</span><span class="nf">dot</span> <span class="o">.</span> <span class="nv">t</span><span class="p">)</span>
+	<span class="p">(</span><span class="nf">haskell</span> <span class="o">.</span> <span class="nv">t</span><span class="p">)</span>
+	<span class="p">(</span><span class="nf">scala</span> <span class="o">.</span> <span class="nv">t</span><span class="p">)</span>
+	<span class="p">))</span>
+</pre></div>
+<p>Note that in order for the above to work, there have to be major modes
+  in Emacs for those specific languages. Comment out or remove the
+  language that is not on your setup.</p>
+<h5>Making the document active by giving things a name</h5>
+<p>To adopt Org mode literate programming mode, we need to start
+  using <code>#+name</code> on top of some Org mode elements.  By doing this,
+  it is possible to reference later on to that part of the document.</p>
+<p>For example we can have a code block and eval it with <code>C-c C-c</code>:</p>
+<div class="highlight"><pre>#+BEGIN_SRC ruby
+1 + 1
+#+END_SRC
+
+#+RESULTS:
+: 2
+</pre></div>
+<p>But by giving it a name, we can reuse this code block:</p>
+<div class="highlight"><pre>#+name: sum
+#+BEGIN_SRC ruby :var arg1=1 :var arg2=2
+arg1 + arg2
+#+END_SRC
+
+#+RESULTS:
+: 2
+
+#+call: sum(10, 100)
+
+#+RESULTS:
+: 110
+</pre></div>
+<p>Or chain it with a table:</p>
+<div class="highlight"><pre>#+name: fruits
+| apples  | 10 |
+| oranges | 20 |
+
+#+name: show-fruits
+#+BEGIN_SRC ruby :var fruitstable=fruits :results output code
+fruits = Hash[fruitstable]
+
+p fruits
+#+END_SRC
+
+#+RESULTS: show-fruits
+#+BEGIN_SRC ruby
+{&quot;apples&quot;=&gt;10, &quot;oranges&quot;=&gt;20}
+#+END_SRC
+</pre></div>
+<p>To be continued&#8230;</p>
+
+
+
+</div>
+
+<div class="related">
+  <h2>Related Posts</h2>
+  <ul class="related-posts">
+    
+      <li>
+        <h3>
+          <a href="/posts/2014/11/17/basic-nats-client/">
+            Basic NATS
+            <small>17 Nov 2014</small>
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/posts/2014/10/16/counting-words-with-nats/">
+            Counting words with NATS
+            <small>16 Oct 2014</small>
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/posts/2014/10/11/transducers-in-ruby/">
+            Term Frequency with Transducers gem in Ruby
+            <small>11 Oct 2014</small>
+          </a>
+        </h3>
+      </li>
+    
+  </ul>
+</div>
+
+    </div>
+
+  </body>
+</html>
