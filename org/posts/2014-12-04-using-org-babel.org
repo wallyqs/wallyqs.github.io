@@ -1,0 +1,299 @@
+#+TITLE:	Gradually adopting Org mode, part 1
+#+CATEGORY:	posts
+#+LAYOUT:	post
+
+Like most Org mode users, I started using Org mode as a TODO list.
+Though for a while now, the Org Babel mode has become an intrinsic
+part of my flow as well, to the point that outside doing code reading 
+of other projects, I rarely visit files anymore and spend most of my
+time within Org mode buffers.
+
+In this post I will attempt to document such progression to this style
+of using Org mode, and should also serve as a kind of tutorial for
+those without familiarity to Org mode.
+
+# intended audience is those with no previous
+# familiarity with Org mode or Org Babel.
+# with Org mode but still unfamiliar with what Org Babel can offer.
+
+# I will divide this post into the following 2 sections:
+
+# - Basic elements
+#   + How I use Org mode for TODO lists
+
+# - Literate programming elements of Org mode (Org Babel)
+#   How I use Org Babel for:
+#   + active and reproducible documents
+#   + literate programming
+
+# I do use Org mode as a TODO list but most of all I use it
+# for doing literate programming with is Org Babel mode.
+# - Installing it (already part of Emacs version 23)
+# - tables
+# - in buffer settings and directives
+# - footnotes
+# - macros
+
+**** Basic elements of Org mode
+
+Org mode has a /ton/ of features, so rather than explaining 
+each one of the features of Org mode, I will describe what 
+are the building blocks that we can choose from
+when authoring an Org mode document.
+
+Some of the most basic elements of an Org mode document are:
+
+- Org mode markup paragraphs ::
+
+     #+BEGIN_SRC org
+     Similar to other markup languages, we can write text in /italics/, *bold*, 
+     _underline_, =code= or ~verbatim~, and even super and subscript: n_1, n^2
+     #+END_SRC
+
+- headlines and sections ::
+
+     A section in Org mode is started by a headline. Headlines start
+     with one or more asterisks.
+
+     #+BEGIN_SRC org
+     * A headline
+     
+     Paragraph within a /headline/ 
+     #+END_SRC
+
+     We can set a TODO state to a headline to define whether something
+     is done or not:
+
+     #+BEGIN_SRC org
+     * TODO Need to do this!
+     * DONE Needed to do this!
+     #+END_SRC
+
+- blocks :: 
+
+     A block is how we group together a bunch of lines that are not
+     meant to be only paragraphs.  Some of the builtin blocks that we can have
+     in Org mode are: src, example, verse, quote and html.
+
+     A block will start =#+begin_...= and end with =#+end_...=.
+
+     One of the coolest features of the Org mode code blocks is that
+     we can add metadata to them, such as which kind of language is
+     being used inside of it (in case of src an example code blocks).
+
+     #+BEGIN_SRC org
+       ,#+begin_src ruby
+       "Hello world"
+       ,#+end_src
+     #+END_SRC
+
+     In order for syntax highlighting to work, it is needed to include
+     the following in the Emacs configuration file (or just eval it
+     during boot):
+
+     : (setq org-src-fontify-natively t)
+
+     It is also required that the Emacs install has the special mode
+     for it.
+  
+- lists :: 
+
+     A list can be an unordered, ordered or definition list:
+
+     #+BEGIN_SRC org
+       - first level
+
+         Org mode /markup/
+
+         + second level
+           1) third level
+              1. fourth level
+       - back to first level
+         + a definition list :: 
+	   some definition
+     #+END_SRC
+  
+     By putting empty brackets  =[ ]=, =[/]=, or =[%]= at the beginning of a list, it
+     can become a task list.  Pressing =C-c C-C= on an item would
+     update its value:
+
+     Before:
+
+     #+BEGIN_SRC org
+       - [0/1] one
+         + [ ] two 
+       - [0%] three
+         ,* [ ] four
+     #+END_SRC
+
+      After:
+
+     #+BEGIN_SRC org
+       - [1/1] one
+         + [X] two 
+       - [100%] three
+         ,* [X] four
+     #+END_SRC
+
+- tables :: 
+     An Org mode table:
+
+     #+BEGIN_SRC org
+     | apples  | 10 |
+     | oranges | 20 |
+     #+END_SRC
+
+     Tables in Org mode are very powerful.  They are not meant to be
+     only for authoring tables, but they have spreadsheet
+     functionality as well.  The following table would have its formulas
+     evaluated after pressing TAB on it:
+
+     Before:
+
+     #+BEGIN_SRC org
+       | fruit   |      quantity | price per fruit | COST          |
+       | apples  |            10 |               5 | =$2 * $3      |
+       | oranges |            20 |               7 | =$2 * $3      |
+       | TOTAL   | =vsum(@2..@3) |                 |               |
+     #+END_SRC
+     
+     After:
+
+     #+BEGIN_SRC org
+       | fruit   |      quantity | price per fruit | COST     |
+       | apples  |            10 |               5 | 50       |
+       | oranges |            20 |               7 | 140      |
+       | TOTAL   |            30 |                 |          |
+       ,#+TBLFM: $2=vsum(@2..@3)::$4=$2 * $3
+     #+END_SRC
+
+***** Basic usage of Org mode for TODO lists
+
+At the beginning of my Org mode usage, my documents used to look like
+this I think:
+
+#+BEGIN_SRC org
+,* TODO Reply email from Alice
+
+,** TODO Reply
+
+Dear Alice...
+
+,* TODO Capacity planning
+#+END_SRC
+
+One of the features I first adopted is the use of =CLOCKS=. 
+You can start a clock by pressing: =C-c C-x TAB=, 
+then we you are done you clock out with =C-c C-x C-o=.
+Then you can use  =C-c C-x C-d= to heck the total time spent.
+
+#+BEGIN_SRC org
+  ,* DONE Reply email from Alice
+    CLOCK: [2014-12-04 Thu 15:45]--[2014-12-04 Thu 15:50] =>  0:05
+
+  ,** DONE Reply
+     CLOCK: [2014-12-04 Thu 16:00]--[2014-12-04 Thu 17:00] =>  1:00
+
+  Dear Alice...
+
+  ,* TODO Capacity planning
+#+END_SRC
+
+Another helpful feature is /narrowing down/ to a headline so that
+other headlines are not shown. This can be done by pressing =C-x n s=.
+
+Having covered these basic I'll go on to talk about Org Babel.
+
+**** Start using Org mode for reproducible documents
+
+The key thing about when using Org mode and for literate programming
+is when you care about making things reproducible.
+
+# This is pretty much when I fell into the rabbit hole and haven't
+# made it back..  
+
+Eric Schulte paper has more background on how the project started: <http://www.jstatsoft.org/v46/i03>
+
+In order to use Org Babel we first need to enable it.  This is how my
+=.emacs= looks for this:
+
+#+BEGIN_SRC emacs-lisp
+(setq org-src-fontify-natively t)
+(setq org-confirm-babel-evaluate nil)
+(org-babel-do-load-languages
+      'org-babel-load-languages
+      '((emacs-lisp . t)
+	(clojure . t)
+        (R . t)
+        (C . t)
+        (sh . t)
+        (ruby . t)
+        (python . t)
+        (js . t)
+        (dot . t)
+	(haskell . t)
+	(scala . t)
+	))
+#+END_SRC
+
+Note that in order for the above to work, there have to be major modes
+in Emacs for those specific languages. Comment out or remove the
+language that is not on your setup.
+
+***** Making the document active by giving things a name
+
+To adopt Org mode literate programming mode, we need to start
+using =#+name= on top of some Org mode elements.  By doing this, 
+it is possible to reference later on to that part of the document.
+
+For example we can have a code block and eval it with =C-c C-c=:
+
+#+BEGIN_SRC org
+  ,#+BEGIN_SRC ruby
+  1 + 1
+  ,#+END_SRC
+
+  ,#+RESULTS:
+  : 2
+#+END_SRC
+
+But by giving it a name, we can reuse this code block:
+
+#+BEGIN_SRC org
+  ,#+name: sum
+  ,#+BEGIN_SRC ruby :var arg1=1 :var arg2=2
+  arg1 + arg2
+  ,#+END_SRC
+
+  ,#+RESULTS:
+  : 2
+
+  ,#+call: sum(10, 100)
+
+  ,#+RESULTS:
+  : 110
+#+END_SRC
+
+Or chain it with a table:
+
+#+BEGIN_SRC org
+
+  ,#+name: fruits
+  | apples  | 10 |
+  | oranges | 20 |
+
+  ,#+name: show-fruits
+  ,#+BEGIN_SRC ruby :var fruitstable=fruits :results output code
+  fruits = Hash[fruitstable]
+
+  p fruits
+  ,#+END_SRC
+
+  ,#+RESULTS: show-fruits
+  ,#+BEGIN_SRC ruby
+  {"apples"=>10, "oranges"=>20}
+  ,#+END_SRC
+
+#+END_SRC
+
+To be continued...

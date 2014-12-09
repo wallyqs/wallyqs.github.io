@@ -1,0 +1,157 @@
+#+TITLE:	About Org Converge
+#+category:	posts
+#+layout:	post
+
+In a past release from Org Ruby, I added the functionality to be able
+to turn off exporting the results attached to a code block. For
+example, here only the actual code would make it to the export:
+
+#+BEGIN_SRC org
+  ,#+begin_src sh :results code
+  echo 'hello'
+  ,#+end_src
+
+  ,#+RESULTS:
+  ,#+BEGIN_SRC sh
+  hello
+  ,#+END_SRC
+#+END_SRC
+
+
+Doing this involved adding support to parse the header arguments from
+a code block, so I decided to start playing with the idea of
+implementing tangling code blocks:
+
+#+BEGIN_SRC org
+  ,#+begin_src sh :tangle /etc/component.yml
+  port: 4000
+  ,#+end_src
+#+END_SRC
+
+This is just a subset of the functionality provided by the powerful
+Org Babel mode, and still very basic since it does not
+support =#+MACROS= for example, which would make feature more
+convenient.
+
+After doing this, and since this is all Ruby, I imagined that since
+there is good interop with other reliable Ruby tools, it would be
+interesting to reopen foreman for actually running the blocks.
+
+All this functionality is wrapped into a gem named [[https://github.com/wallyqs/org-converge][org-converge]],
+named that way in the sense that all reproducible runs should
+converge into a state. 
+
+In the future, I hope to have more Chef/Puppet/Ansible
+like features, like [[https://github.com/wallyqs/org-converge/commit/5393c76127c7a38bc071c14dbd54de9b8665f343][idempotency]]:
+
+*** Idempotency example via =:if= and =:unless= switches
+
+The way this work is by linking 2 different code blocks,
+so that one can define whether the second one should be executed.
+
+In order to achieve this, for now the blocks need to be defined sequentially
+and use the exit status to check whether it should be run or not.
+
+#+BEGIN_SRC org
+
+,#+name: install-package
+,#+begin_src sh
+echo "brew install something..."
+echo "package is installed" > installed
+,#+end_src
+
+,#+name: package-already-installed
+,#+begin_src sh
+if [[ -e installed ]]; then
+  echo "Already installed"
+  exit 0
+else
+  echo "Needs install"
+  exit 1
+fi
+,#+end_src
+
+,#+name: install-package-once-again
+,#+begin_src sh :unless package-already-installed
+echo "Installing the package once again..."
+echo "not run" >> installed
+,#+end_src
+
+,#+name: do-everything-even-if-package-installed
+,#+begin_src sh :if package-already-installed
+echo "Doing this even if installed already..." 
+echo "eof" >> installed
+,#+end_src
+#+END_SRC
+
+Now when we run it the first time, we would get the following output:
+
+#+BEGIN_SRC sh
+gem install org-converge
+
+org-converge idempotent-run.org
+
+[2014-11-28T13:18:13 -0500] package-already-installed -- Needs install
+[2014-11-28T13:18:13 -0500] package-already-installed -- started with pid 47963
+[2014-11-28T13:18:13 -0500] package-already-installed -- exited with code 1
+[2014-11-28T13:18:13 -0500] install-package -- started with pid 47967
+[2014-11-28T13:18:13 -0500] install-package -- Installing the package...
+[2014-11-28T13:18:13 -0500] install-package -- exited with code 0
+#+END_SRC
+
+...but if we run it again, we would get the following:
+
+#+BEGIN_SRC sh
+org-converge idempotent-run.org
+
+[2014-11-28T13:19:07 -0500] package-already-installed -- started with pid 48474
+[2014-11-28T13:19:07 -0500] package-already-installed -- Already installed
+[2014-11-28T13:19:07 -0500] package-already-installed -- exited with code 0
+[2014-11-28T13:19:07 -0500] install-package -- Skipped since :unless clause matches check from 'package-already-installed'
+[2014-11-28T13:19:07 -0500] Run has completed successfully.
+#+END_SRC
+
+*** Multiprocess run usage
+
+I also have been using lately for doing multi process running,
+and I have found it pretty comfortable for when practicing
+literate programming with Org Babel.
+
+An example, the following 3 scripts should be run in parallel
+with all output being flushed to the screen.
+ 
+#+BEGIN_SRC org
+  - Count some numbers with bash
+
+  ,#+name: bash_counter
+  ,#+begin_src sh :shebang #!/bin/bash
+
+  for i in `seq 1 5`; do 
+    echo "Writing! $i"
+    echo "hello $i from bash"
+    sleep $(($RANDOM % 5))
+  done
+
+  ,#+end_src
+
+  - Count some numbers with ruby
+
+  ,#+name: ruby_counter
+  ,#+begin_src ruby :shebang #!/usr/bin/ruby
+  $stdout.sync = true
+
+  10.times do |n|
+    puts "And now writing! #{n}"
+    puts "Hello from Ruby"
+    sleep 0.5
+  end
+  ,#+end_src
+
+  - Print some numbers with python
+
+  ,#+name: python_counter
+  ,#+begin_src python :shebang #!/usr/bin/python
+  for i in range(0, 20):
+    print "From Python"
+  #+end_src
+#+END_SRC 

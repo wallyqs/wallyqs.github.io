@@ -1,0 +1,155 @@
+#+TITLE:    The Eternal Recurrence of PaaS
+#+category: posts
+#+layout:   post
+
+Distributed Systems are hard. 
+
+As a service grows popular, there inevitably comes the time that capability to *scale* is demanded from
+a system, and while doing so it is required that the system has *uptime*.
+As we go on tackling such issues, it results that we end up with a
+distributed system that becomes increasingly complex and its 
+understanding requires an ongoing online computation of its state.
+
+Under such a system, failures are a constant, and whether this failure
+ends up in tragedy or not, depends on how well the platform developer
+was prepared for such events. 
+
+#+BEGIN_CENTER
+
+[[/public/cat-theorem.png]]
+
+*Fig. 1.* /The CAT theorem/ (coined by [[http://www.schwertly.com/][Stan]])
+
+#+END_CENTER
+
+Then, what if while at handling this complexity, or a tragic event that ends up in firefighting,
+(/in your loneliest loneliness/ as Nietzche puts it),
+a demon came up to you and reveal that it doesn't
+get any better? That [[http://queue.acm.org/detail.cfm?id=2482856][there is no way around it]],
+and "/this life which you live must be lived by you once again and innumerable times more; and every pain and joy and thought and sigh must come again to you, all in the same sequence/".
+
+Nietzche poses as the outcome of this thought experiment
+one out of two possible choices: the individual either accepts it and becomes stronger
+from the cognitive process triggered as a result of the tragedy (/[[http://en.wikipedia.org/wiki/Amor_fati][amor fati]]/),
+or the individual succumbs to what he calls /[[http://en.wikipedia.org/wiki/Ressentiment][Ressentiment]]/.
+
+The platform developer, by attempting to build and operate a
+distributed system, will continuously be exposed to a set of challenges
+that will end up with having to face this test of character.
+
+Such as in life (which is itself some sort of distributed system too),
+in a distributed system, tragedy is a constant.  The [[http://en.wikipedia.org/wiki/CAP_theorem][CAP theorem]] & [[http://en.wikipedia.org/wiki/Consensus_%28computer_science%29#Solvability_results_for_some_agreement_problems][FPL result]],
+are just a couple of examples which show the constant tragedy that comes
+along with operating distributed systems.
+
+For the platform developer that does not succumb to ressentiment, what
+lies ahead is easy to predict: it will reflect on the tragedy and use
+the literature to improve the situation and in the end, succeed like
+others have before in taming a system with many moving parts without
+shying away from the difficult problems.  Tackling and understanding the
+tradeoffs around fault tolerance, high availability, distributed
+agreement, etc... all lead to a living a good life for the platform
+developer.
+
+But what about the platform developer that succumbs to /ressentiment/?
+
+Like the quote from Tolstoy goes:
+
+#+BEGIN_QUOTE
+All happy families are alike; each unhappy family is unhappy in its own way.
+#+END_QUOTE
+
+In my experience (and under my line of reasoning stated in the previous
+paragraphs), when such thing happens it could be possible to see some
+of the following behaviors below for example:
+
+****** Cynism, Skepticism
+
+We can avoid having to scale by keeping services small.
+Instead of having shared infrastructure we could make everyone in the company run
+a similar version of the same, then /they/ have to take care of
+running it.  There is no need to have a platform even if we have
+hundreds of nodes.
+
+This platform developer has experienced the pains of having to operate
+a distributed system.  Microservices [[http://martinfowler.com/bliki/MicroservicePrerequisites.html][are]] [[http://highscalability.com/blog/2014/4/8/microservices-not-a-free-lunch.html][hard]], and maybe unnecessary if
+complying to enough trade offs. It is ok to be uncompetitive in
+terms of platform related efforts and just keeping it simple.
+
+The platform developer keeps the level of automation such that there
+is heavy partitioning and waste in the data center and tries to delegate
+difficult issues to avoid tragedies around operating a complex system.
+
+****** The sysadmin as practitioner of a slave morality
+
+A developer either aware or unaware of the challenges of having to run
+a distributed system may try to shield himself/herself of the issue.
+
+As a result of the lack of empathy by the developer,
+a platform developer may develop /ressentiment/ towards the opressors,
+that is the developers who lack empathy to the problem of tackling
+scalability issues.
+
+****** "Hell is other developers"
+
+/Ressentiment/ is to those that do not understand the situation in the
+the data center, and to those heavy users who are causing the architecture
+continue to grow.
+
+The problem is not the platform, but the architecture of the
+application, since there is no need for the platform to have to grow
+this fast.
+
+/Ressentiment/ to those users who create too much data some of it unnecessary, since there is no way that all of it would be needed for analytics.
+In case it is for auditing purposes, /ressentiment/ then is towards those who audit.
+
+The platform developer becomes more used to externalize issues that
+could be fixed in the platform on the users rather than fixing them.
+
+***** Conclusion
+
+It is my believe then that, compared to other areas of software
+development, there is a /Tragic Sense of Life/ which
+has to be acknowledged earlier on when faced with operating
+a distributed system running in production, that is if one is set to the task of doing it correctly.
+
+It is also my believe that even after much tragedy, a platform developer
+with ressentiment still has chance to overcome it and attempt to
+tackle the core issues of building a distributed system. 
+It takes start asking "Why?" and then proceed to start reading papers,
+looking for someone else that has posed the same question
+(many times these fundamental questions already have been answered [[http://web.stanford.edu/class/cs240/readings/lamport.pdf][decades ago]]...)
+
+***** Links
+
+Some links that have helped me out learning about distributed systems:
+
+- Distributed Systems for fun and profit ::
+   I have found this book very useful to immerse in the basics of
+   working with distributed systems.
+  [[http://book.mixu.net/distsys/]]
+
+- /Distributed Systems Archaeology/ talk by Michael Bernstein ::
+  Another great talk by a man with an obsession which I can't
+  recommend enough.
+  [[http://michaelrbernste.in/2013/11/22/distributed-systems-archaeology.html]]
+
+- Papers we love :: 
+  There are many great distributed systems related videos of the meetups available 
+  [[http://paperswelove.org/]]
+
+- A Brief Tour of FLP Impossibility :: 
+    TL;DR; 
+    "it’s not possible to say whether a processor has crashed or is simply taking a long time to respond."
+    [[http://the-paper-trail.org/blog/a-brief-tour-of-flp-impossibility/]]
+
+- The CAP Theorem ::
+     Paper itself can be found at Papers we love [[https://github.com/papers-we-love/papers-we-love/blob/master/distributed_systems/brewers-conjecture.pdf][repo]]. But
+     the Distributed Systems for fun and profit book covers it in the
+     [[http://book.mixu.net/distsys/abstractions.html][chapter 2]] as well.
+
+- Distributed systems theory for the distributed systems engineer ::
+     Great compilation of links
+     [[http://the-paper-trail.org/blog/distributed-systems-theory-for-the-distributed-systems-engineer/]]
+
+
