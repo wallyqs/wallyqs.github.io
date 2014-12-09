@@ -4,13 +4,139 @@
  <title>Literate Infrastructure</title>
  <link href="/atom.xml" rel="self"/>
  <link href="/"/>
- <updated>2014-12-04T06:04:58-05:00</updated>
+ <updated>2014-12-08T22:25:11-05:00</updated>
  <id></id>
  <author>
    <name>Waldemar Quevedo</name>
    <email></email>
  </author>
 
+ 
+ <entry>
+   <title>The Eternal Recurrence of PaaS</title>
+   <link href="/posts/2014/12/08/eternal-recurrence-of-paas/"/>
+   <updated>2014-12-08T00:00:00-05:00</updated>
+   <id>/posts/2014/12/08/eternal-recurrence-of-paas</id>
+   <content type="html">
+&lt;p&gt;Distributed Systems are hard.&lt;/p&gt;
+&lt;p&gt;As a service grows popular, there inevitably comes the time that capability to &lt;b&gt;scale&lt;/b&gt; is demanded from
+  a system, and while doing so it is required that the system has &lt;b&gt;uptime&lt;/b&gt;.
+  As we go on tackling such issues, it results that we end up with a
+  distributed system that becomes increasingly complex and its
+  understanding requires an ongoing online computation of its state.&lt;/p&gt;
+&lt;p&gt;Under such a system, failures are a constant, and whether this failure
+  ends up in tragedy or not, depends on how well the platform developer
+  was prepared for such events.&lt;/p&gt;
+&lt;div style=&quot;text-align: center&quot;&gt;
+  &lt;p&gt;&lt;img src=&quot;./public/cat-theorem.png&quot; alt=&quot;./public/cat-theorem.png&quot; /&gt;&lt;/p&gt;
+  &lt;p&gt;&lt;b&gt;Fig. 1.&lt;/b&gt; &lt;i&gt;The CAT theorem&lt;/i&gt; (coined by &lt;a href=&quot;http://www.schwertly.com/&quot;&gt;Stan&lt;/a&gt;)&lt;/p&gt;
+&lt;/div&gt;
+&lt;p&gt;Then, what if while at handling this complexity, or a tragic event that ends up in firefighting,
+  (&lt;i&gt;in your loneliest loneliness&lt;/i&gt; as Nietzche puts it),
+  a demon came up to you and reveal that it doesn&amp;#8217;t
+  get any better? That &lt;a href=&quot;http://queue.acm.org/detail.cfm?id=2482856&quot;&gt;there is no way around it&lt;/a&gt;,
+  and &amp;#8221;&lt;i&gt;this life which you live must be lived by you once again and innumerable times more; and every pain and joy and thought and sigh must come again to you, all in the same sequence&lt;/i&gt;&amp;#8221;.&lt;/p&gt;
+&lt;p&gt;Nietzche poses as the outcome of this thought experiment
+  one out of two possible choices: the individual either accepts it and becomes stronger
+  from the cognitive process triggered as a result of the tragedy (&lt;i&gt;&lt;a href=&quot;http://en.wikipedia.org/wiki/Amor_fati&quot;&gt;amor fati&lt;/a&gt;&lt;/i&gt;),
+  or the individual succumbs to what he calls &lt;i&gt;&lt;a href=&quot;http://en.wikipedia.org/wiki/Ressentiment&quot;&gt;Ressentiment&lt;/a&gt;&lt;/i&gt;.&lt;/p&gt;
+&lt;p&gt;The platform developer, by attempting to build and operate a
+  distributed system, will continuously be exposed to a set of challenges
+  that will end up with having to face this test of character.&lt;/p&gt;
+&lt;p&gt;Such as in life (which is itself some sort of distributed system too),
+  in a distributed system, tragedy is a constant.  The &lt;a href=&quot;http://en.wikipedia.org/wiki/CAP_theorem&quot;&gt;CAP theorem&lt;/a&gt; &amp;amp; &lt;a href=&quot;http://en.wikipedia.org/wiki/Consensus_%28computer_science%29#Solvability_results_for_some_agreement_problems&quot;&gt;FPL result&lt;/a&gt;,
+  are just a couple of examples which show the constant tragedy that comes
+  along with operating distributed systems.&lt;/p&gt;
+&lt;p&gt;For the platform developer that does not succumb to ressentiment, what
+  lies ahead is easy to predict: it will reflect on the tragedy and use
+  the literature to improve the situation and in the end, succeed like
+  others have before in taming a system with many moving parts without
+  shying away from the difficult problems.  Tackling and understanding the
+  tradeoffs around fault tolerance, high availability, distributed
+  agreement, etc&amp;#8230; all lead to a living a good life for the platform
+  developer.&lt;/p&gt;
+&lt;p&gt;But what about the platform developer that succumbs to &lt;i&gt;ressentiment&lt;/i&gt;?&lt;/p&gt;
+&lt;p&gt;Like the quote from Tolstoy goes:&lt;/p&gt;
+&lt;blockquote&gt;
+  &lt;p&gt;All happy families are alike; each unhappy family is unhappy in its own way.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;In my experience (and under my line of reasoning stated in the previous
+  paragraphs), when such thing happens it could be possible to see some
+  of the following behaviors below for example:&lt;/p&gt;
+&lt;h6&gt;Cynism, Skepticism&lt;/h6&gt;
+&lt;p&gt;We can avoid having to scale by keeping services small.
+  Instead of having shared infrastructure we could make everyone in the company run
+  a similar version of the same, then &lt;i&gt;they&lt;/i&gt; have to take care of
+  running it.  There is no need to have a platform even if we have
+  hundreds of nodes.&lt;/p&gt;
+&lt;p&gt;This platform developer has experienced the pains of having to operate
+  a distributed system.  Microservices &lt;a href=&quot;http://martinfowler.com/bliki/MicroservicePrerequisites.html&quot;&gt;are&lt;/a&gt; &lt;a href=&quot;http://highscalability.com/blog/2014/4/8/microservices-not-a-free-lunch.html&quot;&gt;hard&lt;/a&gt;, and maybe unnecessary if
+  complying to enough trade offs. It is ok to be uncompetitive in
+  terms of platform related efforts and just keeping it simple.&lt;/p&gt;
+&lt;p&gt;The platform developer keeps the level of automation such that there
+  is heavy partitioning and waste in the data center and tries to delegate
+  difficult issues to avoid tragedies around operating a complex system.&lt;/p&gt;
+&lt;h6&gt;The sysadmin as practitioner of a slave morality&lt;/h6&gt;
+&lt;p&gt;A developer either aware or unaware of the challenges of having to run
+  a distributed system may try to shield himself/herself of the issue.&lt;/p&gt;
+&lt;p&gt;As a result of the lack of empathy by the developer,
+  a platform developer may develop &lt;i&gt;ressentiment&lt;/i&gt; towards the opressors,
+  that is the developers who lack empathy to the problem of tackling
+  scalability issues.&lt;/p&gt;
+&lt;h6&gt;&amp;#8220;Hell is other developers&amp;#8221;&lt;/h6&gt;
+&lt;p&gt;&lt;i&gt;Ressentiment&lt;/i&gt; is to those that do not understand the situation in the
+  the data center, and to those heavy users who are causing the architecture
+  continue to grow.&lt;/p&gt;
+&lt;p&gt;The problem is not the platform, but the architecture of the
+  application, since there is no need for the platform to have to grow
+  this fast.
+  &lt;i&gt;Ressentiment&lt;/i&gt; to those users who create too much data some of it
+  unnecessary, since not all of it would be needed for analytics usage
+  and it is crazy that it is needed just for audit purposes
+  (&lt;i&gt;ressentiment&lt;/i&gt; towards those who audit as well).&lt;/p&gt;
+&lt;p&gt;The platform developer becomes more used to externalize issues that
+  could be fixed in the platform on the users rather than fixing them.&lt;/p&gt;
+&lt;h5&gt;Conclusion&lt;/h5&gt;
+&lt;p&gt;It is my believe then that, compared to other areas of software
+  development, there is a &lt;i&gt;Tragic Sense of Life&lt;/i&gt; which
+  has to be acknowledged earlier on when faced with operating
+  a distributed system running in production, that is if one is set to the task of doing it correctly.&lt;/p&gt;
+&lt;p&gt;It is also my believe that even after much tragedy, a platform developer
+  with ressentiment still has chance to overcome it and attempt to
+  tackle the core issues of building a distributed system.
+  It takes start asking &amp;#8220;Why?&amp;#8221; and then proceed to start reading papers,
+  looking for someone else that has posed the same question
+  (many times these fundamental questions already have been answered &lt;a href=&quot;http://web.stanford.edu/class/cs240/readings/lamport.pdf&quot;&gt;decades ago&lt;/a&gt;&amp;#8230;)&lt;/p&gt;
+&lt;h5&gt;Links&lt;/h5&gt;
+&lt;p&gt;Some links that have helped me out learning about distributed systems:&lt;/p&gt;
+&lt;dl&gt;
+  &lt;dt&gt;Distributed Systems for fun and profit&lt;/dt&gt;&lt;dd&gt;
+    I have found this book very useful to immerse in the basics of
+    working with distributed systems.
+    &lt;a href=&quot;http://book.mixu.net/distsys/&quot;&gt;http://book.mixu.net/distsys/&lt;/a&gt;&lt;/dd&gt;
+  &lt;dt&gt;&lt;i&gt;Distributed Systems Archaeology&lt;/i&gt; talk by Michael Bernstein&lt;/dt&gt;&lt;dd&gt;
+    Another great talk by a man with an obsession which I can&amp;#8217;t
+    recommend enough.
+    &lt;a href=&quot;http://michaelrbernste.in/2013/11/22/distributed-systems-archaeology.html&quot;&gt;http://michaelrbernste.in/2013/11/22/distributed-systems-archaeology.html&lt;/a&gt;&lt;/dd&gt;
+  &lt;dt&gt;Papers we love&lt;/dt&gt;&lt;dd&gt;
+    There are many great distributed systems related videos of the meetups available
+    &lt;a href=&quot;http://paperswelove.org/&quot;&gt;http://paperswelove.org/&lt;/a&gt;&lt;/dd&gt;
+  &lt;dt&gt;A Brief Tour of FLP Impossibility&lt;/dt&gt;&lt;dd&gt;
+    TL;DR;
+    &amp;#8220;it’s not possible to say whether a processor has crashed or is simply taking a long time to respond.&amp;#8221;
+    &lt;a href=&quot;http://the-paper-trail.org/blog/a-brief-tour-of-flp-impossibility/&quot;&gt;http://the-paper-trail.org/blog/a-brief-tour-of-flp-impossibility/&lt;/a&gt;&lt;/dd&gt;
+  &lt;dt&gt;The CAP Theorem&lt;/dt&gt;&lt;dd&gt;
+    Paper itself can be found at Papers we love &lt;a href=&quot;https://github.com/papers-we-love/papers-we-love/blob/master/distributed_systems/brewers-conjecture.pdf&quot;&gt;repo&lt;/a&gt;. But
+    the Distributed Systems for fun and profit book covers it in the
+    &lt;a href=&quot;http://book.mixu.net/distsys/abstractions.html&quot;&gt;chapter 2&lt;/a&gt; as well.&lt;/dd&gt;
+  &lt;dt&gt;Distributed systems theory for the distributed systems engineer&lt;/dt&gt;&lt;dd&gt;
+    Great compilation of links
+    &lt;a href=&quot;http://the-paper-trail.org/blog/distributed-systems-theory-for-the-distributed-systems-engineer/&quot;&gt;http://the-paper-trail.org/blog/distributed-systems-theory-for-the-distributed-systems-engineer/&lt;/a&gt;&lt;/dd&gt;
+&lt;/dl&gt;
+
+
+</content>
+ </entry>
  
  <entry>
    <title>Gradually adopting Org mode, part 1</title>

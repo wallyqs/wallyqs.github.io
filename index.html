@@ -84,6 +84,10 @@
           
         
       
+        
+          
+        
+      
 
     </nav>
 
@@ -94,6 +98,136 @@
 
     <div class="content container">
       <div class="posts">
+  
+  <div class="post">
+    <h1 class="post-title">
+      <a href="/posts/2014/12/08/eternal-recurrence-of-paas/">
+        The Eternal Recurrence of PaaS
+      </a>
+    </h1>
+
+    <span class="post-date">08 Dec 2014</span>
+
+    
+<p>Distributed Systems are hard.</p>
+<p>As a service grows popular, there inevitably comes the time that capability to <b>scale</b> is demanded from
+  a system, and while doing so it is required that the system has <b>uptime</b>.
+  As we go on tackling such issues, it results that we end up with a
+  distributed system that becomes increasingly complex and its
+  understanding requires an ongoing online computation of its state.</p>
+<p>Under such a system, failures are a constant, and whether this failure
+  ends up in tragedy or not, depends on how well the platform developer
+  was prepared for such events.</p>
+<div style="text-align: center">
+  <p><img src="./public/cat-theorem.png" alt="./public/cat-theorem.png" /></p>
+  <p><b>Fig. 1.</b> <i>The CAT theorem</i> (coined by <a href="http://www.schwertly.com/">Stan</a>)</p>
+</div>
+<p>Then, what if while at handling this complexity, or a tragic event that ends up in firefighting,
+  (<i>in your loneliest loneliness</i> as Nietzche puts it),
+  a demon came up to you and reveal that it doesn&#8217;t
+  get any better? That <a href="http://queue.acm.org/detail.cfm?id=2482856">there is no way around it</a>,
+  and &#8221;<i>this life which you live must be lived by you once again and innumerable times more; and every pain and joy and thought and sigh must come again to you, all in the same sequence</i>&#8221;.</p>
+<p>Nietzche poses as the outcome of this thought experiment
+  one out of two possible choices: the individual either accepts it and becomes stronger
+  from the cognitive process triggered as a result of the tragedy (<i><a href="http://en.wikipedia.org/wiki/Amor_fati">amor fati</a></i>),
+  or the individual succumbs to what he calls <i><a href="http://en.wikipedia.org/wiki/Ressentiment">Ressentiment</a></i>.</p>
+<p>The platform developer, by attempting to build and operate a
+  distributed system, will continuously be exposed to a set of challenges
+  that will end up with having to face this test of character.</p>
+<p>Such as in life (which is itself some sort of distributed system too),
+  in a distributed system, tragedy is a constant.  The <a href="http://en.wikipedia.org/wiki/CAP_theorem">CAP theorem</a> &amp; <a href="http://en.wikipedia.org/wiki/Consensus_%28computer_science%29#Solvability_results_for_some_agreement_problems">FPL result</a>,
+  are just a couple of examples which show the constant tragedy that comes
+  along with operating distributed systems.</p>
+<p>For the platform developer that does not succumb to ressentiment, what
+  lies ahead is easy to predict: it will reflect on the tragedy and use
+  the literature to improve the situation and in the end, succeed like
+  others have before in taming a system with many moving parts without
+  shying away from the difficult problems.  Tackling and understanding the
+  tradeoffs around fault tolerance, high availability, distributed
+  agreement, etc&#8230; all lead to a living a good life for the platform
+  developer.</p>
+<p>But what about the platform developer that succumbs to <i>ressentiment</i>?</p>
+<p>Like the quote from Tolstoy goes:</p>
+<blockquote>
+  <p>All happy families are alike; each unhappy family is unhappy in its own way.</p>
+</blockquote>
+<p>In my experience (and under my line of reasoning stated in the previous
+  paragraphs), when such thing happens it could be possible to see some
+  of the following behaviors below for example:</p>
+<h6>Cynism, Skepticism</h6>
+<p>We can avoid having to scale by keeping services small.
+  Instead of having shared infrastructure we could make everyone in the company run
+  a similar version of the same, then <i>they</i> have to take care of
+  running it.  There is no need to have a platform even if we have
+  hundreds of nodes.</p>
+<p>This platform developer has experienced the pains of having to operate
+  a distributed system.  Microservices <a href="http://martinfowler.com/bliki/MicroservicePrerequisites.html">are</a> <a href="http://highscalability.com/blog/2014/4/8/microservices-not-a-free-lunch.html">hard</a>, and maybe unnecessary if
+  complying to enough trade offs. It is ok to be uncompetitive in
+  terms of platform related efforts and just keeping it simple.</p>
+<p>The platform developer keeps the level of automation such that there
+  is heavy partitioning and waste in the data center and tries to delegate
+  difficult issues to avoid tragedies around operating a complex system.</p>
+<h6>The sysadmin as practitioner of a slave morality</h6>
+<p>A developer either aware or unaware of the challenges of having to run
+  a distributed system may try to shield himself/herself of the issue.</p>
+<p>As a result of the lack of empathy by the developer,
+  a platform developer may develop <i>ressentiment</i> towards the opressors,
+  that is the developers who lack empathy to the problem of tackling
+  scalability issues.</p>
+<h6>&#8220;Hell is other developers&#8221;</h6>
+<p><i>Ressentiment</i> is to those that do not understand the situation in the
+  the data center, and to those heavy users who are causing the architecture
+  continue to grow.</p>
+<p>The problem is not the platform, but the architecture of the
+  application, since there is no need for the platform to have to grow
+  this fast.
+  <i>Ressentiment</i> to those users who create too much data some of it
+  unnecessary, since not all of it would be needed for analytics usage
+  and it is crazy that it is needed just for audit purposes
+  (<i>ressentiment</i> towards those who audit as well).</p>
+<p>The platform developer becomes more used to externalize issues that
+  could be fixed in the platform on the users rather than fixing them.</p>
+<h5>Conclusion</h5>
+<p>It is my believe then that, compared to other areas of software
+  development, there is a <i>Tragic Sense of Life</i> which
+  has to be acknowledged earlier on when faced with operating
+  a distributed system running in production, that is if one is set to the task of doing it correctly.</p>
+<p>It is also my believe that even after much tragedy, a platform developer
+  with ressentiment still has chance to overcome it and attempt to
+  tackle the core issues of building a distributed system.
+  It takes start asking &#8220;Why?&#8221; and then proceed to start reading papers,
+  looking for someone else that has posed the same question
+  (many times these fundamental questions already have been answered <a href="http://web.stanford.edu/class/cs240/readings/lamport.pdf">decades ago</a>&#8230;)</p>
+<h5>Links</h5>
+<p>Some links that have helped me out learning about distributed systems:</p>
+<dl>
+  <dt>Distributed Systems for fun and profit</dt><dd>
+    I have found this book very useful to immerse in the basics of
+    working with distributed systems.
+    <a href="http://book.mixu.net/distsys/">http://book.mixu.net/distsys/</a></dd>
+  <dt><i>Distributed Systems Archaeology</i> talk by Michael Bernstein</dt><dd>
+    Another great talk by a man with an obsession which I can&#8217;t
+    recommend enough.
+    <a href="http://michaelrbernste.in/2013/11/22/distributed-systems-archaeology.html">http://michaelrbernste.in/2013/11/22/distributed-systems-archaeology.html</a></dd>
+  <dt>Papers we love</dt><dd>
+    There are many great distributed systems related videos of the meetups available
+    <a href="http://paperswelove.org/">http://paperswelove.org/</a></dd>
+  <dt>A Brief Tour of FLP Impossibility</dt><dd>
+    TL;DR;
+    &#8220;it’s not possible to say whether a processor has crashed or is simply taking a long time to respond.&#8221;
+    <a href="http://the-paper-trail.org/blog/a-brief-tour-of-flp-impossibility/">http://the-paper-trail.org/blog/a-brief-tour-of-flp-impossibility/</a></dd>
+  <dt>The CAP Theorem</dt><dd>
+    Paper itself can be found at Papers we love <a href="https://github.com/papers-we-love/papers-we-love/blob/master/distributed_systems/brewers-conjecture.pdf">repo</a>. But
+    the Distributed Systems for fun and profit book covers it in the
+    <a href="http://book.mixu.net/distsys/abstractions.html">chapter 2</a> as well.</dd>
+  <dt>Distributed systems theory for the distributed systems engineer</dt><dd>
+    Great compilation of links
+    <a href="http://the-paper-trail.org/blog/distributed-systems-theory-for-the-distributed-systems-engineer/">http://the-paper-trail.org/blog/distributed-systems-theory-for-the-distributed-systems-engineer/</a></dd>
+</dl>
+
+
+
+  </div>
   
   <div class="post">
     <h1 class="post-title">
@@ -1019,58 +1153,6 @@ aggregator          -- good  -  201
   <span class="nb">puts</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">k</span><span class="si">}</span><span class="s2">  -  </span><span class="si">#{</span><span class="n">v</span><span class="si">}</span><span class="s2">&quot;</span>
 <span class="k">end</span>
 </pre></div>
-
-
-
-  </div>
-  
-  <div class="post">
-    <h1 class="post-title">
-      <a href="/posts/2014/10/10/hs-recap-1st-week/">
-        Hacker School - week #1 recap
-      </a>
-    </h1>
-
-    <span class="post-date">10 Oct 2014</span>
-
-    
-<p>It&#8217;s been almost a week since I came to New York to join
-  HackerSchool, a quick recap:</p>
-<h3>Week of [2014-10-06]&#8211;[2014-10-10]</h3>
-<ul>
-  <li><a href="https://twitter.com/cristalopes">Crista Lopes</a> was the resident during this week and she talked about
-    her <i><a href="http://www.amazon.com/Exercises-Programming-Style-Cristina-Videira/dp/1482227371/">Exercises in Programming Styles</a></i> book during the first days.
-    I&#8217;m not even halfway through the book yet, though I have to say that
-    the book has already left a mark.
-    <p>Crista then went on to concisely explain theoretical concepts
-      around types, data structures, and even monads in Haskell.</p>
-    <p>I also shared a bit about Org Babel, which may have to do something
-      to do with the following tweet:</p>
-  <blockquote class="twitter-tweet" lang="en"><p>Note to self: set this up in my emacs and learn more about it <a href="http://t.co/HIaegQ5bHp">http://t.co/HIaegQ5bHp</a></p>&mdash; Crista Lopes (@cristalopes) <a href="https://twitter.com/cristalopes/status/519971789422997505">October 8, 2014</a></blockquote>
-  <script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script>
-  </li>
-  <li>Right now I&#8217;m working through the exercises <a href="https://github.com/wallyqs/exercises-in-org/tree/master/org/prog-styles">here</a> (of course, in Org mode).
-    I named it <i>Exercises in Org</i> to keep the scope open
-    to other exercises, though focusing on the <i>programming styles</i> book at this moment.</li>
-  <li>I took a bit of time to revamp my blog yet again.  This time using
-    Hyde as the the theme and the <code>org/</code>, <code>src/</code> folder structure that I
-    have been practicing lately.  Repo at <a href="https://github.com/wallyqs/org-hyde">wallyqs/org-hyde</a>.</li>
-  <li>Another great thing of being in NYC is the amount of meetups that there are.
-    I assisted to the Mesos NYC meetup at the Twitter offices to hear
-    about the practical usage of Aurora and Mesos, as presented by <a href="https://twitter.com/wfarner">Bill Farner</a>.
-    In the following weeks I will be diving more into Mesos, so this was
-    a good opportunity to ask directly to those who operate regarding
-    its practical usage.</li>
-  <li>Living in NYC related:
-    <ul>
-      <li>Got my Airbnbs setup until the beginnings of December.</li>
-      <li>Discovered <a href="http://www.gasolinealleycoffee.com/">Gasoline Alley Coffee</a> which is just around the corner of HackerSchool.</li>
-    </ul>
-  </li>
-  <li>Overall, having a great time.  The <a href="https://www.hackerschool.com/manual#sub-sec-social-rules">social rules being applied</a> (no feigning, no subtleisms, &#8230;)
-    make up for an comfortable environment of collaboration which I had not experienced before,
-    at least definitely not on this level.</li>
-</ul>
 
 
 
