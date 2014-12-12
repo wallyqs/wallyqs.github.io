@@ -4,13 +4,301 @@
  <title>Literate Infrastructure</title>
  <link href="/atom.xml" rel="self"/>
  <link href="/"/>
- <updated>2014-12-08T22:36:20-05:00</updated>
+ <updated>2014-12-12T00:05:40-05:00</updated>
  <id></id>
  <author>
    <name>Waldemar Quevedo</name>
    <email></email>
  </author>
 
+ 
+ <entry>
+   <title>Using Org Babel for Literate Programming</title>
+   <link href="/posts/2014/12/12/using-org-babel-for-lp/"/>
+   <updated>2014-12-12T00:00:00-05:00</updated>
+   <id>/posts/2014/12/12/using-org-babel-for-lp</id>
+   <content type="html">
+&lt;p&gt;Most people that have heard about Org mode are aware that
+  it is a tool meant for creating &lt;code&gt;TODO&lt;/code&gt; lists, taking notes,
+  and even doing documentation to some extent.&lt;/p&gt;
+&lt;p&gt;What is not immediately clear about Org mode is that it is a very
+  powerful tool for doing literate programming and a comfortable
+  environment for working with active documents.&lt;/p&gt;
+&lt;p&gt;Rather than explain the ideas one by one, I will give a more
+  practical example of what it is possible to do with it.&lt;/p&gt;
+&lt;h3&gt;Example: Creating a monitoring HTTP endpoint&lt;/h3&gt;
+&lt;p&gt;Let&amp;#8217;s create a simple HTTP endpoint with Sinatra which
+  will respond with some information about the host where it is running,
+  like its &lt;code&gt;uptime&lt;/code&gt; and the number of established connections.&lt;/p&gt;
+&lt;h4&gt;Requirements&lt;/h4&gt;
+&lt;p&gt;What we want is basically the output of the following commands:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;uptime
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;&amp;#8230;which will show something like this:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;20:37  up 4 days,  9:48, 5 users, load averages: 0.67 0.86 1.11
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;And:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;netstat -an &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; grep ESTABLISHED &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; wc -l
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;which shows a number:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;5
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;The result from both commands would be aggregated into
+  the response sent by the the server when we request &lt;code&gt;/vars&lt;/code&gt;:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;curl 127.0.0.1:9292/vars
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Result:&lt;/p&gt;
+&lt;pre class=&quot;example&quot;&gt;
+Uptime:
+
+20:37  up 4 days,  9:48, 5 users, load averages: 0.67 0.86 1.11
+
+ESTABLISHED connections: 14
+
+&lt;/pre&gt;
+&lt;h3&gt;Preparation&lt;/h3&gt;
+&lt;p&gt;We will start by creating a couple of folders, one for the content
+  we write in Org, and another one for the actual implementation.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;mkdir -p org
+mkdir -p src
+touch readme.org
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;(The &lt;code&gt;readme.org&lt;/code&gt; file is of course optional, but still a good practice to follow.)&lt;/p&gt;
+&lt;p&gt;In the end, our directory structure will look something like this:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;.
+├── org
+│   ├── app.org
+│   └── run.org
+├── readme.org
+├── src
+│   ├── Gemfile
+│   ├── app.rb
+│   └── config.ru
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h3&gt;Implementation&lt;/h3&gt;
+&lt;p&gt;Most of the contents of our application, we will develop within an
+  &lt;code&gt;org/app.org&lt;/code&gt; file.&lt;/p&gt;
+&lt;pre class=&quot;example&quot;&gt;
+touch org/app.org
+&lt;/pre&gt;
+&lt;h4&gt;Prototyping phase&lt;/h4&gt;
+&lt;p&gt;Usually, while developing a program we go into a &lt;code&gt;REPL&lt;/code&gt; to test out what
+  would eventually make it into the program.&lt;/p&gt;
+&lt;p&gt;With &lt;b&gt;Org Babel&lt;/b&gt; though, it is possible to call the code blocks within
+  an Emacs buffer, so we can actually start prototyping using Org mode.
+  Each time we press &lt;code&gt;C-c C-c&lt;/code&gt; on top of the code block, the results
+  would be refreshed:&lt;/p&gt;
+&lt;pre class=&quot;src src-org&quot;&gt;&lt;span style=&quot;color: #A6E22E;&quot;&gt;*** Notes on how to get the results&lt;/span&gt;
+
+We could use something simple like:
+
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+begin_src ruby :results output code&lt;/span&gt;
+s = &lt;span style=&quot;color: #E6DB74;&quot;&gt;&amp;lt;&amp;lt;VARS&lt;/span&gt;
+&lt;span style=&quot;color: #E6DB74;&quot;&gt;Uptime:&lt;/span&gt;
+&lt;span style=&quot;color: #F92672;&quot;&gt;#{`uptime`}&lt;/span&gt;
+
+&lt;span style=&quot;color: #E6DB74;&quot;&gt;ESTABLISHED connections:&lt;/span&gt;
+&lt;span style=&quot;color: #F92672;&quot;&gt;#{`netstat -an | grep ESTABLISHED | wc -l`}&lt;/span&gt;
+
+&lt;span style=&quot;color: #E6DB74;&quot;&gt;VARS&lt;/span&gt;
+
+puts s
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+end_src&lt;/span&gt;
+
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+RESULTS:&lt;/span&gt;
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+BEGIN_SRC ruby&lt;/span&gt;
+&lt;span style=&quot;color: #66D9EF;&quot;&gt;Uptime&lt;/span&gt;:
+22&lt;span style=&quot;color: #AE81FF;&quot;&gt;:23&lt;/span&gt;  up 4 days, 11&lt;span style=&quot;color: #AE81FF;&quot;&gt;:34&lt;/span&gt;, 5 users, load averages: 0.58 0.46 0.30
+
+
+&lt;span style=&quot;color: #66D9EF;&quot;&gt;ESTABLISHED&lt;/span&gt; connections:
+       8
+
+
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+END_SRC&lt;/span&gt;
+&lt;/pre&gt;
+&lt;h4&gt;Using &lt;code&gt;:tangle&lt;/code&gt; to create the files of the program&lt;/h4&gt;
+&lt;p&gt;We can have a code block be &lt;i&gt;tangled&lt;/i&gt; into a file by using the
+  &lt;code&gt;:tangle&lt;/code&gt; switch argument.  For example, we can define the &lt;code&gt;Gemfile&lt;/code&gt;
+  and &lt;code&gt;config.ru&lt;/code&gt; files within an Org mode buffer like this:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;Dependencies from the app, just sinatra and webrick &lt;span class=&quot;k&quot;&gt;for &lt;/span&gt;the server is ok &lt;span class=&quot;k&quot;&gt;for &lt;/span&gt;now.
+
+&lt;span class=&quot;c&quot;&gt;#+BEGIN_SRC ruby :tangle src/Gemfile&lt;/span&gt;
+gem &lt;span class=&quot;s1&quot;&gt;&amp;#39;sinatra&amp;#39;&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#+END_SRC&lt;/span&gt;
+
+Needed to start the Sinatra application:
+
+&lt;span class=&quot;c&quot;&gt;#+BEGIN_SRC ruby :tangle src/config.ru&lt;/span&gt;
+require &lt;span class=&quot;s1&quot;&gt;&amp;#39;./app.rb&amp;#39;&lt;/span&gt;
+run Sinatra::Application
+&lt;span class=&quot;c&quot;&gt;#+END_SRC&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h4&gt;Full example&lt;/h4&gt;
+&lt;p&gt;The Sinatra application would then look something like this.
+  From Emacs, we can either press &lt;code&gt;C-c C-v t&lt;/code&gt; or &lt;code&gt;C-c C-v C-t&lt;/code&gt;,
+  (&lt;code&gt;M-x org-babel-tangle&lt;/code&gt; also does it) to tangle the web of
+  code blocks to their respective files.&lt;/p&gt;
+&lt;pre class=&quot;src src-org&quot;&gt;&lt;span style=&quot;color: #b3b3b3;&quot;&gt;#+TITLE:&lt;/span&gt; &lt;span style=&quot;color: #cafe12; font-size: 144%; font-weight: bold;&quot;&gt;Monitoring HTTP endpoint&lt;/span&gt;
+
+  This is a simple Sinatra application that provides
+  the following endpoints:
+
+  &amp;hyphen; &lt;span style=&quot;color: #cafe12; font-weight: bold;&quot;&gt;=/=&lt;/span&gt;&lt;span style=&quot;font-weight: bold;&quot;&gt;        ::&lt;/span&gt; which responds &lt;span style=&quot;color: #cafe12;&quot;&gt;=OK=&lt;/span&gt; in case all is good with the server.
+  &amp;hyphen; &lt;span style=&quot;color: #cafe12; font-weight: bold;&quot;&gt;=/vars=&lt;/span&gt;&lt;span style=&quot;font-weight: bold;&quot;&gt;    ::&lt;/span&gt; to get info about the system
+
+  &lt;span style=&quot;color: #F92672;&quot;&gt;** Bootstrapping the app&lt;/span&gt;
+
+  &lt;span style=&quot;color: #A6E22E;&quot;&gt;*** Gemfile&lt;/span&gt;
+
+  Dependencies from the app, just sinatra and webrick for now is ok.
+
+  &lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+BEGIN_SRC ruby :tangle src/Gemfile&lt;/span&gt;
+  gem &lt;span style=&quot;color: #E6DB74;&quot;&gt;&#39;sinatra&#39;&lt;/span&gt;
+  &lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+END_SRC&lt;/span&gt;
+
+  &lt;span style=&quot;color: #A6E22E;&quot;&gt;*** Config.ru&lt;/span&gt;
+
+  Needed to start the sinatra application
+
+  &lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+BEGIN_SRC ruby :tangle src/config.ru&lt;/span&gt;
+  require &lt;span style=&quot;color: #E6DB74;&quot;&gt;&#39;./app.rb&#39;&lt;/span&gt;
+  run &lt;span style=&quot;color: #66D9EF;&quot;&gt;Sinatra&lt;/span&gt;::&lt;span style=&quot;color: #66D9EF;&quot;&gt;Application&lt;/span&gt;
+  &lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+END_SRC&lt;/span&gt;
+
+  &lt;span style=&quot;color: #F92672;&quot;&gt;** The App&lt;/span&gt;
+
+  &lt;span style=&quot;color: #A6E22E;&quot;&gt;*** Import dependencies&lt;/span&gt;
+
+  &lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+BEGIN_SRC ruby :tangle src/app.rb&lt;/span&gt;
+
+  require &lt;span style=&quot;color: #E6DB74;&quot;&gt;&#39;sinatra&#39;&lt;/span&gt;
+
+  &lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+END_SRC&lt;/span&gt;
+
+  &lt;span style=&quot;color: #A6E22E;&quot;&gt;*** &lt;/span&gt;&lt;span style=&quot;color: #A6E22E;&quot;&gt;=/=&lt;/span&gt;&lt;span style=&quot;color: #A6E22E;&quot;&gt; endpoint&lt;/span&gt;
+
+  Just respond with &lt;span style=&quot;color: #cafe12;&quot;&gt;=OK=&lt;/span&gt;.
+
+  &lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+BEGIN_SRC ruby :tangle src/app.rb&lt;/span&gt;
+  get &lt;span style=&quot;color: #E6DB74;&quot;&gt;&#39;/&#39;&lt;/span&gt; &lt;span style=&quot;color: #66D9EF;&quot;&gt;do&lt;/span&gt;
+  &lt;span style=&quot;color: #E6DB74;&quot;&gt;&amp;nbsp;&amp;nbsp;&#39;OK&#39;&lt;/span&gt;
+  &lt;span style=&quot;color: #66D9EF;&quot;&gt;end&lt;/span&gt;
+  &lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+END_SRC&lt;/span&gt;
+
+  &lt;span style=&quot;color: #A6E22E;&quot;&gt;*** &lt;/span&gt;&lt;span style=&quot;color: #A6E22E;&quot;&gt;=/vars=&lt;/span&gt;&lt;span style=&quot;color: #A6E22E;&quot;&gt; endpoint&lt;/span&gt;
+
+  Respond with info about the system:
+
+  &lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+BEGIN_SRC ruby :tangle src/app.rb&lt;/span&gt;
+  get &lt;span style=&quot;color: #E6DB74;&quot;&gt;&#39;/vars&#39;&lt;/span&gt; &lt;span style=&quot;color: #66D9EF;&quot;&gt;do&lt;/span&gt;
+
+  r = &lt;span style=&quot;color: #E6DB74;&quot;&gt;&amp;lt;&amp;lt;VARS&lt;/span&gt;
+  &lt;span style=&quot;color: #E6DB74;&quot;&gt;Uptime:&lt;/span&gt;
+  &lt;span style=&quot;color: #F92672;&quot;&gt;#{`uptime`}&lt;/span&gt;
+
+  &lt;span style=&quot;color: #E6DB74;&quot;&gt;ESTABLISHED connections:&lt;/span&gt;
+  &lt;span style=&quot;color: #F92672;&quot;&gt;#{`netstat -an | grep ESTABLISHED | wc -l`}&lt;/span&gt;
+
+  &lt;span style=&quot;color: #E6DB74;&quot;&gt;VARS&lt;/span&gt;
+
+  r
+  &lt;span style=&quot;color: #66D9EF;&quot;&gt;end&lt;/span&gt;
+  &lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+END_SRC&lt;/span&gt;
+&lt;/pre&gt;
+
+&lt;h3&gt;Running it&lt;/h3&gt;
+&lt;p&gt;Now that, we have defined the program, it would be also helpful to
+  define how to actually run it.  We will write this in a &lt;code&gt;org/run.org&lt;/code&gt;
+  file.
+  Note how we are including the &lt;code&gt;org/app.org&lt;/code&gt; application as a
+  dependency so that in case of changes those code blocks become tangled
+  as well.&lt;/p&gt;
+&lt;pre class=&quot;src src-org&quot;&gt;&lt;span style=&quot;color: #b3b3b3;&quot;&gt;#+TITLE:&lt;/span&gt;   &lt;span style=&quot;color: #cafe12; font-size: 144%; font-weight: bold;&quot;&gt;Running the Application&lt;/span&gt;
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+include: &quot;org/app.org&quot;&lt;/span&gt;
+
+&lt;span style=&quot;color: #F92672;&quot;&gt;** Run it&lt;/span&gt;
+
+To run it, we will need to get the dependencies first,
+and then start it with bundler:
+
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+name: server&lt;/span&gt;
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+BEGIN_SRC sh :dir src&lt;/span&gt;
+bundle install
+bundle exec rackup
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+END_SRC&lt;/span&gt;
+
+Now let&#39;s send some requests to it:
+
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+name: curl&lt;/span&gt;
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+BEGIN_SRC sh :wait 1&lt;/span&gt;
+&lt;span style=&quot;color: #66D9EF;&quot;&gt;while&lt;/span&gt; true; &lt;span style=&quot;color: #66D9EF;&quot;&gt;do&lt;/span&gt; 
+  curl 127.0.0.1:9292/vars 2&amp;gt; /dev/null
+  sleep 1
+&lt;span style=&quot;color: #66D9EF;&quot;&gt;done&lt;/span&gt;
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+END_SRC&lt;/span&gt;
+&lt;/pre&gt;
+&lt;p&gt;Here we are giving the code block a &lt;code&gt;#+name:&lt;/code&gt;, doing this make it
+  possible to reuse the code block later on.  I made a small gem that
+  makes it possible to run these kind of blocks when they have a name.&lt;/p&gt;
+&lt;pre class=&quot;example&quot;&gt;
+gem install org-converge
+org-run org/run.org
+&lt;/pre&gt;
+&lt;p&gt;The output would look like this:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;org-run org/run.org
+...
+Running code blocks now! (2 runnable blocks found in total)
+server    -- started with pid 71840
+curl      -- started with pid 71841
+server    -- Using rack 1.5.2
+server    -- Using rack-protection 1.5.3
+server    -- Using tilt 1.4.1
+server    -- Using sinatra 1.4.5
+server    -- Using bundler 1.7.1
+server    -- Your bundle is complete!
+server    -- Use `bundle show [gemname]` to see where a bundled gem is installed.
+server    -- [2014-12-11 22:56:42] INFO  WEBrick 1.3.1
+server    -- [2014-12-11 22:56:42] INFO  ruby 2.1.2 (2014-05-08) [x86_64-darwin11.0]
+server    -- [2014-12-11 22:56:42] INFO  WEBrick::HTTPServer#start: pid=71848 port=9292
+server    -- 127.0.0.1 - - [11/Dec/2014 22:56:42] &amp;quot;GET /vars HTTP/1.1&amp;quot; 200 110 0.0527
+curl      -- Uptime:
+curl      -- 22:56  up 4 days, 12:07, 5 users, load averages: 0.78 0.84 0.76
+curl      -- 
+curl      -- 
+curl      -- ESTABLISHED connections:
+curl      --       12
+curl      -- 
+curl      -- 
+server    -- 127.0.0.1 - - [11/Dec/2014 22:56:43] &amp;quot;GET /vars HTTP/1.1&amp;quot; 200 110 0.0210
+curl      -- Uptime:
+curl      -- 22:56  up 4 days, 12:07, 5 users, load averages: 0.78 0.84 0.76
+curl      -- 
+curl      -- 
+curl      -- ESTABLISHED connections:
+curl      --       12
+curl      -- 
+curl      -- 
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h3&gt;Final remarks&lt;/h3&gt;
+&lt;p&gt;I think there is a lot of potential in the approach from Org mode
+  for Literate Programming, so it is worth a try.
+  Take a look at the concepts exposed by Knuth in his &lt;a href=&quot;http://www.literateprogramming.com/knuthweb.pdf&quot;&gt;paper&lt;/a&gt; on the
+  matter, and you will find out that the core ideas about LP have not
+  shown its age.&lt;/p&gt;
+&lt;p&gt;These days, most of my development starts from an Org mode buffer
+  and it just continues there.  With Org mode, you can basically start with a Readme
+  (c.f. &lt;i&gt;Readme Driven Development&lt;/i&gt;), and then just contine doing the
+  full implementation of your source there in the same place, along with
+  your notes (but which are not exported).&lt;/p&gt;
+&lt;p&gt;At the same time, it makes up for very useful documentation for others
+  to pick up a project later on.
+  And also Org mode file rendering is supported by Github!  In case of bugs,
+  please send me a &lt;a href=&quot;https://github.com/wallyqs/org-ruby&quot;&gt;ticket here&lt;/a&gt;.&lt;/p&gt;
+
+
+</content>
+ </entry>
  
  <entry>
    <title>The Eternal Recurrence of PaaS</title>
@@ -87,13 +375,10 @@
 &lt;p&gt;&lt;i&gt;Ressentiment&lt;/i&gt; is to those that do not understand the situation in the
   the data center, and to those heavy users who are causing the architecture
   continue to grow.&lt;/p&gt;
-&lt;p&gt;The problem is not the platform, but the architecture of the
-  application, since there is no need for the platform to have to grow
-  this fast.
-  &lt;i&gt;Ressentiment&lt;/i&gt; to those users who create too much data some of it
-  unnecessary, since not all of it would be needed for analytics usage
-  and it is crazy that it is needed just for audit purposes
-  (&lt;i&gt;ressentiment&lt;/i&gt; towards those who audit as well).&lt;/p&gt;
+&lt;p&gt;The problem is not the platform, but the architecture of the application.
+  Had the application architechture been designed properly there wouldn&amp;#8217;t be a need to have as many servers.&lt;/p&gt;
+&lt;p&gt;Or there could be &lt;i&gt;ressentiment&lt;/i&gt; as well to those users who for analytics purposes capture everything and produce lots of data.
+  In case it is for auditing purposes, &lt;i&gt;ressentiment&lt;/i&gt; then is towards those who audit.&lt;/p&gt;
 &lt;p&gt;The platform developer becomes more used to externalize issues that
   could be fixed in the platform on the users rather than fixing them.&lt;/p&gt;
 &lt;h5&gt;Conclusion&lt;/h5&gt;

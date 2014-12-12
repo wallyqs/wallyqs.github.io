@@ -101,6 +101,298 @@
   
   <div class="post">
     <h1 class="post-title">
+      <a href="/posts/2014/12/12/using-org-babel-for-lp/">
+        Using Org Babel for Literate Programming
+      </a>
+    </h1>
+
+    <span class="post-date">12 Dec 2014</span>
+
+    
+<p>Most people that have heard about Org mode are aware that
+  it is a tool meant for creating <code>TODO</code> lists, taking notes,
+  and even doing documentation to some extent.</p>
+<p>What is not immediately clear about Org mode is that it is a very
+  powerful tool for doing literate programming and a comfortable
+  environment for working with active documents.</p>
+<p>Rather than explain the ideas one by one, I will give a more
+  practical example of what it is possible to do with it.</p>
+<h3>Example: Creating a monitoring HTTP endpoint</h3>
+<p>Let&#8217;s create a simple HTTP endpoint with Sinatra which
+  will respond with some information about the host where it is running,
+  like its <code>uptime</code> and the number of established connections.</p>
+<h4>Requirements</h4>
+<p>What we want is basically the output of the following commands:</p>
+<div class="highlight"><pre>uptime
+</pre></div>
+<p>&#8230;which will show something like this:</p>
+<div class="highlight"><pre>20:37  up 4 days,  9:48, 5 users, load averages: 0.67 0.86 1.11
+</pre></div>
+<p>And:</p>
+<div class="highlight"><pre>netstat -an <span class="p">|</span> grep ESTABLISHED <span class="p">|</span> wc -l
+</pre></div>
+<p>which shows a number:</p>
+<div class="highlight"><pre>5
+</pre></div>
+<p>The result from both commands would be aggregated into
+  the response sent by the the server when we request <code>/vars</code>:</p>
+<div class="highlight"><pre>curl 127.0.0.1:9292/vars
+</pre></div>
+<p>Result:</p>
+<pre class="example">
+Uptime:
+
+20:37  up 4 days,  9:48, 5 users, load averages: 0.67 0.86 1.11
+
+ESTABLISHED connections: 14
+
+</pre>
+<h3>Preparation</h3>
+<p>We will start by creating a couple of folders, one for the content
+  we write in Org, and another one for the actual implementation.</p>
+<div class="highlight"><pre>mkdir -p org
+mkdir -p src
+touch readme.org
+</pre></div>
+<p>(The <code>readme.org</code> file is of course optional, but still a good practice to follow.)</p>
+<p>In the end, our directory structure will look something like this:</p>
+<div class="highlight"><pre>.
+├── org
+│   ├── app.org
+│   └── run.org
+├── readme.org
+├── src
+│   ├── Gemfile
+│   ├── app.rb
+│   └── config.ru
+</pre></div>
+<h3>Implementation</h3>
+<p>Most of the contents of our application, we will develop within an
+  <code>org/app.org</code> file.</p>
+<pre class="example">
+touch org/app.org
+</pre>
+<h4>Prototyping phase</h4>
+<p>Usually, while developing a program we go into a <code>REPL</code> to test out what
+  would eventually make it into the program.</p>
+<p>With <b>Org Babel</b> though, it is possible to call the code blocks within
+  an Emacs buffer, so we can actually start prototyping using Org mode.
+  Each time we press <code>C-c C-c</code> on top of the code block, the results
+  would be refreshed:</p>
+<pre class="src src-org"><span style="color: #A6E22E;">*** Notes on how to get the results</span>
+
+We could use something simple like:
+
+<span style="color: #465457; font-style: italic;">#+begin_src ruby :results output code</span>
+s = <span style="color: #E6DB74;">&lt;&lt;VARS</span>
+<span style="color: #E6DB74;">Uptime:</span>
+<span style="color: #F92672;">#{`uptime`}</span>
+
+<span style="color: #E6DB74;">ESTABLISHED connections:</span>
+<span style="color: #F92672;">#{`netstat -an | grep ESTABLISHED | wc -l`}</span>
+
+<span style="color: #E6DB74;">VARS</span>
+
+puts s
+<span style="color: #465457; font-style: italic;">#+end_src</span>
+
+<span style="color: #465457; font-style: italic;">#+RESULTS:</span>
+<span style="color: #465457; font-style: italic;">#+BEGIN_SRC ruby</span>
+<span style="color: #66D9EF;">Uptime</span>:
+22<span style="color: #AE81FF;">:23</span>  up 4 days, 11<span style="color: #AE81FF;">:34</span>, 5 users, load averages: 0.58 0.46 0.30
+
+
+<span style="color: #66D9EF;">ESTABLISHED</span> connections:
+       8
+
+
+<span style="color: #465457; font-style: italic;">#+END_SRC</span>
+</pre>
+<h4>Using <code>:tangle</code> to create the files of the program</h4>
+<p>We can have a code block be <i>tangled</i> into a file by using the
+  <code>:tangle</code> switch argument.  For example, we can define the <code>Gemfile</code>
+  and <code>config.ru</code> files within an Org mode buffer like this:</p>
+<div class="highlight"><pre>Dependencies from the app, just sinatra and webrick <span class="k">for </span>the server is ok <span class="k">for </span>now.
+
+<span class="c">#+BEGIN_SRC ruby :tangle src/Gemfile</span>
+gem <span class="s1">&#39;sinatra&#39;</span>
+<span class="c">#+END_SRC</span>
+
+Needed to start the Sinatra application:
+
+<span class="c">#+BEGIN_SRC ruby :tangle src/config.ru</span>
+require <span class="s1">&#39;./app.rb&#39;</span>
+run Sinatra::Application
+<span class="c">#+END_SRC</span>
+</pre></div>
+<h4>Full example</h4>
+<p>The Sinatra application would then look something like this.
+  From Emacs, we can either press <code>C-c C-v t</code> or <code>C-c C-v C-t</code>,
+  (<code>M-x org-babel-tangle</code> also does it) to tangle the web of
+  code blocks to their respective files.</p>
+<pre class="src src-org"><span style="color: #b3b3b3;">#+TITLE:</span> <span style="color: #cafe12; font-size: 144%; font-weight: bold;">Monitoring HTTP endpoint</span>
+
+  This is a simple Sinatra application that provides
+  the following endpoints:
+
+  &hyphen; <span style="color: #cafe12; font-weight: bold;">=/=</span><span style="font-weight: bold;">        ::</span> which responds <span style="color: #cafe12;">=OK=</span> in case all is good with the server.
+  &hyphen; <span style="color: #cafe12; font-weight: bold;">=/vars=</span><span style="font-weight: bold;">    ::</span> to get info about the system
+
+  <span style="color: #F92672;">** Bootstrapping the app</span>
+
+  <span style="color: #A6E22E;">*** Gemfile</span>
+
+  Dependencies from the app, just sinatra and webrick for now is ok.
+
+  <span style="color: #465457; font-style: italic;">#+BEGIN_SRC ruby :tangle src/Gemfile</span>
+  gem <span style="color: #E6DB74;">'sinatra'</span>
+  <span style="color: #465457; font-style: italic;">#+END_SRC</span>
+
+  <span style="color: #A6E22E;">*** Config.ru</span>
+
+  Needed to start the sinatra application
+
+  <span style="color: #465457; font-style: italic;">#+BEGIN_SRC ruby :tangle src/config.ru</span>
+  require <span style="color: #E6DB74;">'./app.rb'</span>
+  run <span style="color: #66D9EF;">Sinatra</span>::<span style="color: #66D9EF;">Application</span>
+  <span style="color: #465457; font-style: italic;">#+END_SRC</span>
+
+  <span style="color: #F92672;">** The App</span>
+
+  <span style="color: #A6E22E;">*** Import dependencies</span>
+
+  <span style="color: #465457; font-style: italic;">#+BEGIN_SRC ruby :tangle src/app.rb</span>
+
+  require <span style="color: #E6DB74;">'sinatra'</span>
+
+  <span style="color: #465457; font-style: italic;">#+END_SRC</span>
+
+  <span style="color: #A6E22E;">*** </span><span style="color: #A6E22E;">=/=</span><span style="color: #A6E22E;"> endpoint</span>
+
+  Just respond with <span style="color: #cafe12;">=OK=</span>.
+
+  <span style="color: #465457; font-style: italic;">#+BEGIN_SRC ruby :tangle src/app.rb</span>
+  get <span style="color: #E6DB74;">'/'</span> <span style="color: #66D9EF;">do</span>
+  <span style="color: #E6DB74;">&nbsp;&nbsp;'OK'</span>
+  <span style="color: #66D9EF;">end</span>
+  <span style="color: #465457; font-style: italic;">#+END_SRC</span>
+
+  <span style="color: #A6E22E;">*** </span><span style="color: #A6E22E;">=/vars=</span><span style="color: #A6E22E;"> endpoint</span>
+
+  Respond with info about the system:
+
+  <span style="color: #465457; font-style: italic;">#+BEGIN_SRC ruby :tangle src/app.rb</span>
+  get <span style="color: #E6DB74;">'/vars'</span> <span style="color: #66D9EF;">do</span>
+
+  r = <span style="color: #E6DB74;">&lt;&lt;VARS</span>
+  <span style="color: #E6DB74;">Uptime:</span>
+  <span style="color: #F92672;">#{`uptime`}</span>
+
+  <span style="color: #E6DB74;">ESTABLISHED connections:</span>
+  <span style="color: #F92672;">#{`netstat -an | grep ESTABLISHED | wc -l`}</span>
+
+  <span style="color: #E6DB74;">VARS</span>
+
+  r
+  <span style="color: #66D9EF;">end</span>
+  <span style="color: #465457; font-style: italic;">#+END_SRC</span>
+</pre>
+
+<h3>Running it</h3>
+<p>Now that, we have defined the program, it would be also helpful to
+  define how to actually run it.  We will write this in a <code>org/run.org</code>
+  file.
+  Note how we are including the <code>org/app.org</code> application as a
+  dependency so that in case of changes those code blocks become tangled
+  as well.</p>
+<pre class="src src-org"><span style="color: #b3b3b3;">#+TITLE:</span>   <span style="color: #cafe12; font-size: 144%; font-weight: bold;">Running the Application</span>
+<span style="color: #465457; font-style: italic;">#+include: "org/app.org"</span>
+
+<span style="color: #F92672;">** Run it</span>
+
+To run it, we will need to get the dependencies first,
+and then start it with bundler:
+
+<span style="color: #465457; font-style: italic;">#+name: server</span>
+<span style="color: #465457; font-style: italic;">#+BEGIN_SRC sh :dir src</span>
+bundle install
+bundle exec rackup
+<span style="color: #465457; font-style: italic;">#+END_SRC</span>
+
+Now let's send some requests to it:
+
+<span style="color: #465457; font-style: italic;">#+name: curl</span>
+<span style="color: #465457; font-style: italic;">#+BEGIN_SRC sh :wait 1</span>
+<span style="color: #66D9EF;">while</span> true; <span style="color: #66D9EF;">do</span> 
+  curl 127.0.0.1:9292/vars 2&gt; /dev/null
+  sleep 1
+<span style="color: #66D9EF;">done</span>
+<span style="color: #465457; font-style: italic;">#+END_SRC</span>
+</pre>
+<p>Here we are giving the code block a <code>#+name:</code>, doing this make it
+  possible to reuse the code block later on.  I made a small gem that
+  makes it possible to run these kind of blocks when they have a name.</p>
+<pre class="example">
+gem install org-converge
+org-run org/run.org
+</pre>
+<p>The output would look like this:</p>
+<div class="highlight"><pre>org-run org/run.org
+...
+Running code blocks now! (2 runnable blocks found in total)
+server    -- started with pid 71840
+curl      -- started with pid 71841
+server    -- Using rack 1.5.2
+server    -- Using rack-protection 1.5.3
+server    -- Using tilt 1.4.1
+server    -- Using sinatra 1.4.5
+server    -- Using bundler 1.7.1
+server    -- Your bundle is complete!
+server    -- Use `bundle show [gemname]` to see where a bundled gem is installed.
+server    -- [2014-12-11 22:56:42] INFO  WEBrick 1.3.1
+server    -- [2014-12-11 22:56:42] INFO  ruby 2.1.2 (2014-05-08) [x86_64-darwin11.0]
+server    -- [2014-12-11 22:56:42] INFO  WEBrick::HTTPServer#start: pid=71848 port=9292
+server    -- 127.0.0.1 - - [11/Dec/2014 22:56:42] &quot;GET /vars HTTP/1.1&quot; 200 110 0.0527
+curl      -- Uptime:
+curl      -- 22:56  up 4 days, 12:07, 5 users, load averages: 0.78 0.84 0.76
+curl      -- 
+curl      -- 
+curl      -- ESTABLISHED connections:
+curl      --       12
+curl      -- 
+curl      -- 
+server    -- 127.0.0.1 - - [11/Dec/2014 22:56:43] &quot;GET /vars HTTP/1.1&quot; 200 110 0.0210
+curl      -- Uptime:
+curl      -- 22:56  up 4 days, 12:07, 5 users, load averages: 0.78 0.84 0.76
+curl      -- 
+curl      -- 
+curl      -- ESTABLISHED connections:
+curl      --       12
+curl      -- 
+curl      -- 
+</pre></div>
+<h3>Final remarks</h3>
+<p>I think there is a lot of potential in the approach from Org mode
+  for Literate Programming, so it is worth a try.
+  Take a look at the concepts exposed by Knuth in his <a href="http://www.literateprogramming.com/knuthweb.pdf">paper</a> on the
+  matter, and you will find out that the core ideas about LP have not
+  shown its age.</p>
+<p>These days, most of my development starts from an Org mode buffer
+  and it just continues there.  With Org mode, you can basically start with a Readme
+  (c.f. <i>Readme Driven Development</i>), and then just contine doing the
+  full implementation of your source there in the same place, along with
+  your notes (but which are not exported).</p>
+<p>At the same time, it makes up for very useful documentation for others
+  to pick up a project later on.
+  And also Org mode file rendering is supported by Github!  In case of bugs,
+  please send me a <a href="https://github.com/wallyqs/org-ruby">ticket here</a>.</p>
+
+
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
       <a href="/posts/2014/12/08/eternal-recurrence-of-paas/">
         The Eternal Recurrence of PaaS
       </a>
@@ -178,13 +470,10 @@
 <p><i>Ressentiment</i> is to those that do not understand the situation in the
   the data center, and to those heavy users who are causing the architecture
   continue to grow.</p>
-
 <p>The problem is not the platform, but the architecture of the application.
-  Had the application architechture been designed properly there wouldn't be a need to have as many servers.
-
-  Or there could be <i>ressentiment</i> as well to those users who for analytics purposes capture everything and produce lots of data.
-  In case it is for auditing purposes, <i>ressentiment</i> then is towards those who audit.
-
+  Had the application architechture been designed properly there wouldn&#8217;t be a need to have as many servers.</p>
+<p>Or there could be <i>ressentiment</i> as well to those users who for analytics purposes capture everything and produce lots of data.
+  In case it is for auditing purposes, <i>ressentiment</i> then is towards those who audit.</p>
 <p>The platform developer becomes more used to externalize issues that
   could be fixed in the platform on the users rather than fixing them.</p>
 <h5>Conclusion</h5>
@@ -985,174 +1274,6 @@ aggregator          -- good  -  201
     and see how does defending against this impact the style.</li>
   <li>Dispatch to other nodes with using a different client.</li>
 </ul>
-
-
-
-  </div>
-  
-  <div class="post">
-    <h1 class="post-title">
-      <a href="/posts/2014/10/11/transducers-in-ruby/">
-        Term Frequency with Transducers gem in Ruby
-      </a>
-    </h1>
-
-    <span class="post-date">11 Oct 2014</span>
-
-    
-<p>Yesterday, Cognitect <a href="https://twitter.com/cognitect/status/520644214116212736https://twitter.com/cognitect/status/520644214116212736">announced</a> about a Ruby implementation among
-  others of the transducers concept that Rich Hickey <a href="https://www.youtube.com/watch?v=6mTbuzafcII">talked about at StrangeLoop</a>.</p>
-<p>After watching the talk a number of times and reading a little the source of the <a href="https://github.com/cognitect-labs/transducers-ruby/blob/master/lib/transducers.rb">gem</a>,
-  I gave it a shot at using it to solve the term frequency exercise
-  from the <i><a href="http://www.amazon.com/Exercises-Programming-Style-Cristina-Videira/dp/1482227371/">Exercises in Programming Styles</a></i> book.</p>
-<h2>Transducers usage in Ruby</h2>
-<p>The full example looks as follows: (explanation of the steps is further below).</p>
-<div class="highlight"><pre><span class="nb">require</span> <span class="s1">&#39;transducers&#39;</span>
-
-<span class="no">SRC_ROOT</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../../..&quot;</span><span class="p">),</span> <span class="s2">&quot;src&quot;</span><span class="p">,</span> <span class="s2">&quot;exercises-in-programming-style&quot;</span><span class="p">)</span>
-<span class="no">PRIDE_AND_PREJUDICE</span>   <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">SRC_ROOT</span><span class="p">,</span> <span class="s2">&quot;pride-and-prejudice.txt&quot;</span><span class="p">)</span>
-<span class="no">STOP_WORDS</span>            <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">SRC_ROOT</span><span class="p">,</span> <span class="s1">&#39;stop_words.txt&#39;</span><span class="p">)</span>
-
-<span class="c1"># load words to ignore</span>
-<span class="n">stop_words</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="no">STOP_WORDS</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
-<span class="n">stop_words</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="o">.</span><span class="n">.</span><span class="s1">&#39;z&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">to_a</span> <span class="c1"># also alphabet</span>
-<span class="n">stop_words</span><span class="o">.</span><span class="n">flatten!</span><span class="o">.</span><span class="n">uniq!</span>
-
-<span class="n">lines</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="no">PRIDE_AND_PREJUDICE</span><span class="p">)</span><span class="o">.</span><span class="n">lines</span>
-<span class="n">frequency_counter</span> <span class="o">=</span> <span class="no">Class</span><span class="o">.</span><span class="n">new</span> <span class="k">do</span>
-  <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="n">words_frequency</span><span class="p">,</span> <span class="n">words</span><span class="p">)</span>
-    <span class="n">words</span><span class="o">.</span><span class="n">each</span> <span class="p">{</span> <span class="o">|</span><span class="n">w</span><span class="o">|</span> <span class="n">words_frequency</span><span class="o">[</span><span class="n">w</span><span class="o">.</span><span class="n">downcase</span><span class="o">]</span> <span class="o">+=</span> <span class="mi">1</span> <span class="p">}</span>
-    <span class="n">words_frequency</span>
-  <span class="k">end</span>
-
-  <span class="k">def</span> <span class="nf">complete</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
-    <span class="n">result</span><span class="o">.</span><span class="n">sort</span> <span class="p">{</span><span class="o">|</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="o">|</span> <span class="n">a</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span> <span class="o">&lt;=&gt;</span> <span class="n">b</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span><span class="p">}</span><span class="o">.</span><span class="n">reverse</span>
-  <span class="k">end</span>
-<span class="k">end</span><span class="o">.</span><span class="n">new</span>
-
-<span class="n">t</span> <span class="o">=</span> <span class="no">Transducers</span><span class="o">.</span><span class="n">compose</span><span class="p">(</span>
-      <span class="no">Transducers</span><span class="o">.</span><span class="n">map</span> <span class="k">do</span> <span class="o">|</span><span class="n">line</span><span class="o">|</span>
-        <span class="n">line</span><span class="o">.</span><span class="n">gsub!</span><span class="p">(</span><span class="sr">/[^a-zA-Z0-9]/</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">)</span> <span class="c1"># remove non alphanumeric</span>
-        <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span>                 <span class="c1"># split into words</span>
-      <span class="k">end</span><span class="p">,</span>
-      <span class="no">Transducers</span><span class="o">.</span><span class="n">map</span> <span class="k">do</span> <span class="o">|</span><span class="n">words</span><span class="o">|</span>        <span class="c1"># remove stop words</span>
-        <span class="n">words</span><span class="o">.</span><span class="n">delete_if</span> <span class="p">{</span><span class="o">|</span><span class="n">w</span><span class="o">|</span> <span class="n">stop_words</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="n">w</span><span class="o">.</span><span class="n">downcase</span><span class="p">)</span> <span class="p">}</span>
-      <span class="k">end</span><span class="p">)</span>
-
-<span class="n">words_frequency</span>  <span class="o">=</span> <span class="no">Hash</span><span class="o">.</span><span class="n">new</span> <span class="p">{</span><span class="o">|</span><span class="n">h</span><span class="p">,</span><span class="n">k</span><span class="o">|</span> <span class="n">h</span><span class="o">[</span><span class="n">k</span><span class="o">]</span> <span class="o">=</span> <span class="mi">0</span> <span class="p">}</span>
-<span class="n">words_frequency_list</span> <span class="o">=</span> <span class="no">Transducers</span><span class="o">.</span><span class="n">transduce</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">frequency_counter</span><span class="p">,</span> <span class="n">words_frequency</span><span class="p">,</span> <span class="n">lines</span><span class="p">)</span>
-
-<span class="c1"># Print the top 25 terms</span>
-<span class="n">words_frequency_list</span><span class="o">.</span><span class="n">to_a</span><span class="o">[</span><span class="mi">0</span><span class="o">.</span><span class="n">.</span><span class="o">.</span><span class="mi">25</span><span class="o">].</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="o">|</span>
-  <span class="nb">puts</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">k</span><span class="si">}</span><span class="s2">  -  </span><span class="si">#{</span><span class="n">v</span><span class="si">}</span><span class="s2">&quot;</span>
-<span class="k">end</span>
-</pre></div>
-<h2>Going over the steps of the implementatoin</h2>
-<h3>Dependencies and definitions</h3>
-<h4><code>Gemfile</code></h4>
-<div class="highlight"><pre><span class="n">source</span> <span class="s2">&quot;http://rubygems.org&quot;</span>
-
-<span class="n">gem</span> <span class="s1">&#39;transducers&#39;</span>
-</pre></div>
-<h4>Imports</h4>
-<div class="highlight"><pre><span class="nb">require</span> <span class="s1">&#39;transducers&#39;</span>
-</pre></div>
-<h4>Location of the files</h4>
-<div class="highlight"><pre><span class="no">SRC_ROOT</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;../../..&quot;</span><span class="p">),</span> <span class="s2">&quot;src&quot;</span><span class="p">,</span> <span class="s2">&quot;exercises-in-programming-style&quot;</span><span class="p">)</span>
-<span class="no">PRIDE_AND_PREJUDICE</span>   <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">SRC_ROOT</span><span class="p">,</span> <span class="s2">&quot;pride-and-prejudice.txt&quot;</span><span class="p">)</span>
-<span class="no">STOP_WORDS</span>            <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">SRC_ROOT</span><span class="p">,</span> <span class="s1">&#39;stop_words.txt&#39;</span><span class="p">)</span>
-</pre></div>
-<h4>Stop words</h4>
-<p>The <i>stop words</i> are the list of words and single letters that
-  appear in the test that we decide to ignore.</p>
-<div class="highlight"><pre><span class="c1"># load words to ignore</span>
-<span class="n">stop_words</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="no">STOP_WORDS</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
-<span class="n">stop_words</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="o">.</span><span class="n">.</span><span class="s1">&#39;z&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">to_a</span> <span class="c1"># also alphabet</span>
-<span class="n">stop_words</span><span class="o">.</span><span class="n">flatten!</span><span class="o">.</span><span class="n">uniq!</span>
-</pre></div>
-<h3>Using Transducers</h3>
-<p>In order to determine the term frequency in the pride and prejudice
-  text, we will do the following transformations:</p>
-<ol>
-  <li>Create a collection of the lines from the raw body of text</li>
-  <li>Remove non-alphanumeric characters from the line</li>
-  <li>Split the line into words</li>
-  <li>Remove words which are considered to be <i>stop words</i></li>
-</ol>
-<p>Then as part of the reducing step:</p>
-<ol>
-  <li>Increment counter in <code>words_frequency</code> hash each time the word appears</li>
-  <li>Sort the words by frequency</li>
-  <li>Reverse the list</li>
-</ol>
-<p>Then from this list, we will take the top 25 terms and print them to stdout.</p>
-<h4>The Collection</h4>
-<p>The collection upon which we will be applying the transformations
-  are each one of the lines that exist in the text.</p>
-<div class="highlight"><pre><span class="n">lines</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="no">PRIDE_AND_PREJUDICE</span><span class="p">)</span><span class="o">.</span><span class="n">lines</span>
-</pre></div>
-<h4>The Reducer</h4>
-<p>From the <a href="https://github.com/cognitect-labs/transducers-ruby/blob/222686714cc55f984671af48bf506f1c130fc013/lib/transducers.rb#L24">source</a>:</p>
-<blockquote>
-  <p>A <span style="text-decoration:underline;">reducer</span> is an object with a `step` method that takes a result
-    (so far) and an input and returns a new result. This is similar to
-    the blocks we pass to Ruby&#8217;s `reduce` (a.k.a `inject`), and serves a
-    similar role in <span style="text-decoration:underline;">transducing process</span>.</p>
-</blockquote>
-<p>As part of its reducing step, the reducer will receive a list of words
-  in a line, then iterate over this list and increment the counter in
-  the <code>words_frequency</code> hash.</p>
-<p>Then, once the <code>words_frequency</code> has been computed, we returned the
-  result sorted by frequency in descending order.</p>
-<div class="highlight"><pre><span class="n">frequency_counter</span> <span class="o">=</span> <span class="no">Class</span><span class="o">.</span><span class="n">new</span> <span class="k">do</span>
-  <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="n">words_frequency</span><span class="p">,</span> <span class="n">words</span><span class="p">)</span>
-    <span class="n">words</span><span class="o">.</span><span class="n">each</span> <span class="p">{</span> <span class="o">|</span><span class="n">w</span><span class="o">|</span> <span class="n">words_frequency</span><span class="o">[</span><span class="n">w</span><span class="o">.</span><span class="n">downcase</span><span class="o">]</span> <span class="o">+=</span> <span class="mi">1</span> <span class="p">}</span>
-    <span class="n">words_frequency</span>
-  <span class="k">end</span>
-
-  <span class="k">def</span> <span class="nf">complete</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
-     <span class="n">result</span><span class="o">.</span><span class="n">sort</span> <span class="p">{</span><span class="o">|</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="o">|</span> <span class="n">a</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span> <span class="o">&lt;=&gt;</span> <span class="n">b</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span><span class="p">}</span><span class="o">.</span><span class="n">reverse</span>
-  <span class="k">end</span>
-<span class="k">end</span><span class="o">.</span><span class="n">new</span>
-</pre></div>
-<h4>The Transducer</h4>
-<p>Again from the <a href="https://github.com/cognitect-labs/transducers-ruby/blob/222686714cc55f984671af48bf506f1c130fc013/lib/transducers.rb#L33">source</a>:</p>
-<blockquote>
-  <p>A <span style="text-decoration:underline;">handler</span> is an object with a `call` method that a reducer uses
-    to process input. In a `map` operation, this would transform the
-    input, and in a `filter` operation it would act as a predicate.</p>
-  <p>A <span style="text-decoration:underline;">transducer</span> is an object that transforms a reducer by adding
-    additional processing for each element in a collection of inputs.</p>
-  <p>A <span style="text-decoration:underline;">transducing process</span> is invoked by calling
-    `Transducers.transduce` with a transducer, a reducer, an optional
-    initial value, and an input collection.</p>
-</blockquote>
-<p>Our transducer will compose the functions which filter the
-  non-alphanumeric characters that exists on a line, as well as words
-  that should be ignored from the text.</p>
-<p>This results in the reducer receiving a list of words to compute the
-  term frequency list.</p>
-<div class="highlight"><pre><span class="n">t</span> <span class="o">=</span> <span class="no">Transducers</span><span class="o">.</span><span class="n">compose</span><span class="p">(</span>
-  <span class="no">Transducers</span><span class="o">.</span><span class="n">map</span> <span class="k">do</span> <span class="o">|</span><span class="n">line</span><span class="o">|</span>
-    <span class="n">line</span><span class="o">.</span><span class="n">gsub!</span><span class="p">(</span><span class="sr">/[^a-zA-Z0-9]/</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">)</span> <span class="c1"># remove non alphanumeric</span>
-    <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span>                 <span class="c1"># split into words</span>
-  <span class="k">end</span><span class="p">,</span>
-  <span class="no">Transducers</span><span class="o">.</span><span class="n">map</span> <span class="k">do</span> <span class="o">|</span><span class="n">words</span><span class="o">|</span>        <span class="c1"># remove stop words</span>
-    <span class="n">words</span><span class="o">.</span><span class="n">delete_if</span> <span class="p">{</span><span class="o">|</span><span class="n">w</span><span class="o">|</span> <span class="n">stop_words</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="n">w</span><span class="o">.</span><span class="n">downcase</span><span class="p">)</span> <span class="p">}</span>
-  <span class="k">end</span>
-<span class="p">)</span>
-
-<span class="n">words_frequency</span>  <span class="o">=</span> <span class="no">Hash</span><span class="o">.</span><span class="n">new</span> <span class="p">{</span><span class="o">|</span><span class="n">h</span><span class="p">,</span><span class="n">k</span><span class="o">|</span> <span class="n">h</span><span class="o">[</span><span class="n">k</span><span class="o">]</span> <span class="o">=</span> <span class="mi">0</span> <span class="p">}</span>
-<span class="n">words_frequency_list</span> <span class="o">=</span> <span class="no">Transducers</span><span class="o">.</span><span class="n">transduce</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">frequency_counter</span><span class="p">,</span> <span class="n">words_frequency</span><span class="p">,</span> <span class="n">lines</span><span class="p">)</span>
-</pre></div>
-<h4>Printing the results</h4>
-<p>To verify the results, we only want to check which were the top 25
-  terms that have the highest frequency</p>
-<div class="highlight"><pre><span class="c1"># Print the top 25 terms</span>
-<span class="n">words_frequency_list</span><span class="o">.</span><span class="n">to_a</span><span class="o">[</span><span class="mi">0</span><span class="o">.</span><span class="n">.</span><span class="o">.</span><span class="mi">25</span><span class="o">].</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="o">|</span>
-  <span class="nb">puts</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">k</span><span class="si">}</span><span class="s2">  -  </span><span class="si">#{</span><span class="n">v</span><span class="si">}</span><span class="s2">&quot;</span>
-<span class="k">end</span>
-</pre></div>
 
 
 
