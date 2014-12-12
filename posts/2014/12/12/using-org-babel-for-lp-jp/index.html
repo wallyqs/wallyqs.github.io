@@ -101,7 +101,7 @@
   <h1 class="post-title">Org Babelで文芸的プログラミング</h1>
   <span class="post-date">12 Dec 2014</span>
   
-<p>(This is a post for the <a href="http://qiita.com/advent-calendar/2014/emacs">Emacs Advent Calendar 2014</a> from Japan, a similar English version can be found <a href="http://localhost:4000/posts/2014/12/12/using-org-babel-for-lp/">here</a>)</p>
+<p>(This is a post for the <a href="http://qiita.com/advent-calendar/2014/emacs">Emacs Advent Calendar 2014</a> from Japan, a similar English version can be found <a href="http://literateinfrastructure.org/posts/2014/12/12/using-org-babel-for-lp/">here</a>)</p>
 <p>Org modeの話を聞いたことがある方は、Org modeは「TODOリスト管理ツールの
   一つだ」と思われる方が多いかもしれません。それは当たっていますが、
   Org Babelというモードで、「文芸的プログラミング(Literate Programming)」を実現することができます。</p>
@@ -184,7 +184,7 @@ puts s
 <h4><code>:tangle</code> の使い方</h4>
 <p><code>:tangle</code> はOrg modeのcode block switch argumentsの一つです。
   これを使えば、Org modeのcode blockは実装しているファイルを設定できます。</p>
-<p>例えば、 <code>:tangle</code> を使って <code>Gemfile</code> と <code>config.ru</code> の内容を買いましょう。</p>
+<p>例えば、 <code>:tangle</code> を使って <code>Gemfile</code> と <code>config.ru</code> の内容を書きましょう。</p>
 <div class="highlight"><pre>Dependencies from the app, just sinatra and webrick <span class="k">for </span>the server is ok <span class="k">for </span>now.
 
 <span class="c">#+BEGIN_SRC ruby :tangle src/Gemfile</span>
