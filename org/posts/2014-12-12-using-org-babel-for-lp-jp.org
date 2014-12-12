@@ -1,0 +1,341 @@
+# -*- mode: org; mode: auto-fill -*-
+#+TITLE:	Org Babelで文芸的プログラミング
+#+category:	posts
+#+layout:	post
+
+(This is a post for the [[http://qiita.com/advent-calendar/2014/emacs][Emacs Advent Calendar 2014]] from Japan, a similar English version can be found [[http://localhost:4000/posts/2014/12/12/using-org-babel-for-lp/][here]])
+
+Org modeの話を聞いたことがある方は、Org modeは「TODOリスト管理ツールの
+一つだ」と思われる方が多いかもしれません。それは当たっていますが、
+Org Babelというモードで、「文芸的プログラミング(Literate Programming)」を実現することができます。
+
+# Most people that have heard about Org mode are aware that
+# it is a tool meant for creating =TODO= lists, taking notes,
+# and even doing documentation to some extent.
+
+# What is not immediately clear about Org mode is that it is a very
+# powerful tool for doing literate programming and a comfortable
+# environment for working with active documents.
+
+# Rather than explain the ideas one by one, I will give a more 
+# practical example of what it is possible to do with it.
+
+Org Babelの使い方を示すために、あるホストのモニタリング情報を表示する、
+単純なSinatraアプリケーションを例えにします。
+
+*** 例: ホストのモニタリング情報を表示するSinatra app
+
+表示したい項目をシステムの =uptime= と ESTABLISHEDコネクションの数に絞り込みます。
+
+#+BEGIN_SRC sh :results output code
+uptime
+
+20:37  up 4 days,  9:48, 5 users, load averages: 0.67 0.86 1.11
+#+END_SRC
+
+=ESTABLISHED= コネクションの数:
+
+#+begin_src sh :results output code
+netstat -an | grep ESTABLISHED | wc -l
+
+       5
+#+END_SRC
+
+この二つのコマンドの結果を集まって、 HTTPクライアントを使えば
+=GET /vars= で取れるようにします：
+
+#+BEGIN_SRC sh :results output
+curl 127.0.0.1:9292/vars
+#+END_SRC
+
+#+RESULTS:
+: Uptime:
+: 21:04  up 4 days, 10:15, 5 users, load averages: 0.29 0.39 0.48
+: 
+: 
+: ESTABLISHED connections:
+:        6
+: 
+: 
+
+*** 事前準備
+
+まず、ディレクトリの作成は必要です:
+
+#+BEGIN_SRC sh :result output
+mkdir -p org
+mkdir -p src
+touch readme.org
+#+END_SRC
+
+- =org/= ディレクトリの下に置くファイルはOrg mode で書きます
+- =src/= ディレクトリの下に置くファイルはSinatraアプリケーションのソースコード
+
+(=readme.org= の作成は必要ではないけど、best practiceとしておすすめします...)
+
+最終的に、ディレクトリ構成はこんな感じになります:
+
+#+BEGIN_SRC 
+.
+├── org
+│   ├── app.org
+│   └── run.org
+├── readme.org
+├── src
+│   ├── Gemfile
+│   ├── app.rb
+│   └── config.ru
+
+#+END_SRC
+
+*** 実装
+
+アプリケーションの実装自体は =org/app.org= に書きます。
+
+: touch org/app.org
+
+**** プロトタイプ
+
+SinatraのWebアプリケーションを実装前に、Org Babel を使ってプロトタイプを作りましょう。
+Rubyのcode blockを書いたら、 =C-c C-c= で実行することができます。
+
+#+BEGIN_HTML html
+<pre class="src src-org"><span style="color: #A6E22E;">*** Notes on how to get the results</span>
+
+We could use something simple like:
+
+<span style="color: #465457; font-style: italic;">#+begin_src ruby :results output code</span>
+s = <span style="color: #E6DB74;">&lt;&lt;VARS</span>
+<span style="color: #E6DB74;">Uptime:</span>
+<span style="color: #F92672;">#{`uptime`}</span>
+
+<span style="color: #E6DB74;">ESTABLISHED connections:</span>
+<span style="color: #F92672;">#{`netstat -an | grep ESTABLISHED | wc -l`}</span>
+
+<span style="color: #E6DB74;">VARS</span>
+
+puts s
+<span style="color: #465457; font-style: italic;">#+end_src</span>
+
+<span style="color: #465457; font-style: italic;">#+RESULTS:</span>
+<span style="color: #465457; font-style: italic;">#+BEGIN_SRC ruby</span>
+<span style="color: #66D9EF;">Uptime</span>:
+22<span style="color: #AE81FF;">:23</span>  up 4 days, 11<span style="color: #AE81FF;">:34</span>, 5 users, load averages: 0.58 0.46 0.30
+
+
+<span style="color: #66D9EF;">ESTABLISHED</span> connections:
+       8
+
+
+<span style="color: #465457; font-style: italic;">#+END_SRC</span>
+</pre>
+#+END_HTML
+
+**** =:tangle= の使い方
+
+=:tangle= はOrg modeのcode block switch argumentsの一つです。
+これを使えば、Org modeのcode blockは実装しているファイルを設定できます。
+
+# We can have a code block be /tangled/ into a file by using the
+# =:tangle= switch argument.  
+
+例えば、 =:tangle= を使って =Gemfile= と =config.ru= の内容を買いましょう。
+
+#+BEGIN_SRC sh
+
+Dependencies from the app, just sinatra and webrick for the server is ok for now.
+
+,#+BEGIN_SRC ruby :tangle src/Gemfile
+gem 'sinatra'
+,#+END_SRC
+
+Needed to start the Sinatra application:
+
+,#+BEGIN_SRC ruby :tangle src/config.ru
+require './app.rb'
+run Sinatra::Application
+,#+END_SRC
+
+#+END_SRC
+
+**** /Full Example/
+
+EmacsのOrg modeバッファーで, =C-c C-v t= か =C-c C-v C-t= を叩けば、
+Org modeの =org-babel-tangle= の機能を呼び出します。
+これで、動かせるプログラムは =src/= ディレクトリのしたに現れます。
+
+#+BEGIN_HTML html
+<pre class="src src-org"><span style="color: #b3b3b3;">#+TITLE:</span> <span style="color: #cafe12; font-size: 144%; font-weight: bold;">Monitoring HTTP endpoint</span>
+
+  This is a simple Sinatra application that provides
+  the following endpoints:
+
+  &hyphen; <span style="color: #cafe12; font-weight: bold;">=/=</span><span style="font-weight: bold;">        ::</span> which responds <span style="color: #cafe12;">=OK=</span> in case all is good with the server.
+  &hyphen; <span style="color: #cafe12; font-weight: bold;">=/vars=</span><span style="font-weight: bold;">    ::</span> to get info about the system
+
+  <span style="color: #F92672;">** Bootstrapping the app</span>
+
+  <span style="color: #A6E22E;">*** Gemfile</span>
+
+  Dependencies from the app, just sinatra and webrick for now is ok.
+
+  <span style="color: #465457; font-style: italic;">#+BEGIN_SRC ruby :tangle src/Gemfile</span>
+  gem <span style="color: #E6DB74;">'sinatra'</span>
+  <span style="color: #465457; font-style: italic;">#+END_SRC</span>
+
+  <span style="color: #A6E22E;">*** Config.ru</span>
+
+  Needed to start the sinatra application
+
+  <span style="color: #465457; font-style: italic;">#+BEGIN_SRC ruby :tangle src/config.ru</span>
+  require <span style="color: #E6DB74;">'./app.rb'</span>
+  run <span style="color: #66D9EF;">Sinatra</span>::<span style="color: #66D9EF;">Application</span>
+  <span style="color: #465457; font-style: italic;">#+END_SRC</span>
+
+  <span style="color: #F92672;">** The App</span>
+
+  <span style="color: #A6E22E;">*** Import dependencies</span>
+
+  <span style="color: #465457; font-style: italic;">#+BEGIN_SRC ruby :tangle src/app.rb</span>
+
+  require <span style="color: #E6DB74;">'sinatra'</span>
+
+  <span style="color: #465457; font-style: italic;">#+END_SRC</span>
+
+  <span style="color: #A6E22E;">*** </span><span style="color: #A6E22E;">=/=</span><span style="color: #A6E22E;"> endpoint</span>
+
+  Just respond with <span style="color: #cafe12;">=OK=</span>.
+
+  <span style="color: #465457; font-style: italic;">#+BEGIN_SRC ruby :tangle src/app.rb</span>
+  get <span style="color: #E6DB74;">'/'</span> <span style="color: #66D9EF;">do</span>
+  <span style="color: #E6DB74;">&nbsp;&nbsp;'OK'</span>
+  <span style="color: #66D9EF;">end</span>
+  <span style="color: #465457; font-style: italic;">#+END_SRC</span>
+
+  <span style="color: #A6E22E;">*** </span><span style="color: #A6E22E;">=/vars=</span><span style="color: #A6E22E;"> endpoint</span>
+
+  Respond with info about the system:
+
+  <span style="color: #465457; font-style: italic;">#+BEGIN_SRC ruby :tangle src/app.rb</span>
+  get <span style="color: #E6DB74;">'/vars'</span> <span style="color: #66D9EF;">do</span>
+
+  r = <span style="color: #E6DB74;">&lt;&lt;VARS</span>
+  <span style="color: #E6DB74;">Uptime:</span>
+  <span style="color: #F92672;">#{`uptime`}</span>
+
+  <span style="color: #E6DB74;">ESTABLISHED connections:</span>
+  <span style="color: #F92672;">#{`netstat -an | grep ESTABLISHED | wc -l`}</span>
+
+  <span style="color: #E6DB74;">VARS</span>
+
+  r
+  <span style="color: #66D9EF;">end</span>
+  <span style="color: #465457; font-style: italic;">#+END_SRC</span>
+</pre>
+
+#+END_HTML
+
+*** 動かす方法
+
+次、プログラムを動かす方法を =org/run.org= にまとめます。
+プログラムを動かす前に、Sinatraのプログラムに修正修正があったかもしれないから、 
+=#+include: org/app.org= でこの依存関係を設定します。
+
+#+BEGIN_HTML
+<pre class="src src-org"><span style="color: #b3b3b3;">#+TITLE:</span>   <span style="color: #cafe12; font-size: 144%; font-weight: bold;">Running the Application</span>
+<span style="color: #465457; font-style: italic;">#+include: "org/app.org"</span>
+
+<span style="color: #F92672;">** Run it</span>
+
+To run it, we will need to get the dependencies first,
+and then start it with bundler:
+
+<span style="color: #465457; font-style: italic;">#+name: server</span>
+<span style="color: #465457; font-style: italic;">#+BEGIN_SRC sh :dir src</span>
+bundle install
+bundle exec rackup
+<span style="color: #465457; font-style: italic;">#+END_SRC</span>
+
+Now let's send some requests to it:
+
+<span style="color: #465457; font-style: italic;">#+name: curl</span>
+<span style="color: #465457; font-style: italic;">#+BEGIN_SRC sh :wait 1</span>
+<span style="color: #66D9EF;">while</span> true; <span style="color: #66D9EF;">do</span> 
+  curl 127.0.0.1:9292/vars 2&gt; /dev/null
+  sleep 1
+<span style="color: #66D9EF;">done</span>
+<span style="color: #465457; font-style: italic;">#+END_SRC</span>
+</pre>
+#+END_HTML
+
+Emacsでlong running processesを実行出来ますが、そうするとEmacsがコードブロック
+の結果を待ちしちゃいます... それは少し残念ですけれども、
+コードブロックの上に、 =#+name= を設定すれば、私が作ったgemで叩くことができます:
+
+: gem install org-converge
+: org-run org/run.org
+
+そうすると結果は以下のようになります：
+
+#+BEGIN_SRC conf
+org-run org/run.org
+...
+Running code blocks now! (2 runnable blocks found in total)
+server    -- started with pid 71840
+curl      -- started with pid 71841
+server    -- Using rack 1.5.2
+server    -- Using rack-protection 1.5.3
+server    -- Using tilt 1.4.1
+server    -- Using sinatra 1.4.5
+server    -- Using bundler 1.7.1
+server    -- Your bundle is complete!
+server    -- Use `bundle show [gemname]` to see where a bundled gem is installed.
+server    -- [2014-12-11 22:56:42] INFO  WEBrick 1.3.1
+server    -- [2014-12-11 22:56:42] INFO  ruby 2.1.2 (2014-05-08) [x86_64-darwin11.0]
+server    -- [2014-12-11 22:56:42] INFO  WEBrick::HTTPServer#start: pid=71848 port=9292
+server    -- 127.0.0.1 - - [11/Dec/2014 22:56:42] "GET /vars HTTP/1.1" 200 110 0.0527
+curl      -- Uptime:
+curl      -- 22:56  up 4 days, 12:07, 5 users, load averages: 0.78 0.84 0.76
+curl      -- 
+curl      -- 
+curl      -- ESTABLISHED connections:
+curl      --       12
+curl      -- 
+curl      -- 
+server    -- 127.0.0.1 - - [11/Dec/2014 22:56:43] "GET /vars HTTP/1.1" 200 110 0.0210
+curl      -- Uptime:
+curl      -- 22:56  up 4 days, 12:07, 5 users, load averages: 0.78 0.84 0.76
+curl      -- 
+curl      -- 
+curl      -- ESTABLISHED connections:
+curl      --       12
+curl      -- 
+curl      -- 
+#+END_SRC
+
+*** まとめ
+
+Org modeはすごく便利！皆使いましょう！
+そして、Githubさんが org-rubyを使って =.org= ファイルをHTMLに変換してくれる！
+Ruby の Org modeパーサはまだOrg mode のすべての機能に追いついていないけど、
+私がある程度メンテナンスしています。もしOrg Rubyに何かの問題があれば、
+こちらに [[https://github.com/wallyqs/org-ruby/issues][issue]] を発行していただければと思います。 :)
+
+(そして、日本語が間違っている場合、こちらに [[https://github.com/wallyqs/wallyqs.github.io/tree/source/org/posts][PR]] ください...)
+
+# I think there is a lot of potential in the approach from Org mode 
+# for Literate Programming, so it is worth a try.  
+# Take a look at the concepts exposed by Knuth in his [[http://www.literateprogramming.com/knuthweb.pdf][paper]] on the
+# matter, and you will find out that the core ideas about LP have not
+# shown its age.
+
+# These days, most of my development starts from an Org mode buffer
+# and it just continues there.  With Org mode, you can basically start with a Readme
+# (c.f. /Readme Driven Development/), and then just contine doing the
+# full implementation of your source there in the same place, along with
+# your notes (but which are not exported).
+
+# At the same time, it makes up for very useful documentation for others
+# to pick up a project later on.
+# And also Org mode file rendering is supported by Github!  In case of bugs,
+# please send me a [[https://github.com/wallyqs/org-ruby][ticket here]].

@@ -96,11 +96,10 @@ scalability issues.
 the data center, and to those heavy users who are causing the architecture
 continue to grow.
 
-The problem is not the platform, but the architecture of the
-application, since there is no need for the platform to have to grow
-this fast.
+The problem is not the platform, but the architecture of the application.
+Had the application architechture been designed properly there wouldn't be a need to have as many servers.
 
-/Ressentiment/ to those users who create too much data some of it unnecessary, since there is no way that all of it would be needed for analytics.
+Or there could be /ressentiment/ as well to those users who for analytics purposes capture everything and produce lots of data.
 In case it is for auditing purposes, /ressentiment/ then is towards those who audit.
 
 The platform developer becomes more used to externalize issues that
