@@ -4,13 +4,270 @@
  <title>Literate Infrastructure</title>
  <link href="/atom.xml" rel="self"/>
  <link href="/"/>
- <updated>2014-12-12T00:05:40-05:00</updated>
+ <updated>2014-12-12T02:23:02-05:00</updated>
  <id></id>
  <author>
    <name>Waldemar Quevedo</name>
    <email></email>
  </author>
 
+ 
+ <entry>
+   <title>Org Babelで文芸的プログラミング</title>
+   <link href="/posts/2014/12/12/using-org-babel-for-lp-jp/"/>
+   <updated>2014-12-12T00:00:00-05:00</updated>
+   <id>/posts/2014/12/12/using-org-babel-for-lp-jp</id>
+   <content type="html">
+&lt;p&gt;(This is a post for the &lt;a href=&quot;http://qiita.com/advent-calendar/2014/emacs&quot;&gt;Emacs Advent Calendar 2014&lt;/a&gt; from Japan, a similar English version can be found &lt;a href=&quot;http://localhost:4000/posts/2014/12/12/using-org-babel-for-lp/&quot;&gt;here&lt;/a&gt;)&lt;/p&gt;
+&lt;p&gt;Org modeの話を聞いたことがある方は、Org modeは「TODOリスト管理ツールの
+  一つだ」と思われる方が多いかもしれません。それは当たっていますが、
+  Org Babelというモードで、「文芸的プログラミング(Literate Programming)」を実現することができます。&lt;/p&gt;
+&lt;p&gt;Org Babelの使い方を示すために、あるホストのモニタリング情報を表示する、
+  単純なSinatraアプリケーションを例えにします。&lt;/p&gt;
+&lt;h3&gt;例: ホストのモニタリング情報を表示するSinatra app&lt;/h3&gt;
+&lt;p&gt;表示したい項目をシステムの &lt;code&gt;uptime&lt;/code&gt; と ESTABLISHEDコネクションの数に絞り込みます。&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;uptime
+
+20:37  up 4 days,  9:48, 5 users, load averages: 0.67 0.86 1.11
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;&lt;code&gt;ESTABLISHED&lt;/code&gt; コネクションの数:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;netstat -an &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; grep ESTABLISHED &lt;span class=&quot;p&quot;&gt;|&lt;/span&gt; wc -l
+
+       5
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;この二つのコマンドの結果を集まって、 HTTPクライアントを使えば
+  &lt;code&gt;GET /vars&lt;/code&gt; で取れるようにします：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;curl 127.0.0.1:9292/vars
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h3&gt;事前準備&lt;/h3&gt;
+&lt;p&gt;まず、ディレクトリの作成は必要です:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;mkdir -p org
+mkdir -p src
+touch readme.org
+&lt;/pre&gt;&lt;/div&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;code&gt;org/&lt;/code&gt; ディレクトリの下に置くファイルはOrg mode で書きます&lt;/li&gt;
+  &lt;li&gt;&lt;code&gt;src/&lt;/code&gt; ディレクトリの下に置くファイルはSinatraアプリケーションのソースコード&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;(&lt;code&gt;readme.org&lt;/code&gt; の作成は必要ではないけど、best practiceとしておすすめします&amp;#8230;)&lt;/p&gt;
+&lt;p&gt;最終的に、ディレクトリ構成はこんな感じになります:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;.
+├── org
+│   ├── app.org
+│   └── run.org
+├── readme.org
+├── src
+│   ├── Gemfile
+│   ├── app.rb
+│   └── config.ru
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h3&gt;実装&lt;/h3&gt;
+&lt;p&gt;アプリケーションの実装自体は &lt;code&gt;org/app.org&lt;/code&gt; に書きます。&lt;/p&gt;
+&lt;pre class=&quot;example&quot;&gt;
+touch org/app.org
+&lt;/pre&gt;
+&lt;h4&gt;プロトタイプ&lt;/h4&gt;
+&lt;p&gt;SinatraのWebアプリケーションを実装前に、Org Babel を使ってプロトタイプを作りましょう。
+  Rubyのcode blockを書いたら、 &lt;code&gt;C-c C-c&lt;/code&gt; で実行することができます。&lt;/p&gt;
+&lt;pre class=&quot;src src-org&quot;&gt;&lt;span style=&quot;color: #A6E22E;&quot;&gt;*** Notes on how to get the results&lt;/span&gt;
+
+We could use something simple like:
+
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+begin_src ruby :results output code&lt;/span&gt;
+s = &lt;span style=&quot;color: #E6DB74;&quot;&gt;&amp;lt;&amp;lt;VARS&lt;/span&gt;
+&lt;span style=&quot;color: #E6DB74;&quot;&gt;Uptime:&lt;/span&gt;
+&lt;span style=&quot;color: #F92672;&quot;&gt;#{`uptime`}&lt;/span&gt;
+
+&lt;span style=&quot;color: #E6DB74;&quot;&gt;ESTABLISHED connections:&lt;/span&gt;
+&lt;span style=&quot;color: #F92672;&quot;&gt;#{`netstat -an | grep ESTABLISHED | wc -l`}&lt;/span&gt;
+
+&lt;span style=&quot;color: #E6DB74;&quot;&gt;VARS&lt;/span&gt;
+
+puts s
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+end_src&lt;/span&gt;
+
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+RESULTS:&lt;/span&gt;
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+BEGIN_SRC ruby&lt;/span&gt;
+&lt;span style=&quot;color: #66D9EF;&quot;&gt;Uptime&lt;/span&gt;:
+22&lt;span style=&quot;color: #AE81FF;&quot;&gt;:23&lt;/span&gt;  up 4 days, 11&lt;span style=&quot;color: #AE81FF;&quot;&gt;:34&lt;/span&gt;, 5 users, load averages: 0.58 0.46 0.30
+
+
+&lt;span style=&quot;color: #66D9EF;&quot;&gt;ESTABLISHED&lt;/span&gt; connections:
+       8
+
+
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+END_SRC&lt;/span&gt;
+&lt;/pre&gt;
+&lt;h4&gt;&lt;code&gt;:tangle&lt;/code&gt; の使い方&lt;/h4&gt;
+&lt;p&gt;&lt;code&gt;:tangle&lt;/code&gt; はOrg modeのcode block switch argumentsの一つです。
+  これを使えば、Org modeのcode blockは実装しているファイルを設定できます。&lt;/p&gt;
+&lt;p&gt;例えば、 &lt;code&gt;:tangle&lt;/code&gt; を使って &lt;code&gt;Gemfile&lt;/code&gt; と &lt;code&gt;config.ru&lt;/code&gt; の内容を買いましょう。&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;Dependencies from the app, just sinatra and webrick &lt;span class=&quot;k&quot;&gt;for &lt;/span&gt;the server is ok &lt;span class=&quot;k&quot;&gt;for &lt;/span&gt;now.
+
+&lt;span class=&quot;c&quot;&gt;#+BEGIN_SRC ruby :tangle src/Gemfile&lt;/span&gt;
+gem &lt;span class=&quot;s1&quot;&gt;&amp;#39;sinatra&amp;#39;&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;#+END_SRC&lt;/span&gt;
+
+Needed to start the Sinatra application:
+
+&lt;span class=&quot;c&quot;&gt;#+BEGIN_SRC ruby :tangle src/config.ru&lt;/span&gt;
+require &lt;span class=&quot;s1&quot;&gt;&amp;#39;./app.rb&amp;#39;&lt;/span&gt;
+run Sinatra::Application
+&lt;span class=&quot;c&quot;&gt;#+END_SRC&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h4&gt;&lt;i&gt;Full Example&lt;/i&gt;&lt;/h4&gt;
+&lt;p&gt;EmacsのOrg modeバッファーで, &lt;code&gt;C-c C-v t&lt;/code&gt; か &lt;code&gt;C-c C-v C-t&lt;/code&gt; を叩けば、
+  Org modeの &lt;code&gt;org-babel-tangle&lt;/code&gt; の機能を呼び出します。
+  これで、動かせるプログラムは &lt;code&gt;src/&lt;/code&gt; ディレクトリのしたに現れます。&lt;/p&gt;
+&lt;pre class=&quot;src src-org&quot;&gt;&lt;span style=&quot;color: #b3b3b3;&quot;&gt;#+TITLE:&lt;/span&gt; &lt;span style=&quot;color: #cafe12; font-size: 144%; font-weight: bold;&quot;&gt;Monitoring HTTP endpoint&lt;/span&gt;
+
+  This is a simple Sinatra application that provides
+  the following endpoints:
+
+  &amp;hyphen; &lt;span style=&quot;color: #cafe12; font-weight: bold;&quot;&gt;=/=&lt;/span&gt;&lt;span style=&quot;font-weight: bold;&quot;&gt;        ::&lt;/span&gt; which responds &lt;span style=&quot;color: #cafe12;&quot;&gt;=OK=&lt;/span&gt; in case all is good with the server.
+  &amp;hyphen; &lt;span style=&quot;color: #cafe12; font-weight: bold;&quot;&gt;=/vars=&lt;/span&gt;&lt;span style=&quot;font-weight: bold;&quot;&gt;    ::&lt;/span&gt; to get info about the system
+
+  &lt;span style=&quot;color: #F92672;&quot;&gt;** Bootstrapping the app&lt;/span&gt;
+
+  &lt;span style=&quot;color: #A6E22E;&quot;&gt;*** Gemfile&lt;/span&gt;
+
+  Dependencies from the app, just sinatra and webrick for now is ok.
+
+  &lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+BEGIN_SRC ruby :tangle src/Gemfile&lt;/span&gt;
+  gem &lt;span style=&quot;color: #E6DB74;&quot;&gt;&#39;sinatra&#39;&lt;/span&gt;
+  &lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+END_SRC&lt;/span&gt;
+
+  &lt;span style=&quot;color: #A6E22E;&quot;&gt;*** Config.ru&lt;/span&gt;
+
+  Needed to start the sinatra application
+
+  &lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+BEGIN_SRC ruby :tangle src/config.ru&lt;/span&gt;
+  require &lt;span style=&quot;color: #E6DB74;&quot;&gt;&#39;./app.rb&#39;&lt;/span&gt;
+  run &lt;span style=&quot;color: #66D9EF;&quot;&gt;Sinatra&lt;/span&gt;::&lt;span style=&quot;color: #66D9EF;&quot;&gt;Application&lt;/span&gt;
+  &lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+END_SRC&lt;/span&gt;
+
+  &lt;span style=&quot;color: #F92672;&quot;&gt;** The App&lt;/span&gt;
+
+  &lt;span style=&quot;color: #A6E22E;&quot;&gt;*** Import dependencies&lt;/span&gt;
+
+  &lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+BEGIN_SRC ruby :tangle src/app.rb&lt;/span&gt;
+
+  require &lt;span style=&quot;color: #E6DB74;&quot;&gt;&#39;sinatra&#39;&lt;/span&gt;
+
+  &lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+END_SRC&lt;/span&gt;
+
+  &lt;span style=&quot;color: #A6E22E;&quot;&gt;*** &lt;/span&gt;&lt;span style=&quot;color: #A6E22E;&quot;&gt;=/=&lt;/span&gt;&lt;span style=&quot;color: #A6E22E;&quot;&gt; endpoint&lt;/span&gt;
+
+  Just respond with &lt;span style=&quot;color: #cafe12;&quot;&gt;=OK=&lt;/span&gt;.
+
+  &lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+BEGIN_SRC ruby :tangle src/app.rb&lt;/span&gt;
+  get &lt;span style=&quot;color: #E6DB74;&quot;&gt;&#39;/&#39;&lt;/span&gt; &lt;span style=&quot;color: #66D9EF;&quot;&gt;do&lt;/span&gt;
+  &lt;span style=&quot;color: #E6DB74;&quot;&gt;&amp;nbsp;&amp;nbsp;&#39;OK&#39;&lt;/span&gt;
+  &lt;span style=&quot;color: #66D9EF;&quot;&gt;end&lt;/span&gt;
+  &lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+END_SRC&lt;/span&gt;
+
+  &lt;span style=&quot;color: #A6E22E;&quot;&gt;*** &lt;/span&gt;&lt;span style=&quot;color: #A6E22E;&quot;&gt;=/vars=&lt;/span&gt;&lt;span style=&quot;color: #A6E22E;&quot;&gt; endpoint&lt;/span&gt;
+
+  Respond with info about the system:
+
+  &lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+BEGIN_SRC ruby :tangle src/app.rb&lt;/span&gt;
+  get &lt;span style=&quot;color: #E6DB74;&quot;&gt;&#39;/vars&#39;&lt;/span&gt; &lt;span style=&quot;color: #66D9EF;&quot;&gt;do&lt;/span&gt;
+
+  r = &lt;span style=&quot;color: #E6DB74;&quot;&gt;&amp;lt;&amp;lt;VARS&lt;/span&gt;
+  &lt;span style=&quot;color: #E6DB74;&quot;&gt;Uptime:&lt;/span&gt;
+  &lt;span style=&quot;color: #F92672;&quot;&gt;#{`uptime`}&lt;/span&gt;
+
+  &lt;span style=&quot;color: #E6DB74;&quot;&gt;ESTABLISHED connections:&lt;/span&gt;
+  &lt;span style=&quot;color: #F92672;&quot;&gt;#{`netstat -an | grep ESTABLISHED | wc -l`}&lt;/span&gt;
+
+  &lt;span style=&quot;color: #E6DB74;&quot;&gt;VARS&lt;/span&gt;
+
+  r
+  &lt;span style=&quot;color: #66D9EF;&quot;&gt;end&lt;/span&gt;
+  &lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+END_SRC&lt;/span&gt;
+&lt;/pre&gt;
+
+&lt;h3&gt;動かす方法&lt;/h3&gt;
+&lt;p&gt;次、プログラムを動かす方法を &lt;code&gt;org/run.org&lt;/code&gt; にまとめます。
+  プログラムを動かす前に、Sinatraのプログラムに修正修正があったかもしれないから、
+  &lt;code&gt;#+include: org/app.org&lt;/code&gt; でこの依存関係を設定します。&lt;/p&gt;
+&lt;pre class=&quot;src src-org&quot;&gt;&lt;span style=&quot;color: #b3b3b3;&quot;&gt;#+TITLE:&lt;/span&gt;   &lt;span style=&quot;color: #cafe12; font-size: 144%; font-weight: bold;&quot;&gt;Running the Application&lt;/span&gt;
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+include: &quot;org/app.org&quot;&lt;/span&gt;
+
+&lt;span style=&quot;color: #F92672;&quot;&gt;** Run it&lt;/span&gt;
+
+To run it, we will need to get the dependencies first,
+and then start it with bundler:
+
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+name: server&lt;/span&gt;
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+BEGIN_SRC sh :dir src&lt;/span&gt;
+bundle install
+bundle exec rackup
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+END_SRC&lt;/span&gt;
+
+Now let&#39;s send some requests to it:
+
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+name: curl&lt;/span&gt;
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+BEGIN_SRC sh :wait 1&lt;/span&gt;
+&lt;span style=&quot;color: #66D9EF;&quot;&gt;while&lt;/span&gt; true; &lt;span style=&quot;color: #66D9EF;&quot;&gt;do&lt;/span&gt; 
+  curl 127.0.0.1:9292/vars 2&amp;gt; /dev/null
+  sleep 1
+&lt;span style=&quot;color: #66D9EF;&quot;&gt;done&lt;/span&gt;
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+END_SRC&lt;/span&gt;
+&lt;/pre&gt;
+&lt;p&gt;Emacsでlong running processesを実行出来ますが、そうするとEmacsがコードブロック
+  の結果を待ちしちゃいます&amp;#8230; それは少し残念ですけれども、
+  コードブロックの上に、 &lt;code&gt;#+name&lt;/code&gt; を設定すれば、私が作ったgemで叩くことができます:&lt;/p&gt;
+&lt;pre class=&quot;example&quot;&gt;
+gem install org-converge
+org-run org/run.org
+&lt;/pre&gt;
+&lt;p&gt;そうすると結果は以下のようになります：&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;org-run org/run.org
+...
+Running code blocks now! (2 runnable blocks found in total)
+server    -- started with pid 71840
+curl      -- started with pid 71841
+server    -- Using rack 1.5.2
+server    -- Using rack-protection 1.5.3
+server    -- Using tilt 1.4.1
+server    -- Using sinatra 1.4.5
+server    -- Using bundler 1.7.1
+server    -- Your bundle is complete!
+server    -- Use `bundle show [gemname]` to see where a bundled gem is installed.
+server    -- [2014-12-11 22:56:42] INFO  WEBrick 1.3.1
+server    -- [2014-12-11 22:56:42] INFO  ruby 2.1.2 (2014-05-08) [x86_64-darwin11.0]
+server    -- [2014-12-11 22:56:42] INFO  WEBrick::HTTPServer#start: pid=71848 port=9292
+server    -- 127.0.0.1 - - [11/Dec/2014 22:56:42] &amp;quot;GET /vars HTTP/1.1&amp;quot; 200 110 0.0527
+curl      -- Uptime:
+curl      -- 22:56  up 4 days, 12:07, 5 users, load averages: 0.78 0.84 0.76
+curl      -- 
+curl      -- 
+curl      -- ESTABLISHED connections:
+curl      --       12
+curl      -- 
+curl      -- 
+server    -- 127.0.0.1 - - [11/Dec/2014 22:56:43] &amp;quot;GET /vars HTTP/1.1&amp;quot; 200 110 0.0210
+curl      -- Uptime:
+curl      -- 22:56  up 4 days, 12:07, 5 users, load averages: 0.78 0.84 0.76
+curl      -- 
+curl      -- 
+curl      -- ESTABLISHED connections:
+curl      --       12
+curl      -- 
+curl      -- 
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h3&gt;まとめ&lt;/h3&gt;
+&lt;p&gt;Org modeはすごく便利！皆使いましょう！
+  そして、Githubさんが org-rubyを使って &lt;code&gt;.org&lt;/code&gt; ファイルをHTMLに変換してくれる！
+  Ruby の Org modeパーサはまだOrg mode のすべての機能に追いついていないけど、
+  私がある程度メンテナンスしています。もしOrg Rubyに何かの問題があれば、
+  こちらに &lt;a href=&quot;https://github.com/wallyqs/org-ruby/issues&quot;&gt;issue&lt;/a&gt; を発行していただければと思います。 :)&lt;/p&gt;
+&lt;p&gt;(そして、日本語が間違っている場合、こちらに &lt;a href=&quot;https://github.com/wallyqs/wallyqs.github.io/tree/source/org/posts&quot;&gt;PR&lt;/a&gt; ください&amp;#8230;)&lt;/p&gt;
+
+
+</content>
+ </entry>
  
  <entry>
    <title>Using Org Babel for Literate Programming</title>

@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+
+  <head>
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+  <!-- Enable responsiveness on mobile devices-->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  <title>
+    
+      Org Babelで文芸的プログラミング &middot; Literate Infrastructure
+    
+  </title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/public/css/poole.css">
+  <link rel="stylesheet" href="/public/css/syntax.css">
+  <link rel="stylesheet" href="/public/css/hyde.css">
+  <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+
+  <!-- Icons -->
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/public/apple-touch-icon-144-precomposed.png">
+                                 <link rel="shortcut icon" href="/public/favicon.ico">
+
+  <!-- RSS -->
+  <link rel="alternate" type="application/rss+xml" title="RSS" href="/atom.xml">
+</head>
+
+
+  <body>
+  <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-55629836-1', 'auto');
+    ga('send', 'pageview');
+
+  </script>
+    <div class="sidebar">
+  <div class="container sidebar-sticky">
+    <div class="sidebar-about">
+      <h2>
+        <a href="/">
+          Literate Infrastructure
+        </a>
+      </h2>
+      <p>PaaS + Org mode</p>
+      <p class="lead"><a href="https://twitter.com/wallyqs" target="_blank">@wallyqs</a></p>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="sidebar-nav-item" href="/">Home</a>
+
+      
+      
+        
+          
+        
+      
+        
+          
+            <a class="sidebar-nav-item" href="/about.html">About</a>
+          
+        
+      
+        
+      
+        
+          
+        
+      
+        
+          
+            <a class="sidebar-nav-item" href="/posts/">Posts</a>
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+
+    </nav>
+
+    <p>&copy; 2014. All rights reserved.</p>
+  </div>
+</div>
+
+
+    <div class="content container">
+      <div class="post">
+  <h1 class="post-title">Org Babelで文芸的プログラミング</h1>
+  <span class="post-date">12 Dec 2014</span>
+  
+<p>(This is a post for the <a href="http://qiita.com/advent-calendar/2014/emacs">Emacs Advent Calendar 2014</a> from Japan, a similar English version can be found <a href="http://localhost:4000/posts/2014/12/12/using-org-babel-for-lp/">here</a>)</p>
+<p>Org modeの話を聞いたことがある方は、Org modeは「TODOリスト管理ツールの
+  一つだ」と思われる方が多いかもしれません。それは当たっていますが、
+  Org Babelというモードで、「文芸的プログラミング(Literate Programming)」を実現することができます。</p>
+<p>Org Babelの使い方を示すために、あるホストのモニタリング情報を表示する、
+  単純なSinatraアプリケーションを例えにします。</p>
+<h3>例: ホストのモニタリング情報を表示するSinatra app</h3>
+<p>表示したい項目をシステムの <code>uptime</code> と ESTABLISHEDコネクションの数に絞り込みます。</p>
+<div class="highlight"><pre>uptime
+
+20:37  up 4 days,  9:48, 5 users, load averages: 0.67 0.86 1.11
+</pre></div>
+<p><code>ESTABLISHED</code> コネクションの数:</p>
+<div class="highlight"><pre>netstat -an <span class="p">|</span> grep ESTABLISHED <span class="p">|</span> wc -l
+
+       5
+</pre></div>
+<p>この二つのコマンドの結果を集まって、 HTTPクライアントを使えば
+  <code>GET /vars</code> で取れるようにします：</p>
+<div class="highlight"><pre>curl 127.0.0.1:9292/vars
+</pre></div>
+<h3>事前準備</h3>
+<p>まず、ディレクトリの作成は必要です:</p>
+<div class="highlight"><pre>mkdir -p org
+mkdir -p src
+touch readme.org
+</pre></div>
+<ul>
+  <li><code>org/</code> ディレクトリの下に置くファイルはOrg mode で書きます</li>
+  <li><code>src/</code> ディレクトリの下に置くファイルはSinatraアプリケーションのソースコード</li>
+</ul>
+<p>(<code>readme.org</code> の作成は必要ではないけど、best practiceとしておすすめします&#8230;)</p>
+<p>最終的に、ディレクトリ構成はこんな感じになります:</p>
+<div class="highlight"><pre>.
+├── org
+│   ├── app.org
+│   └── run.org
+├── readme.org
+├── src
+│   ├── Gemfile
+│   ├── app.rb
+│   └── config.ru
+</pre></div>
+<h3>実装</h3>
+<p>アプリケーションの実装自体は <code>org/app.org</code> に書きます。</p>
+<pre class="example">
+touch org/app.org
+</pre>
+<h4>プロトタイプ</h4>
+<p>SinatraのWebアプリケーションを実装前に、Org Babel を使ってプロトタイプを作りましょう。
+  Rubyのcode blockを書いたら、 <code>C-c C-c</code> で実行することができます。</p>
+<pre class="src src-org"><span style="color: #A6E22E;">*** Notes on how to get the results</span>
+
+We could use something simple like:
+
+<span style="color: #465457; font-style: italic;">#+begin_src ruby :results output code</span>
+s = <span style="color: #E6DB74;">&lt;&lt;VARS</span>
+<span style="color: #E6DB74;">Uptime:</span>
+<span style="color: #F92672;">#{`uptime`}</span>
+
+<span style="color: #E6DB74;">ESTABLISHED connections:</span>
+<span style="color: #F92672;">#{`netstat -an | grep ESTABLISHED | wc -l`}</span>
+
+<span style="color: #E6DB74;">VARS</span>
+
+puts s
+<span style="color: #465457; font-style: italic;">#+end_src</span>
+
+<span style="color: #465457; font-style: italic;">#+RESULTS:</span>
+<span style="color: #465457; font-style: italic;">#+BEGIN_SRC ruby</span>
+<span style="color: #66D9EF;">Uptime</span>:
+22<span style="color: #AE81FF;">:23</span>  up 4 days, 11<span style="color: #AE81FF;">:34</span>, 5 users, load averages: 0.58 0.46 0.30
+
+
+<span style="color: #66D9EF;">ESTABLISHED</span> connections:
+       8
+
+
+<span style="color: #465457; font-style: italic;">#+END_SRC</span>
+</pre>
+<h4><code>:tangle</code> の使い方</h4>
+<p><code>:tangle</code> はOrg modeのcode block switch argumentsの一つです。
+  これを使えば、Org modeのcode blockは実装しているファイルを設定できます。</p>
+<p>例えば、 <code>:tangle</code> を使って <code>Gemfile</code> と <code>config.ru</code> の内容を買いましょう。</p>
+<div class="highlight"><pre>Dependencies from the app, just sinatra and webrick <span class="k">for </span>the server is ok <span class="k">for </span>now.
+
+<span class="c">#+BEGIN_SRC ruby :tangle src/Gemfile</span>
+gem <span class="s1">&#39;sinatra&#39;</span>
+<span class="c">#+END_SRC</span>
+
+Needed to start the Sinatra application:
+
+<span class="c">#+BEGIN_SRC ruby :tangle src/config.ru</span>
+require <span class="s1">&#39;./app.rb&#39;</span>
+run Sinatra::Application
+<span class="c">#+END_SRC</span>
+</pre></div>
+<h4><i>Full Example</i></h4>
+<p>EmacsのOrg modeバッファーで, <code>C-c C-v t</code> か <code>C-c C-v C-t</code> を叩けば、
+  Org modeの <code>org-babel-tangle</code> の機能を呼び出します。
+  これで、動かせるプログラムは <code>src/</code> ディレクトリのしたに現れます。</p>
+<pre class="src src-org"><span style="color: #b3b3b3;">#+TITLE:</span> <span style="color: #cafe12; font-size: 144%; font-weight: bold;">Monitoring HTTP endpoint</span>
+
+  This is a simple Sinatra application that provides
+  the following endpoints:
+
+  &hyphen; <span style="color: #cafe12; font-weight: bold;">=/=</span><span style="font-weight: bold;">        ::</span> which responds <span style="color: #cafe12;">=OK=</span> in case all is good with the server.
+  &hyphen; <span style="color: #cafe12; font-weight: bold;">=/vars=</span><span style="font-weight: bold;">    ::</span> to get info about the system
+
+  <span style="color: #F92672;">** Bootstrapping the app</span>
+
+  <span style="color: #A6E22E;">*** Gemfile</span>
+
+  Dependencies from the app, just sinatra and webrick for now is ok.
+
+  <span style="color: #465457; font-style: italic;">#+BEGIN_SRC ruby :tangle src/Gemfile</span>
+  gem <span style="color: #E6DB74;">'sinatra'</span>
+  <span style="color: #465457; font-style: italic;">#+END_SRC</span>
+
+  <span style="color: #A6E22E;">*** Config.ru</span>
+
+  Needed to start the sinatra application
+
+  <span style="color: #465457; font-style: italic;">#+BEGIN_SRC ruby :tangle src/config.ru</span>
+  require <span style="color: #E6DB74;">'./app.rb'</span>
+  run <span style="color: #66D9EF;">Sinatra</span>::<span style="color: #66D9EF;">Application</span>
+  <span style="color: #465457; font-style: italic;">#+END_SRC</span>
+
+  <span style="color: #F92672;">** The App</span>
+
+  <span style="color: #A6E22E;">*** Import dependencies</span>
+
+  <span style="color: #465457; font-style: italic;">#+BEGIN_SRC ruby :tangle src/app.rb</span>
+
+  require <span style="color: #E6DB74;">'sinatra'</span>
+
+  <span style="color: #465457; font-style: italic;">#+END_SRC</span>
+
+  <span style="color: #A6E22E;">*** </span><span style="color: #A6E22E;">=/=</span><span style="color: #A6E22E;"> endpoint</span>
+
+  Just respond with <span style="color: #cafe12;">=OK=</span>.
+
+  <span style="color: #465457; font-style: italic;">#+BEGIN_SRC ruby :tangle src/app.rb</span>
+  get <span style="color: #E6DB74;">'/'</span> <span style="color: #66D9EF;">do</span>
+  <span style="color: #E6DB74;">&nbsp;&nbsp;'OK'</span>
+  <span style="color: #66D9EF;">end</span>
+  <span style="color: #465457; font-style: italic;">#+END_SRC</span>
+
+  <span style="color: #A6E22E;">*** </span><span style="color: #A6E22E;">=/vars=</span><span style="color: #A6E22E;"> endpoint</span>
+
+  Respond with info about the system:
+
+  <span style="color: #465457; font-style: italic;">#+BEGIN_SRC ruby :tangle src/app.rb</span>
+  get <span style="color: #E6DB74;">'/vars'</span> <span style="color: #66D9EF;">do</span>
+
+  r = <span style="color: #E6DB74;">&lt;&lt;VARS</span>
+  <span style="color: #E6DB74;">Uptime:</span>
+  <span style="color: #F92672;">#{`uptime`}</span>
+
+  <span style="color: #E6DB74;">ESTABLISHED connections:</span>
+  <span style="color: #F92672;">#{`netstat -an | grep ESTABLISHED | wc -l`}</span>
+
+  <span style="color: #E6DB74;">VARS</span>
+
+  r
+  <span style="color: #66D9EF;">end</span>
+  <span style="color: #465457; font-style: italic;">#+END_SRC</span>
+</pre>
+
+<h3>動かす方法</h3>
+<p>次、プログラムを動かす方法を <code>org/run.org</code> にまとめます。
+  プログラムを動かす前に、Sinatraのプログラムに修正修正があったかもしれないから、
+  <code>#+include: org/app.org</code> でこの依存関係を設定します。</p>
+<pre class="src src-org"><span style="color: #b3b3b3;">#+TITLE:</span>   <span style="color: #cafe12; font-size: 144%; font-weight: bold;">Running the Application</span>
+<span style="color: #465457; font-style: italic;">#+include: "org/app.org"</span>
+
+<span style="color: #F92672;">** Run it</span>
+
+To run it, we will need to get the dependencies first,
+and then start it with bundler:
+
+<span style="color: #465457; font-style: italic;">#+name: server</span>
+<span style="color: #465457; font-style: italic;">#+BEGIN_SRC sh :dir src</span>
+bundle install
+bundle exec rackup
+<span style="color: #465457; font-style: italic;">#+END_SRC</span>
+
+Now let's send some requests to it:
+
+<span style="color: #465457; font-style: italic;">#+name: curl</span>
+<span style="color: #465457; font-style: italic;">#+BEGIN_SRC sh :wait 1</span>
+<span style="color: #66D9EF;">while</span> true; <span style="color: #66D9EF;">do</span> 
+  curl 127.0.0.1:9292/vars 2&gt; /dev/null
+  sleep 1
+<span style="color: #66D9EF;">done</span>
+<span style="color: #465457; font-style: italic;">#+END_SRC</span>
+</pre>
+<p>Emacsでlong running processesを実行出来ますが、そうするとEmacsがコードブロック
+  の結果を待ちしちゃいます&#8230; それは少し残念ですけれども、
+  コードブロックの上に、 <code>#+name</code> を設定すれば、私が作ったgemで叩くことができます:</p>
+<pre class="example">
+gem install org-converge
+org-run org/run.org
+</pre>
+<p>そうすると結果は以下のようになります：</p>
+<div class="highlight"><pre>org-run org/run.org
+...
+Running code blocks now! (2 runnable blocks found in total)
+server    -- started with pid 71840
+curl      -- started with pid 71841
+server    -- Using rack 1.5.2
+server    -- Using rack-protection 1.5.3
+server    -- Using tilt 1.4.1
+server    -- Using sinatra 1.4.5
+server    -- Using bundler 1.7.1
+server    -- Your bundle is complete!
+server    -- Use `bundle show [gemname]` to see where a bundled gem is installed.
+server    -- [2014-12-11 22:56:42] INFO  WEBrick 1.3.1
+server    -- [2014-12-11 22:56:42] INFO  ruby 2.1.2 (2014-05-08) [x86_64-darwin11.0]
+server    -- [2014-12-11 22:56:42] INFO  WEBrick::HTTPServer#start: pid=71848 port=9292
+server    -- 127.0.0.1 - - [11/Dec/2014 22:56:42] &quot;GET /vars HTTP/1.1&quot; 200 110 0.0527
+curl      -- Uptime:
+curl      -- 22:56  up 4 days, 12:07, 5 users, load averages: 0.78 0.84 0.76
+curl      -- 
+curl      -- 
+curl      -- ESTABLISHED connections:
+curl      --       12
+curl      -- 
+curl      -- 
+server    -- 127.0.0.1 - - [11/Dec/2014 22:56:43] &quot;GET /vars HTTP/1.1&quot; 200 110 0.0210
+curl      -- Uptime:
+curl      -- 22:56  up 4 days, 12:07, 5 users, load averages: 0.78 0.84 0.76
+curl      -- 
+curl      -- 
+curl      -- ESTABLISHED connections:
+curl      --       12
+curl      -- 
+curl      -- 
+</pre></div>
+<h3>まとめ</h3>
+<p>Org modeはすごく便利！皆使いましょう！
+  そして、Githubさんが org-rubyを使って <code>.org</code> ファイルをHTMLに変換してくれる！
+  Ruby の Org modeパーサはまだOrg mode のすべての機能に追いついていないけど、
+  私がある程度メンテナンスしています。もしOrg Rubyに何かの問題があれば、
+  こちらに <a href="https://github.com/wallyqs/org-ruby/issues">issue</a> を発行していただければと思います。 :)</p>
+<p>(そして、日本語が間違っている場合、こちらに <a href="https://github.com/wallyqs/wallyqs.github.io/tree/source/org/posts">PR</a> ください&#8230;)</p>
+
+
+
+</div>
+
+<div class="related">
+  <h2>Related Posts</h2>
+  <ul class="related-posts">
+    
+      <li>
+        <h3>
+          <a href="/posts/2014/12/12/using-org-babel-for-lp/">
+            Using Org Babel for Literate Programming
+            <small>12 Dec 2014</small>
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/posts/2014/12/08/eternal-recurrence-of-paas/">
+            The Eternal Recurrence of PaaS
+            <small>08 Dec 2014</small>
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/posts/2014/12/04/using-org-babel/">
+            Gradually adopting Org mode, part 1
+            <small>04 Dec 2014</small>
+          </a>
+        </h3>
+      </li>
+    
+  </ul>
+</div>
+
+    </div>
+
+  </body>
+</html>
