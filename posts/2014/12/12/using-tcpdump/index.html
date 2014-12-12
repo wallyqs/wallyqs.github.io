@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+
+  <head>
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+  <!-- Enable responsiveness on mobile devices-->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  <title>
+    
+      Quickly inspecting HTTP traffic with tcpdump &middot; Literate Infrastructure
+    
+  </title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/public/css/poole.css">
+  <link rel="stylesheet" href="/public/css/syntax.css">
+  <link rel="stylesheet" href="/public/css/hyde.css">
+  <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+
+  <!-- Icons -->
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/public/apple-touch-icon-144-precomposed.png">
+                                 <link rel="shortcut icon" href="/public/favicon.ico">
+
+  <!-- RSS -->
+  <link rel="alternate" type="application/rss+xml" title="RSS" href="/atom.xml">
+</head>
+
+
+  <body>
+  <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-55629836-1', 'auto');
+    ga('send', 'pageview');
+
+  </script>
+    <div class="sidebar">
+  <div class="container sidebar-sticky">
+    <div class="sidebar-about">
+      <h2>
+        <a href="/">
+          Literate Infrastructure
+        </a>
+      </h2>
+      <p>PaaS + Org mode</p>
+      <p class="lead"><a href="https://twitter.com/wallyqs" target="_blank">@wallyqs</a></p>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="sidebar-nav-item" href="/">Home</a>
+
+      
+      
+        
+          
+        
+      
+        
+          
+            <a class="sidebar-nav-item" href="/about.html">About</a>
+          
+        
+      
+        
+      
+        
+          
+        
+      
+        
+          
+            <a class="sidebar-nav-item" href="/posts/">Posts</a>
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+
+    </nav>
+
+    <p>&copy; 2014. All rights reserved.</p>
+  </div>
+</div>
+
+
+    <div class="content container">
+      <div class="post">
+  <h1 class="post-title">Quickly inspecting HTTP traffic with tcpdump</h1>
+  <span class="post-date">12 Dec 2014</span>
+  
+<p>Just a quick post on one of my favorite features of <code>tcpdump</code> that I
+  have found useful for doing quick investigations of the behavior of an app
+  and you need a little bit more than what you get with the access logs.</p>
+<p>Wireshark has this <a href="http://www.wireshark.org/tools/string-cf.html">great site</a> that given a HTTP request,
+  will give you a filter that if paired with the <code>-A</code> (print packet in ASCII) option from <code>tcpdump</code>
+  will match all related HTTP traffic that is going on in a node.</p>
+<p>A couple of basic examples:</p>
+<ul>
+  <li>Show all <code>GET</code> requests</li>
+</ul>
+<div class="highlight"><pre>tcpdump -A <span class="s1">&#39;tcp[((tcp[12:1] &amp; 0xf0) &gt;&gt; 2):2] = 0x4745 &amp;&amp; tcp[((tcp[12:1] &amp; 0xf0) &gt;&gt; 2) + 2:1] = 0x54&#39;</span>
+
+tcpdump: verbose output suppressed, use -v or -vv <span class="k">for </span>full protocol decode
+listening on wlan0, link-type EN10MB <span class="o">(</span>Ethernet<span class="o">)</span>, capture size 65535 bytes
+16:31:54.870479 IP 10.0.1.134.56724 &gt; 10.0.7.64.http-alt: Flags <span class="o">[</span>P.<span class="o">]</span>, seq 1988783165:1988783563, ack 2609786817, win 65535, options <span class="o">[</span>nop,nop,TS val 703013338 ecr 40647638<span class="o">]</span>, length 398
+E...Bt@.@...
+...
+..@....v.l<span class="o">=</span>../............
+<span class="o">)</span>.!..l<span class="p">;</span>.GET /v2/apps HTTP/1.1
+Host: 10.0.77.64:8080
+Connection: keep-alive
+Accept: application/json, text/javascript, */*<span class="p">;</span> <span class="nv">q</span><span class="o">=</span>0.01
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 <span class="o">(</span>Macintosh<span class="p">;</span> Intel Mac OS X 10_7_5<span class="o">)</span> AppleWebKit/537.36 <span class="o">(</span>KHTML, like Gecko<span class="o">)</span> Chrome/39.0.2171.71 Safari/537.36
+Referer: http://10.0.7.64:8080/
+Accept-Encoding: gzip, deflate, sdch
+Accept-Language: en-US,en<span class="p">;</span><span class="nv">q</span><span class="o">=</span>0.8
+</pre></div>
+<ul>
+  <li>Show all <code>POST</code> requests</li>
+</ul>
+<div class="highlight"><pre>tcpdump -A <span class="s1">&#39;tcp[((tcp[12:1] &amp; 0xf0) &gt;&gt; 2):4] = 0x504f5354&#39;</span>
+
+tcpdump: verbose output suppressed, use -v or -vv <span class="k">for </span>full protocol decode
+listening on wlan0, link-type EN10MB <span class="o">(</span>Ethernet<span class="o">)</span>, capture size 65535 bytes
+16:41:59.925399 IP 10.0.1.134.56765 &gt; 10.0.7.64.http-alt: Flags <span class="o">[</span>P.<span class="o">]</span>, seq 1595944397:1595945056, ack 1073928153, win 65535, options <span class="o">[</span>nop,nop,TS val 703610055 ecr 40792556<span class="o">]</span>, length 659
+E.....@.@.o.
+...
+..@...._ -.@..............
+<span class="o">)</span>.&lt;..nq.POST /v2/apps HTTP/1.1
+Host: 10.0.77.64:8080
+Connection: keep-alive
+Content-Length: 182
+Accept: application/json, text/javascript, */*<span class="p">;</span> <span class="nv">q</span><span class="o">=</span>0.01
+Origin: http://10.0.7.64:8080
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 <span class="o">(</span>Macintosh<span class="p">;</span> Intel Mac OS X 10_7_5<span class="o">)</span> AppleWebKit/537.36 <span class="o">(</span>KHTML, like Gecko<span class="o">)</span> Chrome/39.0.2171.71 Safari/537.36
+Content-Type: application/json
+Referer: http://10.0.7.64:8080/
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en<span class="p">;</span><span class="nv">q</span><span class="o">=</span>0.8
+</pre></div>
+<p>You can add more info to the path (e.g. <code>GET /v2/</code>) to narrow down the actions
+  that are being investigated.</p>
+
+
+
+</div>
+
+<div class="related">
+  <h2>Related Posts</h2>
+  <ul class="related-posts">
+    
+      <li>
+        <h3>
+          <a href="/posts/2014/12/12/using-org-babel-for-lp-jp/">
+            Org Babelで文芸的プログラミング
+            <small>12 Dec 2014</small>
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/posts/2014/12/12/using-org-babel-for-lp/">
+            Using Org Babel for Literate Programming
+            <small>12 Dec 2014</small>
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/posts/2014/12/08/eternal-recurrence-of-paas/">
+            The Eternal Recurrence of PaaS
+            <small>08 Dec 2014</small>
+          </a>
+        </h3>
+      </li>
+    
+  </ul>
+</div>
+
+    </div>
+
+  </body>
+</html>

@@ -101,6 +101,75 @@
   
   <div class="post">
     <h1 class="post-title">
+      <a href="/posts/2014/12/12/using-tcpdump/">
+        Quickly inspecting HTTP traffic with tcpdump
+      </a>
+    </h1>
+
+    <span class="post-date">12 Dec 2014</span>
+
+    
+<p>Just a quick post on one of my favorite features of <code>tcpdump</code> that I
+  have found useful for doing quick investigations of the behavior of an app
+  and you need a little bit more than what you get with the access logs.</p>
+<p>Wireshark has this <a href="http://www.wireshark.org/tools/string-cf.html">great site</a> that given a HTTP request,
+  will give you a filter that if paired with the <code>-A</code> (print packet in ASCII) option from <code>tcpdump</code>
+  will match all related HTTP traffic that is going on in a node.</p>
+<p>A couple of basic examples:</p>
+<ul>
+  <li>Show all <code>GET</code> requests</li>
+</ul>
+<div class="highlight"><pre>tcpdump -A <span class="s1">&#39;tcp[((tcp[12:1] &amp; 0xf0) &gt;&gt; 2):2] = 0x4745 &amp;&amp; tcp[((tcp[12:1] &amp; 0xf0) &gt;&gt; 2) + 2:1] = 0x54&#39;</span>
+
+tcpdump: verbose output suppressed, use -v or -vv <span class="k">for </span>full protocol decode
+listening on wlan0, link-type EN10MB <span class="o">(</span>Ethernet<span class="o">)</span>, capture size 65535 bytes
+16:31:54.870479 IP 10.0.1.134.56724 &gt; 10.0.7.64.http-alt: Flags <span class="o">[</span>P.<span class="o">]</span>, seq 1988783165:1988783563, ack 2609786817, win 65535, options <span class="o">[</span>nop,nop,TS val 703013338 ecr 40647638<span class="o">]</span>, length 398
+E...Bt@.@...
+...
+..@....v.l<span class="o">=</span>../............
+<span class="o">)</span>.!..l<span class="p">;</span>.GET /v2/apps HTTP/1.1
+Host: 10.0.77.64:8080
+Connection: keep-alive
+Accept: application/json, text/javascript, */*<span class="p">;</span> <span class="nv">q</span><span class="o">=</span>0.01
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 <span class="o">(</span>Macintosh<span class="p">;</span> Intel Mac OS X 10_7_5<span class="o">)</span> AppleWebKit/537.36 <span class="o">(</span>KHTML, like Gecko<span class="o">)</span> Chrome/39.0.2171.71 Safari/537.36
+Referer: http://10.0.7.64:8080/
+Accept-Encoding: gzip, deflate, sdch
+Accept-Language: en-US,en<span class="p">;</span><span class="nv">q</span><span class="o">=</span>0.8
+</pre></div>
+<ul>
+  <li>Show all <code>POST</code> requests</li>
+</ul>
+<div class="highlight"><pre>tcpdump -A <span class="s1">&#39;tcp[((tcp[12:1] &amp; 0xf0) &gt;&gt; 2):4] = 0x504f5354&#39;</span>
+
+tcpdump: verbose output suppressed, use -v or -vv <span class="k">for </span>full protocol decode
+listening on wlan0, link-type EN10MB <span class="o">(</span>Ethernet<span class="o">)</span>, capture size 65535 bytes
+16:41:59.925399 IP 10.0.1.134.56765 &gt; 10.0.7.64.http-alt: Flags <span class="o">[</span>P.<span class="o">]</span>, seq 1595944397:1595945056, ack 1073928153, win 65535, options <span class="o">[</span>nop,nop,TS val 703610055 ecr 40792556<span class="o">]</span>, length 659
+E.....@.@.o.
+...
+..@...._ -.@..............
+<span class="o">)</span>.&lt;..nq.POST /v2/apps HTTP/1.1
+Host: 10.0.77.64:8080
+Connection: keep-alive
+Content-Length: 182
+Accept: application/json, text/javascript, */*<span class="p">;</span> <span class="nv">q</span><span class="o">=</span>0.01
+Origin: http://10.0.7.64:8080
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 <span class="o">(</span>Macintosh<span class="p">;</span> Intel Mac OS X 10_7_5<span class="o">)</span> AppleWebKit/537.36 <span class="o">(</span>KHTML, like Gecko<span class="o">)</span> Chrome/39.0.2171.71 Safari/537.36
+Content-Type: application/json
+Referer: http://10.0.7.64:8080/
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en<span class="p">;</span><span class="nv">q</span><span class="o">=</span>0.8
+</pre></div>
+<p>You can add more info to the path (e.g. <code>GET /v2/</code>) to narrow down the actions
+  that are being investigated.</p>
+
+
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
       <a href="/posts/2014/12/12/using-org-babel-for-lp-jp/">
         Org Babelで文芸的プログラミング
       </a>
@@ -994,239 +1063,6 @@ p fruits
 #+END_SRC
 </pre></div>
 <p>To be continued&#8230;</p>
-
-
-
-  </div>
-  
-  <div class="post">
-    <h1 class="post-title">
-      <a href="/posts/2014/11/17/basic-nats-client/">
-        Basic NATS
-      </a>
-    </h1>
-
-    <span class="post-date">17 Nov 2014</span>
-
-    
-<p>There aren&#8217;t many docs out there on <a href="http://nats.io/">NATS</a> even though it is
-  so awesome (and <a href="http://www.bravenewgeek.com/dissecting-message-queues/">fast</a>) so I thought I would share some notes
-  on what it is needed to implement a basic client for NATS,
-  (and maybe one day write a client for it&#8230;)</p>
-<h4>Connecting and receiving INFO</h4>
-<p>Let&#8217;s try a simple connecting test:</p>
-<div class="highlight"><pre><span class="nb">export </span><span class="nv">msgcounter</span><span class="o">=</span>0
-nc 127.0.0.1 4222 <span class="p">|</span> <span class="k">while </span><span class="nb">read </span>msg<span class="p">;</span> <span class="k">do</span>
-<span class="k">  </span><span class="nv">msgcounter</span><span class="o">=</span><span class="sb">`</span>expr <span class="nv">$msgcounter</span> + 1<span class="sb">`</span>
-  <span class="nb">echo</span> <span class="s2">&quot;$msgcounter :: &quot;</span> <span class="nv">$msg</span>
-<span class="k">done</span>
-</pre></div>
-<p>We can see that as soon as we establish the connection, the server will respond with
-  an <code>INFO</code> message, and then after <span style="text-decoration:underline;">2 minutes</span>, it will send its first <code>PING</code> message
-  to check the connection with the client.</p>
-<p>The server will try to send 3 more <code>PING</code> messages to the client,
-  and on the <span style="text-decoration:underline;">4th message</span>, it will close the connection.</p>
-<div class="highlight"><pre>[2014-11-16T14:17:12 -0500] run-nats-server -- 2014/11/16 14:17:12 [INFO] Starting gnatsd version 0.5.6
-[2014-11-16T14:17:12 -0500] run-nats-server -- 2014/11/16 14:17:12 [INFO] Listening for client connections on 0.0.0.0:4222
-[2014-11-16T14:17:12 -0500] run-nats-server -- 2014/11/16 14:17:12 [INFO] gnatsd is ready
-[2014-11-16T14:17:12 -0500] client          -- 1 ::  INFO {&quot;server_id&quot;:&quot;da9955fe007233fa724ec91a8978c44d&quot;,&quot;version&quot;:&quot;0.5.6&quot;,&quot;host&quot;:&quot;0.0.0.0&quot;,&quot;port&quot;:4222,&quot;auth_required&quot;:false,&quot;ssl_required&quot;:false,&quot;max_payload&quot;:1048576} 
-[2014-11-16T14:19:12 -0500] client          -- 2 ::  PING
-[2014-11-16T14:21:12 -0500] client          -- 3 ::  PING
-[2014-11-16T14:23:12 -0500] client          -- 4 ::  -ERR &#39;Stale Connection&#39;
-</pre></div>
-<h4>PING &lt;-&gt; PONG</h4>
-<p>After we have received the first <code>PING</code>, it is needed to reply with another <code>PONG</code>:</p>
-<p>To keep on using netcat for this examples, we will be relying on named
-  pipes and a multiprocess run.  Then, we will be using the named pipe to feed
-  the <code>PONG</code> when we receive a <code>PING</code> from NATS, otherwise the connection would be closed.</p>
-<div class="highlight"><pre><span class="o">[[</span> -e nats-in <span class="o">]]</span>  <span class="o">||</span> mkfifo nats-in
-<span class="o">[[</span> -e nats-out <span class="o">]]</span> <span class="o">||</span> mkfifo nats-out
-
-<span class="nb">echo</span> <span class="s2">&quot;Start client...&quot;</span>
-nc 127.0.0.1 4222 &lt;nats-in &gt;nats-out <span class="p">&amp;</span>
-
-<span class="c"># open nats-in for writing  on fd 3</span>
-<span class="c"># open nats-out for reading on fd 4</span>
-<span class="nb">exec </span>3&gt; nats-in 4&lt;nats-out
-
-<span class="nb">export </span><span class="nv">msgcounter</span><span class="o">=</span>0
-<span class="k">while </span><span class="nb">read </span>msg &lt;<span class="p">&amp;</span>4<span class="p">;</span> <span class="k">do</span>
-<span class="k">  </span><span class="nb">echo</span> <span class="s2">&quot;GOT ::&quot;</span> <span class="nv">$msg</span>
-
-  <span class="nb">export </span><span class="nv">msgcounter</span><span class="o">=</span><span class="sb">`</span>expr <span class="nv">$msgcounter</span> + 1<span class="sb">`</span>
-  <span class="nb">echo</span> <span class="s2">&quot;$msgcounter messages received&quot;</span>
-
-  <span class="c"># process ping</span>
-  <span class="nb">echo</span> <span class="nv">$msg</span> <span class="p">|</span> grep -q PING <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;PONG&quot;</span> &gt;<span class="p">&amp;</span>3 <span class="p">;</span>
-
-<span class="k">done</span>
-</pre></div>
-<h5>Sample output</h5>
-<div class="highlight"><pre>gnatsd		-- [INFO] Starting gnatsd version 0.5.7
-gnatsd		-- [INFO] Listening for client connections on 0.0.0.0:4222
-gnatsd		-- [INFO] gnatsd is ready
-nats-client	-- Start client..
-gnatsd		-- [DEBUG] Client connection created%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
-nats-client	-- 1 messages received
-nats-client	-- GOT :: INFO {&quot;server_id&quot;:&quot;93f5d02d3b613ec2f6135e4ffcee199a&quot;,&quot;version&quot;:&quot;0.5.7&quot;,&quot;host&quot;:&quot;0.0.0.0&quot;,&quot;port&quot;:4222,&quot;auth_required&quot;:false,&quot;ssl_required&quot;:false,&quot;max_payload&quot;:1048576} 
-gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
-nats-client    -- 2 messages received
-nats-client    -- GOT :: PING
-gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
-nats-client    -- 3 messages received
-nats-client    -- GOT :: PING
-gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
-nats-client    -- 4 messages received
-nats-client    -- GOT :: PING
-gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
-nats-client    -- 5 messages received
-nats-client    -- GOT :: PING
-gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
-nats-client    -- 6 messages received
-nats-client    -- GOT :: PING
-gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
-nats-client    -- 7 messages received
-nats-client    -- GOT :: PING
-gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
-nats-client    -- 8 messages received
-nats-client    -- GOT :: PING
-gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
-nats-client    -- 9 messages received
-nats-client    -- GOT :: PING
-</pre></div>
-<h4>PUB  &lt;-&gt; SUB</h4>
-<p>As we have seen, we need to constantly be sending <code>PING</code>
-  otherwise the server will close the connection.</p>
-<p>Now let&#8217;s try creating a subscription!</p>
-<p>Another step that we need to handle is <code>CONNECT</code>,
-  so we do that before starting a subscription. After that,
-  we subscribe to the <code>hello.world</code> channel:</p>
-<div class="highlight"><pre><span class="nb">echo</span> <span class="s1">&#39;CONNECT {&quot;verbose&quot;:false,&quot;pedantic&quot;:false}&#39;</span> &gt; nats-in
-<span class="nb">echo</span> <span class="s2">&quot;SUB hello.world  2&quot;</span> &gt; nats-in
-</pre></div>
-<p>Now if we try to send a message to this channel by <code>nats-pub</code>&#8230;</p>
-<div class="highlight"><pre>nats-pub hello.world -s nats://127.0.0.1:4222 &quot;hoge hoge&quot;
-</pre></div>
-<p>&#8230;we get the following displayed on our netcat console:</p>
-<div class="highlight"><pre><span class="o">[</span>2014-11-16T23:14:20 -0500<span class="o">]</span> nats-client    -- GOT :: MSG hello.world 2 9
-<span class="o">[</span>2014-11-16T23:14:20 -0500<span class="o">]</span> nats-client    -- GOT :: hoge hoge
-</pre></div>
-<p>The <code>9</code> here represents the number of letters that were in the MSG.
-  Now let&#8217;s make them cooperate and send a <code>PUB</code> that says <code>fuga fuga</code>
-  soon after it gets the first message:</p>
-<div class="highlight"><pre><span class="o">[[</span> -e nats-in <span class="o">]]</span>  <span class="o">||</span> mkfifo nats-in
-<span class="o">[[</span> -e nats-out <span class="o">]]</span> <span class="o">||</span> mkfifo nats-out
-
-<span class="c"># cat &gt; nats-in</span>
-<span class="nb">echo</span> <span class="s2">&quot;Start client..&quot;</span>
-nc 127.0.0.1 4222 &lt;nats-in &gt;nats-out <span class="p">&amp;</span>
-
-<span class="c"># open nats-in for writing  on fd 3</span>
-<span class="c"># open nats-out for reading on fd 4</span>
-<span class="nb">exec </span>3&gt; nats-in 4&lt;nats-out
-
-<span class="nb">export </span><span class="nv">pingcounter</span><span class="o">=</span>0
-<span class="k">while </span><span class="nb">read </span>msg &lt;<span class="p">&amp;</span>4<span class="p">;</span> <span class="k">do</span>
-
-<span class="k">  </span><span class="nb">export </span><span class="nv">pingcounter</span><span class="o">=</span><span class="sb">`</span>expr <span class="nv">$pingcounter</span> + 1<span class="sb">`</span>
-  <span class="nb">echo</span> <span class="s2">&quot;$pingcounter messages received&quot;</span>
-  <span class="nb">echo</span> <span class="s2">&quot;GOT :: $msg&quot;</span>
-
-  <span class="c"># As soon as we get INFO, send CONNECT and subscriptions</span>
-  <span class="nb">echo</span> <span class="nv">$msg</span> <span class="p">|</span> grep -q INFO <span class="o">&amp;&amp;</span> <span class="o">{</span>
-    <span class="nb">echo</span> <span class="s1">&#39;CONNECT {&quot;verbose&quot;:false,&quot;pedantic&quot;:false}&#39;</span> &gt; nats-in
-    <span class="nb">echo</span> <span class="s2">&quot;SUB hello.world  2&quot;</span> &gt; nats-in
-  <span class="o">}</span>
-
-  <span class="c"># respond to PING</span>
-  <span class="nb">echo</span> <span class="nv">$msg</span> <span class="p">|</span> grep -q PING <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;PONG&quot;</span> &gt; nats-in
-
-  <span class="c"># respond to MSG hello.world</span>
-  <span class="nb">echo</span> <span class="nv">$msg</span> <span class="p">|</span> grep -q <span class="s2">&quot;MSG hello.world&quot;</span> <span class="o">&amp;&amp;</span> <span class="o">{</span>
-    <span class="nb">echo</span> <span class="s2">&quot;PONG&quot;</span> &gt; nats-in
-    <span class="nb">echo</span> -ne <span class="s1">&#39;PUB hello.world  9\r\nfuga fuga\r\n&#39;</span> &gt; nats-in
-    sleep 1
-  <span class="o">}</span>
-
-<span class="k">done</span>
-</pre></div>
-<h6>Using the special channel &#8217;<code>&gt;</code>&#8217;</h6>
-<p>Here we are subscribing to all channels by using <code>&gt;</code>,
-  which is kind of a special channel to match all:</p>
-<div class="highlight"><pre><span class="nb">echo</span> <span class="s1">&#39;CONNECT {&quot;verbose&quot;:false,&quot;pedantic&quot;:false}&#39;</span> &gt; nats-in
-<span class="nb">echo</span> <span class="s2">&quot;SUB &gt;  2&quot;</span> &gt; nats-in
-</pre></div>
-<h4>Replying to an <code>INBOX</code></h4>
-<p>Once having covered subscriptions and publishing,
-  we can try creating an <code>_INBOX</code> to support requests.</p>
-<p>Agents subscribed to the channel will get this message
-  and respond to to it, but from the client side it is
-  possible to stop receiving once we got enough.</p>
-<div class="highlight"><pre>$ nats-request hello.world -s nats://127.0.0.1:4222 -n 1
-
-SUB _INBOX.46bdca94dd22f452e836b5e1f6  2\r\n&quot;
-PUB hello.world _INBOX.46bdca94dd22f452e836b5e1f6 11\r\nHello World\r\n&quot;
-
-[#1] Replied with : &#39;trying to help&#39;
-</pre></div>
-<p>And in our client we handle it as</p>
-<pre class="example">
-MSG hello.world 2 _INBOX.e16d52026b72575471357cc17d 11
-</pre>
-<p>The client for this would look like this:</p>
-<div class="highlight"><pre><span class="o">[[</span> -e nats-in <span class="o">]]</span>  <span class="o">||</span> mkfifo nats-in
-<span class="o">[[</span> -e nats-out <span class="o">]]</span> <span class="o">||</span> mkfifo nats-out
-
-<span class="nb">echo</span> <span class="s2">&quot;Start client..&quot;</span>
-nc 127.0.0.1 4222 &lt;nats-in &gt;nats-out <span class="p">&amp;</span>
-
-<span class="c"># open nats-in for writing  on fd 3</span>
-<span class="c"># open nats-out for reading on fd 4</span>
-<span class="nb">exec </span>3&gt; nats-in 4&lt;nats-out
-
-<span class="nb">export </span><span class="nv">pingcounter</span><span class="o">=</span>0
-cat nats-out <span class="p">|</span> <span class="k">while </span><span class="nb">read </span>msg<span class="p">;</span> <span class="k">do</span>
-
-<span class="k">  </span><span class="nb">export </span><span class="nv">pingcounter</span><span class="o">=</span><span class="sb">`</span>expr <span class="nv">$pingcounter</span> + 1<span class="sb">`</span>
-  <span class="nb">echo</span> <span class="s2">&quot;$pingcounter messages received&quot;</span>
-  <span class="nb">echo</span> <span class="s2">&quot;GOT :: $msg&quot;</span>
-
-  <span class="c"># As soon as we get INFO, send CONNECT and subscriptions</span>
-  <span class="nb">echo</span> <span class="nv">$msg</span> <span class="p">|</span> grep -q INFO <span class="o">&amp;&amp;</span> <span class="o">{</span>
-    <span class="nb">echo</span> <span class="s1">&#39;CONNECT {&quot;verbose&quot;:false,&quot;pedantic&quot;:false}&#39;</span> &gt; nats-in
-    <span class="nb">echo</span> <span class="s2">&quot;SUB hello.world  2&quot;</span> &gt; nats-in
-  <span class="o">}</span>
-
-  <span class="c"># respond to PING</span>
-  <span class="nb">echo</span> <span class="nv">$msg</span> <span class="p">|</span> grep -q PING <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">&quot;PONG&quot;</span> &gt; nats-in
-
-  <span class="c"># respond to MSG hello.world</span>
-  <span class="nb">echo</span> <span class="nv">$msg</span> <span class="p">|</span> grep -q <span class="s2">&quot;MSG hello.world&quot;</span> <span class="o">&amp;&amp;</span> <span class="o">{</span>
-    <span class="nb">echo</span> <span class="s2">&quot;PONG&quot;</span> &gt; nats-in
-    <span class="nb">echo</span> -ne <span class="s2">&quot;PUB hello.world  9\r\nfuga fuga\r\n&quot;</span> &gt; nats-in
-    sleep 1
-  <span class="o">}</span>
-
-  <span class="c"># process MSG hello.world requests</span>
-  <span class="nb">echo</span> <span class="nv">$msg</span> <span class="p">|</span> grep -q <span class="s2">&quot;^MSG hello.world..._INBOX&quot;</span> <span class="o">&amp;&amp;</span> <span class="o">{</span>
-    <span class="nb">echo</span> <span class="s2">&quot;PONG&quot;</span> &gt; nats-in
-    <span class="nv">inbox</span><span class="o">=</span><span class="sb">`</span><span class="nb">echo</span> <span class="nv">$msg</span> <span class="p">|</span> awk <span class="s1">&#39;{print $4}&#39;</span><span class="sb">`</span>
-    <span class="nb">echo</span> -ne <span class="s2">&quot;PUB $inbox 14\r\ntrying to help\r\n&quot;</span> &gt; nats-in
-  <span class="o">}</span>
-
-<span class="k">done</span>
-</pre></div>
-<p>&#8230;which makes up for an extremely basic version of a NATS client :)</p>
-<div class="highlight"><pre>gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58802 - cid:7)
-nats-client	-- 134 messages received
-nats-client	-- GOT :: fuga fuga
-nats-client	-- 135 messages received
-nats-client	-- GOT :: MSG hello.world 2 9
-gnatsd		-- [DEBUG] Client Ping Timer%!(EXTRA *server.client=127.0.0.1:58790 - cid:1)
-nats-client	-- 136 messages received
-nats-client	-- GOT :: fuga fuga
-nats-client	-- 137 messages received
-</pre></div>
 
 
 
