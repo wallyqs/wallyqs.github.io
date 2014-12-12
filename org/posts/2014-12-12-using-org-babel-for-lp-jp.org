@@ -3,7 +3,7 @@
 #+category:	posts
 #+layout:	post
 
-(This is a post for the [[http://qiita.com/advent-calendar/2014/emacs][Emacs Advent Calendar 2014]] from Japan, a similar English version can be found [[http://localhost:4000/posts/2014/12/12/using-org-babel-for-lp/][here]])
+(This is a post for the [[http://qiita.com/advent-calendar/2014/emacs][Emacs Advent Calendar 2014]] from Japan, a similar English version can be found [[http://literateinfrastructure.org/posts/2014/12/12/using-org-babel-for-lp/][here]])
 
 Org modeの話を聞いたことがある方は、Org modeは「TODOリスト管理ツールの
 一つだ」と思われる方が多いかもしれません。それは当たっていますが、
@@ -139,7 +139,7 @@ puts s
 # We can have a code block be /tangled/ into a file by using the
 # =:tangle= switch argument.  
 
-例えば、 =:tangle= を使って =Gemfile= と =config.ru= の内容を買いましょう。
+例えば、 =:tangle= を使って =Gemfile= と =config.ru= の内容を書きましょう。
 
 #+BEGIN_SRC sh
 
