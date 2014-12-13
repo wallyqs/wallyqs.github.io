@@ -943,53 +943,53 @@ Paragraph within a /headline/
   </dd>
   <dt>tables</dt><dd>
     An Org mode table:
-<div class="highlight"><pre>| apples  | 10 |
-| oranges | 20 |
-</pre></div>
+     <pre class="src src-org"><span style="color: #87cefa;">| apples  | 10 |</span>
+     <span style="color: #87cefa;">| oranges | 20 |</span>
+     </pre>
     <p>Tables in Org mode are very powerful.  They are not meant to be
       only for authoring tables, but they have spreadsheet
       functionality as well.  The following table would have its formulas
       evaluated after pressing TAB on it:</p>
     <p>Before:</p>
-<div class="highlight"><pre>| fruit   |      quantity | price per fruit | COST          |
-| apples  |            10 |               5 | =$2 * $3      |
-| oranges |            20 |               7 | =$2 * $3      |
-| TOTAL   | =vsum(@2..@3) |                 |               |
-</pre></div>
+     <pre class="src src-org">  <span style="color: #87cefa;">| fruit   |      quantity | price per fruit | COST          |</span>
+     <span style="color: #87cefa;">| apples  |            10 |               5 | </span><span style="color: #ff7f24;">=$2 * $3      </span><span style="color: #87cefa;">|</span>
+     <span style="color: #87cefa;">| oranges |            20 |               7 | </span><span style="color: #ff7f24;">=$2 * $3      </span><span style="color: #87cefa;">|</span>
+     <span style="color: #87cefa;">| TOTAL   | </span><span style="color: #ff7f24;">=vsum(@2..@3) </span><span style="color: #87cefa;">|                 |               |</span>
+     </pre>
     <p>After:</p>
-<div class="highlight"><pre>| fruit   |      quantity | price per fruit | COST     |
-| apples  |            10 |               5 | 50       |
-| oranges |            20 |               7 | 140      |
-| TOTAL   |            30 |                 |          |
-#+TBLFM: $2=vsum(@2..@3)::$4=$2 * $3
-</pre></div>
+     <pre class="src src-org">  <span style="color: #87cefa;">| fruit   |      quantity | price per fruit | COST     |</span>
+     <span style="color: #87cefa;">| apples  |            10 |               5 | 50       |</span>
+     <span style="color: #87cefa;">| oranges |            20 |               7 | 140      |</span>
+     <span style="color: #87cefa;">| TOTAL   |            30 |                 |          |</span>
+     <span style="color: #465457; font-style: italic;">  #+TBLFM: $2=vsum(@2..@3)::$4=$2 * $3</span>
+     </pre>
   </dd>
 </dl>
 <h5>Basic usage of Org mode for TODO lists</h5>
 <p>At the beginning of my Org mode usage, my documents used to look like
   this I think:</p>
-<div class="highlight"><pre>* TODO Reply email from Alice
+<pre class="src src-org"><span style="color: #66D9EF; font-style: italic;">* </span><span style="color: #ff0000; font-weight: bold;">TODO</span><span style="color: #66D9EF; font-style: italic;"> Reply email from Alice</span>
 
-** TODO Reply
+<span style="color: #F92672;">** </span><span style="color: #ff0000; font-weight: bold;">TODO</span><span style="color: #F92672;"> Reply</span>
 
 Dear Alice...
 
-* TODO Capacity planning
-</pre></div>
+<span style="color: #66D9EF; font-style: italic;">* </span><span style="color: #ff0000; font-weight: bold;">TODO</span><span style="color: #66D9EF; font-style: italic;"> Capacity planning</span>
+</pre>
 <p>One of the features I first adopted is the use of <code>CLOCKS</code>.
   You can start a clock by pressing: <code>C-c C-x TAB</code>,
   then we you are done you clock out with <code>C-c C-x C-o</code>.
-  Then you can use  <code>C-c C-x C-d</code> to heck the total time spent.</p>
-<div class="highlight"><pre>* DONE Reply email from Alice
-  CLOCK: [2014-12-04 Thu 15:45]--[2014-12-04 Thu 15:50] =&gt;  0:05
+  Then you can use  <code>C-c C-x C-d</code> to check the total time spent.</p>
+<pre class="src src-org">  * DONE Reply email from Alice
+    <span style="color: #66D9EF;">CLOCK:</span> <span style="color: #00ffff; text-decoration: underline;">[2014-12-04 Thu 15:45]--[2014-12-04 Thu 15:50]</span> =&gt;  0:05
 
-** DONE Reply
-   CLOCK: [2014-12-04 Thu 16:00]--[2014-12-04 Thu 17:00] =&gt;  1:00
+  ** DONE Reply
+     <span style="color: #66D9EF;">CLOCK:</span> <span style="color: #00ffff; text-decoration: underline;">[2014-12-04 Thu 16:00]--[2014-12-04 Thu 17:00]</span> =&gt;  1:00
 
-Dear Alice...
+  Dear Alice...
 
-* TODO Capacity planning
-</pre></div>
+  * TODO Capacity planning
+</pre>
 <p>Another helpful feature is <i>narrowing down</i> to a headline so that
   other headlines are not shown. This can be done by pressing <code>C-x n s</code>.</p>
 <p>Having covered these basic I&#8217;ll go on to talk about Org Babel.</p>
@@ -1024,44 +1024,44 @@ Dear Alice...
   using <code>#+name</code> on top of some Org mode elements.  By doing this,
   it is possible to reference later on to that part of the document.</p>
 <p>For example we can have a code block and eval it with <code>C-c C-c</code>:</p>
-<div class="highlight"><pre>#+BEGIN_SRC ruby
-1 + 1
-#+END_SRC
+<pre class="src src-org"><span style="color: #465457; font-style: italic;">  #+BEGIN_SRC ruby</span>
+  1 + 1
+<span style="color: #465457; font-style: italic;">  #+END_SRC</span>
 
-#+RESULTS:
-: 2
-</pre></div>
+<span style="color: #465457; font-style: italic;">  #+RESULTS:</span>
+  <span style="color: #b3b3b3;">: 2</span>
+</pre>
 <p>But by giving it a name, we can reuse this code block:</p>
-<div class="highlight"><pre>#+name: sum
-#+BEGIN_SRC ruby :var arg1=1 :var arg2=2
-arg1 + arg2
-#+END_SRC
+<pre class="src src-org"><span style="color: #465457; font-style: italic;">  #+name: sum</span>
+<span style="color: #465457; font-style: italic;">  #+BEGIN_SRC ruby :var arg1=1 :var arg2=2</span>
+  arg1 + arg2
+<span style="color: #465457; font-style: italic;">  #+END_SRC</span>
 
-#+RESULTS:
-: 2
+<span style="color: #465457; font-style: italic;">  #+RESULTS:</span>
+  <span style="color: #b3b3b3;">: 2</span>
 
-#+call: sum(10, 100)
+<span style="color: #465457; font-style: italic;">  #+call: sum(10, 100)</span>
 
-#+RESULTS:
-: 110
-</pre></div>
+<span style="color: #465457; font-style: italic;">  #+RESULTS:</span>
+  <span style="color: #b3b3b3;">: 110</span>
+</pre>
 <p>Or chain it with a table:</p>
-<div class="highlight"><pre>#+name: fruits
-| apples  | 10 |
-| oranges | 20 |
+<pre class="src src-org"><span style="color: #465457; font-style: italic;">  #+name: fruits</span>
+  <span style="color: #87cefa;">| apples  | 10 |</span>
+  <span style="color: #87cefa;">| oranges | 20 |</span>
 
-#+name: show-fruits
-#+BEGIN_SRC ruby :var fruitstable=fruits :results output code
-fruits = Hash[fruitstable]
+<span style="color: #465457; font-style: italic;">  #+name: show-fruits</span>
+<span style="color: #465457; font-style: italic;">  #+BEGIN_SRC ruby :var fruitstable=fruits :results output code</span>
+  fruits = <span style="color: #66D9EF;">Hash</span>[fruitstable]
 
-p fruits
-#+END_SRC
+  p fruits
+<span style="color: #465457; font-style: italic;">  #+END_SRC</span>
 
-#+RESULTS: show-fruits
-#+BEGIN_SRC ruby
-{&quot;apples&quot;=&gt;10, &quot;oranges&quot;=&gt;20}
-#+END_SRC
-</pre></div>
+<span style="color: #465457; font-style: italic;">  #+RESULTS: show-fruits</span>
+<span style="color: #465457; font-style: italic;">  #+BEGIN_SRC ruby</span>
+  {<span style="color: #E6DB74;">"apples"</span>=&gt;10, <span style="color: #E6DB74;">"oranges"</span>=&gt;20}
+<span style="color: #465457; font-style: italic;">  #+END_SRC</span>
+</pre>
 <p>To be continued&#8230;</p>
 
 
