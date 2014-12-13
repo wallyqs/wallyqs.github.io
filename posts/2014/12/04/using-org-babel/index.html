@@ -186,7 +186,8 @@ Paragraph within a /headline/
   </dd>
   <dt>tables</dt><dd>
     An Org mode table:
-     <pre class="src src-org"><span style="color: #87cefa;">| apples  | 10 |</span>
+    <pre class="src src-org">
+     <span style="color: #87cefa;">| apples  | 10 |</span>
      <span style="color: #87cefa;">| oranges | 20 |</span>
      </pre>
     <p>Tables in Org mode are very powerful.  They are not meant to be
@@ -194,13 +195,15 @@ Paragraph within a /headline/
       functionality as well.  The following table would have its formulas
       evaluated after pressing TAB on it:</p>
     <p>Before:</p>
-     <pre class="src src-org">  <span style="color: #87cefa;">| fruit   |      quantity | price per fruit | COST          |</span>
+    <pre class="src src-org">
+     <span style="color: #87cefa;">| fruit   |      quantity | price per fruit | COST          |</span>
      <span style="color: #87cefa;">| apples  |            10 |               5 | </span><span style="color: #ff7f24;">=$2 * $3      </span><span style="color: #87cefa;">|</span>
      <span style="color: #87cefa;">| oranges |            20 |               7 | </span><span style="color: #ff7f24;">=$2 * $3      </span><span style="color: #87cefa;">|</span>
      <span style="color: #87cefa;">| TOTAL   | </span><span style="color: #ff7f24;">=vsum(@2..@3) </span><span style="color: #87cefa;">|                 |               |</span>
      </pre>
     <p>After:</p>
-     <pre class="src src-org">  <span style="color: #87cefa;">| fruit   |      quantity | price per fruit | COST     |</span>
+    <pre class="src src-org">
+     <span style="color: #87cefa;">| fruit   |      quantity | price per fruit | COST     |</span>
      <span style="color: #87cefa;">| apples  |            10 |               5 | 50       |</span>
      <span style="color: #87cefa;">| oranges |            20 |               7 | 140      |</span>
      <span style="color: #87cefa;">| TOTAL   |            30 |                 |          |</span>
@@ -289,7 +292,8 @@ Dear Alice...
   <span style="color: #b3b3b3;">: 110</span>
 </pre>
 <p>Or chain it with a table:</p>
-<pre class="src src-org"><span style="color: #465457; font-style: italic;">  #+name: fruits</span>
+<pre class="src src-org">
+  <span style="color: #465457; font-style: italic;">  #+name: fruits</span>
   <span style="color: #87cefa;">| apples  | 10 |</span>
   <span style="color: #87cefa;">| oranges | 20 |</span>
 
