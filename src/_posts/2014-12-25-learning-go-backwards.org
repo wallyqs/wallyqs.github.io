@@ -2,9 +2,8 @@
 #+CATEGORY:	posts
 #+LAYOUT:	post
 
-One of the features that I have been relying
-a lot in Go when using interfaces is the [[https://golang.org/doc/effective_go.html#type_switch][type switch]].
-This feature is specially useful since it help us avoid having to do type assertions all the time.
+One of the features that I have been relying a lot in Go is the [[https://golang.org/doc/effective_go.html#type_switch][type switch]].
+This feature is specially useful when using interfaces since it helps us avoid having to do type assertions all the time.
 
 A couple of examples below.
 
@@ -27,7 +26,7 @@ type C struct { Name string }
 
 #+END_SRC
 
-And we put them inside of a slice of which can contain ~interfaces~:
+And we put them inside of a slice which can contain ~interfaces~:
 
 #+BEGIN_SRC go
 func main() {
