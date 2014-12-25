@@ -1,0 +1,224 @@
+#+TITLE:	Learning Go backwards: Using Type Switch
+#+CATEGORY:	posts
+#+LAYOUT:	post
+
+One of the features that I have been relying
+a lot in Go when using interfaces is the [[https://golang.org/doc/effective_go.html#type_switch][type switch]].
+This feature is specially useful since it help us avoid having to do type assertions all the time.
+
+A couple of examples below.
+
+*** Example #1
+
+Let's suppose that we have 3 types ~A~, ~B~ & ~C~,
+where each one of these types can be assigned a ~Name~:
+
+#+BEGIN_SRC go
+package main
+
+import (
+  "fmt"
+  "reflect"
+)
+
+type A struct { Name string }
+type B struct { Name string }
+type C struct { Name string }
+
+#+END_SRC
+
+And we put them inside of a slice of which can contain ~interfaces~:
+
+#+BEGIN_SRC go
+func main() {
+
+  a := &A{Name: "A"}
+  b := &B{Name: "B"}
+  c := &C{Name: "C"}
+
+  t := make([]interface{}, 0)
+  t = append(t, a)
+  t = append(t, b)
+  t = append(t, c)
+#+END_SRC
+
+**** Without using =type switch=
+
+We would end up doing something like this:
+
+#+BEGIN_SRC go
+  fmt.Println("--- without type switching")
+  for _, thing := range t {
+    switch thing.(type) {
+      case *A:
+        fmt.Println(reflect.TypeOf(thing), "is of type A. Name is:", thing.(*A).Name)
+      case *B:
+        fmt.Println(reflect.TypeOf(thing), "is of type B. Name is:", thing.(*B).Name)
+      case *C:
+        fmt.Println(reflect.TypeOf(thing), "is of type C. Name is:", thing.(*C).Name)
+    }
+  }
+#+END_SRC
+
+***** Results
+
+#+BEGIN_EXAMPLE
+--- without type switching
+,*main.A is of type A. Name is: A
+,*main.B is of type B. Name is: B
+,*main.C is of type C. Name is: C
+#+END_EXAMPLE
+
+**** Using a =type switch=
+
+Makes things a little more bearable:
+
+#+BEGIN_SRC go
+  fmt.Println("--- type switching on the item")
+  for _, thing := range t {
+    switch o := thing.(type) {
+      case *A:
+        fmt.Println(reflect.TypeOf(o), "is of type A. Name is:", o.Name)
+      case *B:
+        fmt.Println(reflect.TypeOf(o), "is of type B. Name is:", o.Name)
+      case *C:
+        fmt.Println(reflect.TypeOf(o), "is of type C. Name is:", o.Name)
+    }
+  }
+#+END_SRC
+
+***** Results
+
+#+BEGIN_EXAMPLE
+--- type switching on the item
+,*main.A is of type A. Name is: A
+,*main.B is of type B. Name is: B
+,*main.C is of type C. Name is: C
+#+END_EXAMPLE
+
+*** Example #2
+
+Let's see how far we can take it.
+Now, let's suppose that we want to handle A and B the same way.
+
+**** Using =type switch=, it works too
+
+Since we want to handle =A= and =B= the same way, we could think 
+that we could group them into the same =case=, which would work:
+
+#+BEGIN_SRC go
+  fmt.Println("--- Grouping A and B: ")
+  for _, thing := range t {
+    switch o := thing.(type) {
+      case *A, *B:
+        fmt.Println(reflect.TypeOf(o), "is of type A or B.")
+      case *C:
+        fmt.Println(reflect.TypeOf(o), "is of type C.")
+    }
+  }
+#+END_SRC
+
+***** Results
+
+#+BEGIN_EXAMPLE
+,*main.A is of type A or B.
+,*main.B is of type A or B.
+,*main.C is of type C.
+#+END_EXAMPLE
+
+**** Until it doesn't
+
+Let's suppose that we want to inspect the value of the =Name= field. Then it breaks:
+
+#+BEGIN_SRC go
+for _, thing := range t {
+	switch o := thing.(type) {
+	case *A, *B:
+		fmt.Println(reflect.TypeOf(o), "is of type A or B. Name is:", o.Name)
+	case *C:
+		fmt.Println(reflect.TypeOf(o), "is of type C. Name is:", o.Name)
+	}
+}
+#+END_SRC
+
+The above would throw the following error:
+
+#+BEGIN_EXAMPLE
+o.Name undefined (type interface {} has no field or method Name)
+#+END_EXAMPLE
+
+**** Back to ~interface~
+
+What happened here is that by trying to group ~A~, ~B~ types, we ended up again
+with an ~interface~, so we cannot rely on the first type switch anymore.
+
+We could type switch once more time then:
+
+#+BEGIN_SRC go
+fmt.Println("--- Double type switch all the way")
+for _, thing := range t {
+	switch o := thing.(type) {
+	case *A, *B:
+		switch oo := o.(type) {
+		case *A:
+			fmt.Println(reflect.TypeOf(o), "is of type A or B. Name is:", oo.Name)
+		case *B:
+			fmt.Println(reflect.TypeOf(o), "is of type A or B. Name is:", oo.Name)
+		}
+	case *C:
+		fmt.Println(reflect.TypeOf(o), "is of type C. Name is:", o.Name)
+	}
+}
+#+END_SRC
+
+***** Results
+
+#+BEGIN_SRC 
+--- Double type switch all the way
+*main.A is of type A or B. Name is: A
+*main.B is of type A or B. Name is: B
+*main.C is of type C. Name is: C
+#+END_SRC
+
+...which looks a bit messy. A more straightforward way would be to
+flinch away our desire to make things "DRY", still rely on the first type switch
+and just repeat more code:
+
+#+BEGIN_SRC go
+fmt.Println("--- The Go Way™")
+for _, thing := range t {
+	switch o := thing.(type) {
+	case *A:
+		fmt.Println(reflect.TypeOf(o), "is of type A or B. Name is:", o.Name)
+	case *B:
+		fmt.Println(reflect.TypeOf(o), "is of type A or B. Name is:", o.Name)
+	case *C:
+		fmt.Println(reflect.TypeOf(o), "is of type C. Name is:", o.Name)
+	}
+}
+#+END_SRC
+
+...which results in:
+
+#+BEGIN_EXAMPLE
+--- The Go Way™
+*main.A is of type A or B. Name is: A
+*main.B is of type A or B. Name is: B
+*main.C is of type C. Name is: C
+#+END_EXAMPLE
+
+*** Conclusion
+
+So which one of the approaches is better? 
+
+I would say that probably the one with the
+multiple case statements where the same line is repeated, since when 
+we type switch and have a =case= statement with one more type,
+we end up once again with an =interface=, and we need yet another =type switch= 
+for it that generates more code which more or less says the
+same thing, so it seems that it is about as DRY as it could get
+for now using only type switch.
+
+[[https://play.golang.org/p/PEsLe_ZRzE][Link to the Go playground with the example]]
+
+# Zzz...
