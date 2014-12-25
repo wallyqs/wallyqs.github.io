@@ -109,9 +109,8 @@
     <span class="post-date">25 Dec 2014</span>
 
     
-<p>One of the features that I have been relying
-  a lot in Go when using interfaces is the <a href="https://golang.org/doc/effective_go.html#type_switch">type switch</a>.
-  This feature is specially useful since it help us avoid having to do type assertions all the time.</p>
+<p>One of the features that I have been relying a lot in Go is the <a href="https://golang.org/doc/effective_go.html#type_switch">type switch</a>.
+  This feature is specially useful when using interfaces since it helps us avoid having to do type assertions all the time.</p>
 <p>A couple of examples below.</p>
 <h3>Example #1</h3>
 <p>Let&#8217;s suppose that we have 3 types <code>A</code>, <code>B</code> &amp; <code>C</code>,
@@ -127,7 +126,7 @@
 <span class="kd">type</span> <span class="nx">B</span> <span class="kd">struct</span> <span class="p">{</span> <span class="nx">Name</span> <span class="kt">string</span> <span class="p">}</span>
 <span class="kd">type</span> <span class="nx">C</span> <span class="kd">struct</span> <span class="p">{</span> <span class="nx">Name</span> <span class="kt">string</span> <span class="p">}</span>
 </pre></div>
-<p>And we put them inside of a slice of which can contain <code>interfaces</code>:</p>
+<p>And we put them inside of a slice which can contain <code>interfaces</code>:</p>
 <div class="highlight"><pre><span class="kd">func</span> <span class="nx">main</span><span class="p">()</span> <span class="p">{</span>
 
   <span class="nx">a</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">A</span><span class="p">{</span><span class="nx">Name</span><span class="p">:</span> <span class="s">&quot;A&quot;</span><span class="p">}</span>

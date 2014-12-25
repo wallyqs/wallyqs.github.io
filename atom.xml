@@ -18,9 +18,8 @@
    <updated>2014-12-25T00:00:00-05:00</updated>
    <id>/posts/2014/12/25/learning-go-backwards</id>
    <content type="html">
-&lt;p&gt;One of the features that I have been relying
-  a lot in Go when using interfaces is the &lt;a href=&quot;https://golang.org/doc/effective_go.html#type_switch&quot;&gt;type switch&lt;/a&gt;.
-  This feature is specially useful since it help us avoid having to do type assertions all the time.&lt;/p&gt;
+&lt;p&gt;One of the features that I have been relying a lot in Go is the &lt;a href=&quot;https://golang.org/doc/effective_go.html#type_switch&quot;&gt;type switch&lt;/a&gt;.
+  This feature is specially useful when using interfaces since it helps us avoid having to do type assertions all the time.&lt;/p&gt;
 &lt;p&gt;A couple of examples below.&lt;/p&gt;
 &lt;h3&gt;Example #1&lt;/h3&gt;
 &lt;p&gt;Let&amp;#8217;s suppose that we have 3 types &lt;code&gt;A&lt;/code&gt;, &lt;code&gt;B&lt;/code&gt; &amp;amp; &lt;code&gt;C&lt;/code&gt;,
@@ -36,7 +35,7 @@
 &lt;span class=&quot;kd&quot;&gt;type&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;B&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;struct&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;Name&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;string&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
 &lt;span class=&quot;kd&quot;&gt;type&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;C&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;struct&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;Name&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;string&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
-&lt;p&gt;And we put them inside of a slice of which can contain &lt;code&gt;interfaces&lt;/code&gt;:&lt;/p&gt;
+&lt;p&gt;And we put them inside of a slice which can contain &lt;code&gt;interfaces&lt;/code&gt;:&lt;/p&gt;
 &lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;kd&quot;&gt;func&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
 
   &lt;span class=&quot;nx&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;A&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;Name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;A&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
