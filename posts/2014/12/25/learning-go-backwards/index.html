@@ -132,7 +132,7 @@
   <span class="nx">t</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span> <span class="nx">c</span><span class="p">)</span>
 </pre></div>
 <h4>Without using <code>type switch</code></h4>
-<p>We would be end up doing something like this:</p>
+<p>We would end up doing something like this:</p>
 <div class="highlight"><pre><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;--- without type switching&quot;</span><span class="p">)</span>
 <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">thing</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">t</span> <span class="p">{</span>
   <span class="k">switch</span> <span class="nx">thing</span><span class="p">.(</span><span class="kd">type</span><span class="p">)</span> <span class="p">{</span>
