@@ -101,6 +101,187 @@
   
   <div class="post">
     <h1 class="post-title">
+      <a href="/posts/2014/12/25/learning-go-backwards/">
+        Learning Go backwards: Using Type Switch
+      </a>
+    </h1>
+
+    <span class="post-date">25 Dec 2014</span>
+
+    
+<p>One of the features that I have been relying
+  a lot in Go when using interfaces is the <a href="https://golang.org/doc/effective_go.html#type_switch">type switch</a>.
+  This feature is specially useful since it help us avoid having to do type assertions all the time.</p>
+<p>A couple of examples below.</p>
+<h3>Example #1</h3>
+<p>Let&#8217;s suppose that we have 3 types <code>A</code>, <code>B</code> &amp; <code>C</code>,
+  where each one of these types can be assigned a <code>Name</code>:</p>
+<div class="highlight"><pre><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+  <span class="s">&quot;fmt&quot;</span>
+  <span class="s">&quot;reflect&quot;</span>
+<span class="p">)</span>
+
+<span class="kd">type</span> <span class="nx">A</span> <span class="kd">struct</span> <span class="p">{</span> <span class="nx">Name</span> <span class="kt">string</span> <span class="p">}</span>
+<span class="kd">type</span> <span class="nx">B</span> <span class="kd">struct</span> <span class="p">{</span> <span class="nx">Name</span> <span class="kt">string</span> <span class="p">}</span>
+<span class="kd">type</span> <span class="nx">C</span> <span class="kd">struct</span> <span class="p">{</span> <span class="nx">Name</span> <span class="kt">string</span> <span class="p">}</span>
+</pre></div>
+<p>And we put them inside of a slice of which can contain <code>interfaces</code>:</p>
+<div class="highlight"><pre><span class="kd">func</span> <span class="nx">main</span><span class="p">()</span> <span class="p">{</span>
+
+  <span class="nx">a</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">A</span><span class="p">{</span><span class="nx">Name</span><span class="p">:</span> <span class="s">&quot;A&quot;</span><span class="p">}</span>
+  <span class="nx">b</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">B</span><span class="p">{</span><span class="nx">Name</span><span class="p">:</span> <span class="s">&quot;B&quot;</span><span class="p">}</span>
+  <span class="nx">c</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">C</span><span class="p">{</span><span class="nx">Name</span><span class="p">:</span> <span class="s">&quot;C&quot;</span><span class="p">}</span>
+
+  <span class="nx">t</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kd">interface</span><span class="p">{},</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="nx">t</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span> <span class="nx">a</span><span class="p">)</span>
+  <span class="nx">t</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span>
+  <span class="nx">t</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span> <span class="nx">c</span><span class="p">)</span>
+</pre></div>
+<h4>Without using <code>type switch</code></h4>
+<p>We would be end up doing something like this:</p>
+<div class="highlight"><pre><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;--- without type switching&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">thing</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">t</span> <span class="p">{</span>
+  <span class="k">switch</span> <span class="nx">thing</span><span class="p">.(</span><span class="kd">type</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">case</span> <span class="o">*</span><span class="nx">A</span><span class="p">:</span>
+      <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">thing</span><span class="p">),</span> <span class="s">&quot;is of type A. Name is:&quot;</span><span class="p">,</span> <span class="nx">thing</span><span class="p">.(</span><span class="o">*</span><span class="nx">A</span><span class="p">).</span><span class="nx">Name</span><span class="p">)</span>
+    <span class="k">case</span> <span class="o">*</span><span class="nx">B</span><span class="p">:</span>
+      <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">thing</span><span class="p">),</span> <span class="s">&quot;is of type B. Name is:&quot;</span><span class="p">,</span> <span class="nx">thing</span><span class="p">.(</span><span class="o">*</span><span class="nx">B</span><span class="p">).</span><span class="nx">Name</span><span class="p">)</span>
+    <span class="k">case</span> <span class="o">*</span><span class="nx">C</span><span class="p">:</span>
+      <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">thing</span><span class="p">),</span> <span class="s">&quot;is of type C. Name is:&quot;</span><span class="p">,</span> <span class="nx">thing</span><span class="p">.(</span><span class="o">*</span><span class="nx">C</span><span class="p">).</span><span class="nx">Name</span><span class="p">)</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+<h5>Results</h5>
+<pre class="example">
+--- without type switching
+*main.A is of type A. Name is: A
+*main.B is of type B. Name is: B
+*main.C is of type C. Name is: C
+</pre>
+<h4>Using a <code>type switch</code></h4>
+<p>Makes things a little more bearable:</p>
+<div class="highlight"><pre><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;--- type switching on the item&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">thing</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">t</span> <span class="p">{</span>
+  <span class="k">switch</span> <span class="nx">o</span> <span class="o">:=</span> <span class="nx">thing</span><span class="p">.(</span><span class="kd">type</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">case</span> <span class="o">*</span><span class="nx">A</span><span class="p">:</span>
+      <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type A. Name is:&quot;</span><span class="p">,</span> <span class="nx">o</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+    <span class="k">case</span> <span class="o">*</span><span class="nx">B</span><span class="p">:</span>
+      <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type B. Name is:&quot;</span><span class="p">,</span> <span class="nx">o</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+    <span class="k">case</span> <span class="o">*</span><span class="nx">C</span><span class="p">:</span>
+      <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type C. Name is:&quot;</span><span class="p">,</span> <span class="nx">o</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+<h5>Results</h5>
+<pre class="example">
+--- type switching on the item
+*main.A is of type A. Name is: A
+*main.B is of type B. Name is: B
+*main.C is of type C. Name is: C
+</pre>
+<h3>Example #2</h3>
+<p>Let&#8217;s see how far we can take it.
+  Now, let&#8217;s suppose that we want to handle A and B the same way.</p>
+<h4>Using <code>type switch</code>, it works too</h4>
+<p>Since we want to handle <code>A</code> and <code>B</code> the same way, we could think
+  that we could group them into the same <code>case</code>, which would work:</p>
+<div class="highlight"><pre><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;--- Grouping A and B: &quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">thing</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">t</span> <span class="p">{</span>
+  <span class="k">switch</span> <span class="nx">o</span> <span class="o">:=</span> <span class="nx">thing</span><span class="p">.(</span><span class="kd">type</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">case</span> <span class="o">*</span><span class="nx">A</span><span class="p">,</span> <span class="o">*</span><span class="nx">B</span><span class="p">:</span>
+      <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type A or B.&quot;</span><span class="p">)</span>
+    <span class="k">case</span> <span class="o">*</span><span class="nx">C</span><span class="p">:</span>
+      <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type C.&quot;</span><span class="p">)</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+<h5>Results</h5>
+<pre class="example">
+*main.A is of type A or B.
+*main.B is of type A or B.
+*main.C is of type C.
+</pre>
+<h4>Until it doesn&#8217;t</h4>
+<p>Let&#8217;s suppose that we want to inspect the value of the <code>Name</code> field. Then it breaks:</p>
+<div class="highlight"><pre><span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">thing</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">t</span> <span class="p">{</span>
+	<span class="k">switch</span> <span class="nx">o</span> <span class="o">:=</span> <span class="nx">thing</span><span class="p">.(</span><span class="kd">type</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">case</span> <span class="o">*</span><span class="nx">A</span><span class="p">,</span> <span class="o">*</span><span class="nx">B</span><span class="p">:</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type A or B. Name is:&quot;</span><span class="p">,</span> <span class="nx">o</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+	<span class="k">case</span> <span class="o">*</span><span class="nx">C</span><span class="p">:</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type C. Name is:&quot;</span><span class="p">,</span> <span class="nx">o</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+<p>The above would throw the following error:</p>
+<pre class="example">
+o.Name undefined (type interface {} has no field or method Name)
+</pre>
+<h4>Back to <code>interface</code></h4>
+<p>What happened here is that by trying to group <code>A</code>, <code>B</code> types, we ended up again
+  with an <code>interface</code>, so we cannot rely on the first type switch anymore.</p>
+<p>We could type switch once more time then:</p>
+<div class="highlight"><pre><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;--- Double type switch all the way&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">thing</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">t</span> <span class="p">{</span>
+	<span class="k">switch</span> <span class="nx">o</span> <span class="o">:=</span> <span class="nx">thing</span><span class="p">.(</span><span class="kd">type</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">case</span> <span class="o">*</span><span class="nx">A</span><span class="p">,</span> <span class="o">*</span><span class="nx">B</span><span class="p">:</span>
+		<span class="k">switch</span> <span class="nx">oo</span> <span class="o">:=</span> <span class="nx">o</span><span class="p">.(</span><span class="kd">type</span><span class="p">)</span> <span class="p">{</span>
+		<span class="k">case</span> <span class="o">*</span><span class="nx">A</span><span class="p">:</span>
+			<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type A or B. Name is:&quot;</span><span class="p">,</span> <span class="nx">oo</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+		<span class="k">case</span> <span class="o">*</span><span class="nx">B</span><span class="p">:</span>
+			<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type A or B. Name is:&quot;</span><span class="p">,</span> <span class="nx">oo</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+		<span class="p">}</span>
+	<span class="k">case</span> <span class="o">*</span><span class="nx">C</span><span class="p">:</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type C. Name is:&quot;</span><span class="p">,</span> <span class="nx">o</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+<h5>Results</h5>
+<div class="highlight"><pre>--- Double type switch all the way
+*main.A is of type A or B. Name is: A
+*main.B is of type A or B. Name is: B
+*main.C is of type C. Name is: C
+</pre></div>
+<p>&#8230;which looks a bit messy. A more straightforward way would be to
+  flinch away our desire to make things &#8220;DRY&#8221;, still rely on the first type switch
+  and just repeat more code:</p>
+<div class="highlight"><pre><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;--- The Go Way™&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">thing</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">t</span> <span class="p">{</span>
+	<span class="k">switch</span> <span class="nx">o</span> <span class="o">:=</span> <span class="nx">thing</span><span class="p">.(</span><span class="kd">type</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">case</span> <span class="o">*</span><span class="nx">A</span><span class="p">:</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type A or B. Name is:&quot;</span><span class="p">,</span> <span class="nx">o</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+	<span class="k">case</span> <span class="o">*</span><span class="nx">B</span><span class="p">:</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type A or B. Name is:&quot;</span><span class="p">,</span> <span class="nx">o</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+	<span class="k">case</span> <span class="o">*</span><span class="nx">C</span><span class="p">:</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type C. Name is:&quot;</span><span class="p">,</span> <span class="nx">o</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+<p>&#8230;which results in:</p>
+<pre class="example">
+--- The Go Way™
+*main.A is of type A or B. Name is: A
+*main.B is of type A or B. Name is: B
+*main.C is of type C. Name is: C
+</pre>
+<h3>Conclusion</h3>
+<p>So which one of the approaches is better?</p>
+<p>I would say that probably the one with the
+  multiple case statements where the same line is repeated, since when
+  we type switch and have a <code>case</code> statement with one more type,
+  we end up once again with an <code>interface</code>, and we need yet another <code>type switch</code>
+  for it that generates more code which more or less says the
+  same thing, so it seems that it is about as DRY as it could get
+  for now using only type switch.</p>
+<p><a href="https://play.golang.org/p/PEsLe_ZRzE">Link to the Go playground with the example</a></p>
+
+
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
       <a href="/posts/2014/12/12/using-tcpdump/">
         Quickly inspecting HTTP traffic with tcpdump
       </a>
@@ -843,229 +1024,6 @@ curl      --
     Great compilation of links
     <a href="http://the-paper-trail.org/blog/distributed-systems-theory-for-the-distributed-systems-engineer/">http://the-paper-trail.org/blog/distributed-systems-theory-for-the-distributed-systems-engineer/</a></dd>
 </dl>
-
-
-
-  </div>
-  
-  <div class="post">
-    <h1 class="post-title">
-      <a href="/posts/2014/12/04/using-org-babel/">
-        Gradually adopting Org mode, part 1
-      </a>
-    </h1>
-
-    <span class="post-date">04 Dec 2014</span>
-
-    
-<p>Like most Org mode users, I started using Org mode as a TODO list.
-  Though for a while now, the Org Babel mode has become an intrinsic
-  part of my flow as well, to the point that outside doing code reading
-  of other projects, I rarely visit files anymore and spend most of my
-  time within Org mode buffers.</p>
-<p>In this post I will attempt to document such progression to this style
-  of using Org mode, and should also serve as a kind of tutorial for
-  those without familiarity to Org mode.</p>
-<h4>Basic elements of Org mode</h4>
-<p>Org mode has a <i>ton</i> of features, so rather than explaining
-  each one of the features of Org mode, I will describe what
-  are the building blocks that we can choose from
-  when authoring an Org mode document.</p>
-<p>Some of the most basic elements of an Org mode document are:</p>
-<dl>
-  <dt>Org mode markup paragraphs</dt><dd>
-<div class="highlight"><pre>Similar to other markup languages, we can write text in /italics/, *bold*, 
-_underline_, =code= or ~verbatim~, and even super and subscript: n_1, n^2
-</pre></div>
-  </dd>
-  <dt>headlines and sections</dt><dd>
-    <p>A section in Org mode is started by a headline. Headlines start
-      with one or more asterisks.</p>
-<div class="highlight"><pre>* A headline
-
-Paragraph within a /headline/ 
-</pre></div>
-    <p>We can set a TODO state to a headline to define whether something
-      is done or not:</p>
-<div class="highlight"><pre>* TODO Need to do this!
-* DONE Needed to do this!
-</pre></div>
-  </dd>
-  <dt>blocks</dt><dd>
-    <p>A block is how we group together a bunch of lines that are not
-      meant to be only paragraphs.  Some of the builtin blocks that we can have
-      in Org mode are: src, example, verse, quote and html.</p>
-    <p>A block will start <code>#+begin_...</code> and end with <code>#+end_...</code>.</p>
-    <p>One of the coolest features of the Org mode code blocks is that
-      we can add metadata to them, such as which kind of language is
-      being used inside of it (in case of src an example code blocks).</p>
-<div class="highlight"><pre>#+begin_src ruby
-&quot;Hello world&quot;
-#+end_src
-</pre></div>
-    <p>In order for syntax highlighting to work, it is needed to include
-      the following in the Emacs configuration file (or just eval it
-      during boot):</p>
-    <pre class="example">
-(setq org-src-fontify-natively t)
-    </pre>
-    <p>It is also required that the Emacs install has the special mode
-      for it.</p>
-  </dd>
-  <dt>lists</dt><dd>
-    <p>A list can be an unordered, ordered or definition list:</p>
-<div class="highlight"><pre>   - first level
-
-     Org mode /markup/
-
-     + second level
-       1) third level
-          1. fourth level
-   - back to first level
-     + a definition list :: 
-	   some definition
-</pre></div>
-    <p>By putting empty brackets  <code>[ ]</code>, <code>[/]</code>, or <code>[%]</code> at the beginning of a list, it
-      can become a task list.  Pressing <code>C-c C-C</code> on an item would
-      update its value:</p>
-    <p>Before:</p>
-<div class="highlight"><pre>- [0/1] one
-  + [ ] two 
-- [0%] three
-  * [ ] four
-</pre></div>
-    <p>After:</p>
-<div class="highlight"><pre>- [1/1] one
-  + [X] two 
-- [100%] three
-  * [X] four
-</pre></div>
-  </dd>
-  <dt>tables</dt><dd>
-    An Org mode table:
-    <pre class="src src-org">
-     <span style="color: #87cefa;">| apples  | 10 |</span>
-     <span style="color: #87cefa;">| oranges | 20 |</span>
-     </pre>
-    <p>Tables in Org mode are very powerful.  They are not meant to be
-      only for authoring tables, but they have spreadsheet
-      functionality as well.  The following table would have its formulas
-      evaluated after pressing TAB on it:</p>
-    <p>Before:</p>
-    <pre class="src src-org">
-     <span style="color: #87cefa;">| fruit   |      quantity | price per fruit | COST          |</span>
-     <span style="color: #87cefa;">| apples  |            10 |               5 | </span><span style="color: #ff7f24;">=$2 * $3      </span><span style="color: #87cefa;">|</span>
-     <span style="color: #87cefa;">| oranges |            20 |               7 | </span><span style="color: #ff7f24;">=$2 * $3      </span><span style="color: #87cefa;">|</span>
-     <span style="color: #87cefa;">| TOTAL   | </span><span style="color: #ff7f24;">=vsum(@2..@3) </span><span style="color: #87cefa;">|                 |               |</span>
-     </pre>
-    <p>After:</p>
-    <pre class="src src-org">
-     <span style="color: #87cefa;">| fruit   |      quantity | price per fruit | COST     |</span>
-     <span style="color: #87cefa;">| apples  |            10 |               5 | 50       |</span>
-     <span style="color: #87cefa;">| oranges |            20 |               7 | 140      |</span>
-     <span style="color: #87cefa;">| TOTAL   |            30 |                 |          |</span>
-     <span style="color: #465457; font-style: italic;">  #+TBLFM: $2=vsum(@2..@3)::$4=$2 * $3</span>
-     </pre>
-  </dd>
-</dl>
-<h5>Basic usage of Org mode for TODO lists</h5>
-<p>At the beginning of my Org mode usage, my documents used to look like
-  this I think:</p>
-<pre class="src src-org"><span style="color: #66D9EF; font-style: italic;">* </span><span style="color: #ff0000; font-weight: bold;">TODO</span><span style="color: #66D9EF; font-style: italic;"> Reply email from Alice</span>
-
-<span style="color: #F92672;">** </span><span style="color: #ff0000; font-weight: bold;">TODO</span><span style="color: #F92672;"> Reply</span>
-
-Dear Alice...
-
-<span style="color: #66D9EF; font-style: italic;">* </span><span style="color: #ff0000; font-weight: bold;">TODO</span><span style="color: #66D9EF; font-style: italic;"> Capacity planning</span>
-</pre>
-<p>One of the features I first adopted is the use of <code>CLOCKS</code>.
-  You can start a clock by pressing: <code>C-c C-x TAB</code>,
-  then we you are done you clock out with <code>C-c C-x C-o</code>.
-  Then you can use  <code>C-c C-x C-d</code> to check the total time spent.</p>
-<pre class="src src-org">  * DONE Reply email from Alice
-    <span style="color: #66D9EF;">CLOCK:</span> <span style="color: #00ffff; text-decoration: underline;">[2014-12-04 Thu 15:45]--[2014-12-04 Thu 15:50]</span> =&gt;  0:05
-
-  ** DONE Reply
-     <span style="color: #66D9EF;">CLOCK:</span> <span style="color: #00ffff; text-decoration: underline;">[2014-12-04 Thu 16:00]--[2014-12-04 Thu 17:00]</span> =&gt;  1:00
-
-  Dear Alice...
-
-  * TODO Capacity planning
-</pre>
-<p>Another helpful feature is <i>narrowing down</i> to a headline so that
-  other headlines are not shown. This can be done by pressing <code>C-x n s</code>.</p>
-<p>Having covered these basic I&#8217;ll go on to talk about Org Babel.</p>
-<h4>Start using Org mode for reproducible documents</h4>
-<p>The key thing about when using Org mode and for literate programming
-  is when you care about making things reproducible.</p>
-<p>Eric Schulte paper has more background on how the project started: <a href="http://www.jstatsoft.org/v46/i03">http://www.jstatsoft.org/v46/i03</a></p>
-<p>In order to use Org Babel we first need to enable it.  This is how my
-  <code>.emacs</code> looks for this:</p>
-<div class="highlight"><pre><span class="p">(</span><span class="nf">setq</span> <span class="nv">org-src-fontify-natively</span> <span class="nv">t</span><span class="p">)</span>
-<span class="p">(</span><span class="nf">setq</span> <span class="nv">org-confirm-babel-evaluate</span> <span class="nv">nil</span><span class="p">)</span>
-<span class="p">(</span><span class="nf">org-babel-do-load-languages</span>
-      <span class="ss">&#39;org-babel-load-languages</span>
-      <span class="o">&#39;</span><span class="p">((</span><span class="nf">emacs-lisp</span> <span class="o">.</span> <span class="nv">t</span><span class="p">)</span>
-	<span class="p">(</span><span class="nf">clojure</span> <span class="o">.</span> <span class="nv">t</span><span class="p">)</span>
-        <span class="p">(</span><span class="nf">R</span> <span class="o">.</span> <span class="nv">t</span><span class="p">)</span>
-        <span class="p">(</span><span class="nf">C</span> <span class="o">.</span> <span class="nv">t</span><span class="p">)</span>
-        <span class="p">(</span><span class="nf">sh</span> <span class="o">.</span> <span class="nv">t</span><span class="p">)</span>
-        <span class="p">(</span><span class="nf">ruby</span> <span class="o">.</span> <span class="nv">t</span><span class="p">)</span>
-        <span class="p">(</span><span class="nf">python</span> <span class="o">.</span> <span class="nv">t</span><span class="p">)</span>
-        <span class="p">(</span><span class="nf">js</span> <span class="o">.</span> <span class="nv">t</span><span class="p">)</span>
-        <span class="p">(</span><span class="nf">dot</span> <span class="o">.</span> <span class="nv">t</span><span class="p">)</span>
-	<span class="p">(</span><span class="nf">haskell</span> <span class="o">.</span> <span class="nv">t</span><span class="p">)</span>
-	<span class="p">(</span><span class="nf">scala</span> <span class="o">.</span> <span class="nv">t</span><span class="p">)</span>
-	<span class="p">))</span>
-</pre></div>
-<p>Note that in order for the above to work, there have to be major modes
-  in Emacs for those specific languages. Comment out or remove the
-  language that is not on your setup.</p>
-<h5>Making the document active by giving things a name</h5>
-<p>To adopt Org mode literate programming mode, we need to start
-  using <code>#+name</code> on top of some Org mode elements.  By doing this,
-  it is possible to reference later on to that part of the document.</p>
-<p>For example we can have a code block and eval it with <code>C-c C-c</code>:</p>
-<pre class="src src-org"><span style="color: #465457; font-style: italic;">  #+BEGIN_SRC ruby</span>
-  1 + 1
-<span style="color: #465457; font-style: italic;">  #+END_SRC</span>
-
-<span style="color: #465457; font-style: italic;">  #+RESULTS:</span>
-  <span style="color: #b3b3b3;">: 2</span>
-</pre>
-<p>But by giving it a name, we can reuse this code block:</p>
-<pre class="src src-org"><span style="color: #465457; font-style: italic;">  #+name: sum</span>
-<span style="color: #465457; font-style: italic;">  #+BEGIN_SRC ruby :var arg1=1 :var arg2=2</span>
-  arg1 + arg2
-<span style="color: #465457; font-style: italic;">  #+END_SRC</span>
-
-<span style="color: #465457; font-style: italic;">  #+RESULTS:</span>
-  <span style="color: #b3b3b3;">: 2</span>
-
-<span style="color: #465457; font-style: italic;">  #+call: sum(10, 100)</span>
-
-<span style="color: #465457; font-style: italic;">  #+RESULTS:</span>
-  <span style="color: #b3b3b3;">: 110</span>
-</pre>
-<p>Or chain it with a table:</p>
-<pre class="src src-org"><span style="color: #465457; font-style: italic;">  #+name: fruits</span>
-  <span style="color: #87cefa;">| apples  | 10 |</span>
-  <span style="color: #87cefa;">| oranges | 20 |</span>
-
-<span style="color: #465457; font-style: italic;">  #+name: show-fruits</span>
-<span style="color: #465457; font-style: italic;">  #+BEGIN_SRC ruby :var fruitstable=fruits :results output code</span>
-  fruits = <span style="color: #66D9EF;">Hash</span>[fruitstable]
-
-  p fruits
-<span style="color: #465457; font-style: italic;">  #+END_SRC</span>
-
-<span style="color: #465457; font-style: italic;">  #+RESULTS: show-fruits</span>
-<span style="color: #465457; font-style: italic;">  #+BEGIN_SRC ruby</span>
-  {<span style="color: #E6DB74;">"apples"</span>=&gt;10, <span style="color: #E6DB74;">"oranges"</span>=&gt;20}
-<span style="color: #465457; font-style: italic;">  #+END_SRC</span>
-</pre>
-<p>To be continued&#8230;</p>
 
 
 

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+
+  <head>
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+  <!-- Enable responsiveness on mobile devices-->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  <title>
+    
+      Learning Go backwards: Using Type Switch &middot; Literate Infrastructure
+    
+  </title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/public/css/poole.css">
+  <link rel="stylesheet" href="/public/css/syntax.css">
+  <link rel="stylesheet" href="/public/css/hyde.css">
+  <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+
+  <!-- Icons -->
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/public/apple-touch-icon-144-precomposed.png">
+                                 <link rel="shortcut icon" href="/public/favicon.ico">
+
+  <!-- RSS -->
+  <link rel="alternate" type="application/rss+xml" title="RSS" href="/atom.xml">
+</head>
+
+
+  <body>
+  <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-55629836-1', 'auto');
+    ga('send', 'pageview');
+
+  </script>
+    <div class="sidebar">
+  <div class="container sidebar-sticky">
+    <div class="sidebar-about">
+      <h2>
+        <a href="/">
+          Literate Infrastructure
+        </a>
+      </h2>
+      <p>PaaS + Org mode</p>
+      <p class="lead"><a href="https://twitter.com/wallyqs" target="_blank">@wallyqs</a></p>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="sidebar-nav-item" href="/">Home</a>
+
+      
+      
+        
+          
+        
+      
+        
+          
+            <a class="sidebar-nav-item" href="/about.html">About</a>
+          
+        
+      
+        
+      
+        
+          
+        
+      
+        
+          
+            <a class="sidebar-nav-item" href="/posts/">Posts</a>
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+
+    </nav>
+
+    <p>&copy; 2014. All rights reserved.</p>
+  </div>
+</div>
+
+
+    <div class="content container">
+      <div class="post">
+  <h1 class="post-title">Learning Go backwards: Using Type Switch</h1>
+  <span class="post-date">25 Dec 2014</span>
+  
+<p>One of the features that I have been relying
+  a lot in Go when using interfaces is the <a href="https://golang.org/doc/effective_go.html#type_switch">type switch</a>.
+  This feature is specially useful since it help us avoid having to do type assertions all the time.</p>
+<p>A couple of examples below.</p>
+<h3>Example #1</h3>
+<p>Let&#8217;s suppose that we have 3 types <code>A</code>, <code>B</code> &amp; <code>C</code>,
+  where each one of these types can be assigned a <code>Name</code>:</p>
+<div class="highlight"><pre><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+  <span class="s">&quot;fmt&quot;</span>
+  <span class="s">&quot;reflect&quot;</span>
+<span class="p">)</span>
+
+<span class="kd">type</span> <span class="nx">A</span> <span class="kd">struct</span> <span class="p">{</span> <span class="nx">Name</span> <span class="kt">string</span> <span class="p">}</span>
+<span class="kd">type</span> <span class="nx">B</span> <span class="kd">struct</span> <span class="p">{</span> <span class="nx">Name</span> <span class="kt">string</span> <span class="p">}</span>
+<span class="kd">type</span> <span class="nx">C</span> <span class="kd">struct</span> <span class="p">{</span> <span class="nx">Name</span> <span class="kt">string</span> <span class="p">}</span>
+</pre></div>
+<p>And we put them inside of a slice of which can contain <code>interfaces</code>:</p>
+<div class="highlight"><pre><span class="kd">func</span> <span class="nx">main</span><span class="p">()</span> <span class="p">{</span>
+
+  <span class="nx">a</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">A</span><span class="p">{</span><span class="nx">Name</span><span class="p">:</span> <span class="s">&quot;A&quot;</span><span class="p">}</span>
+  <span class="nx">b</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">B</span><span class="p">{</span><span class="nx">Name</span><span class="p">:</span> <span class="s">&quot;B&quot;</span><span class="p">}</span>
+  <span class="nx">c</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">C</span><span class="p">{</span><span class="nx">Name</span><span class="p">:</span> <span class="s">&quot;C&quot;</span><span class="p">}</span>
+
+  <span class="nx">t</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kd">interface</span><span class="p">{},</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="nx">t</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span> <span class="nx">a</span><span class="p">)</span>
+  <span class="nx">t</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span>
+  <span class="nx">t</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span> <span class="nx">c</span><span class="p">)</span>
+</pre></div>
+<h4>Without using <code>type switch</code></h4>
+<p>We would be end up doing something like this:</p>
+<div class="highlight"><pre><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;--- without type switching&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">thing</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">t</span> <span class="p">{</span>
+  <span class="k">switch</span> <span class="nx">thing</span><span class="p">.(</span><span class="kd">type</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">case</span> <span class="o">*</span><span class="nx">A</span><span class="p">:</span>
+      <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">thing</span><span class="p">),</span> <span class="s">&quot;is of type A. Name is:&quot;</span><span class="p">,</span> <span class="nx">thing</span><span class="p">.(</span><span class="o">*</span><span class="nx">A</span><span class="p">).</span><span class="nx">Name</span><span class="p">)</span>
+    <span class="k">case</span> <span class="o">*</span><span class="nx">B</span><span class="p">:</span>
+      <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">thing</span><span class="p">),</span> <span class="s">&quot;is of type B. Name is:&quot;</span><span class="p">,</span> <span class="nx">thing</span><span class="p">.(</span><span class="o">*</span><span class="nx">B</span><span class="p">).</span><span class="nx">Name</span><span class="p">)</span>
+    <span class="k">case</span> <span class="o">*</span><span class="nx">C</span><span class="p">:</span>
+      <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">thing</span><span class="p">),</span> <span class="s">&quot;is of type C. Name is:&quot;</span><span class="p">,</span> <span class="nx">thing</span><span class="p">.(</span><span class="o">*</span><span class="nx">C</span><span class="p">).</span><span class="nx">Name</span><span class="p">)</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+<h5>Results</h5>
+<pre class="example">
+--- without type switching
+*main.A is of type A. Name is: A
+*main.B is of type B. Name is: B
+*main.C is of type C. Name is: C
+</pre>
+<h4>Using a <code>type switch</code></h4>
+<p>Makes things a little more bearable:</p>
+<div class="highlight"><pre><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;--- type switching on the item&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">thing</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">t</span> <span class="p">{</span>
+  <span class="k">switch</span> <span class="nx">o</span> <span class="o">:=</span> <span class="nx">thing</span><span class="p">.(</span><span class="kd">type</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">case</span> <span class="o">*</span><span class="nx">A</span><span class="p">:</span>
+      <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type A. Name is:&quot;</span><span class="p">,</span> <span class="nx">o</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+    <span class="k">case</span> <span class="o">*</span><span class="nx">B</span><span class="p">:</span>
+      <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type B. Name is:&quot;</span><span class="p">,</span> <span class="nx">o</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+    <span class="k">case</span> <span class="o">*</span><span class="nx">C</span><span class="p">:</span>
+      <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type C. Name is:&quot;</span><span class="p">,</span> <span class="nx">o</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+<h5>Results</h5>
+<pre class="example">
+--- type switching on the item
+*main.A is of type A. Name is: A
+*main.B is of type B. Name is: B
+*main.C is of type C. Name is: C
+</pre>
+<h3>Example #2</h3>
+<p>Let&#8217;s see how far we can take it.
+  Now, let&#8217;s suppose that we want to handle A and B the same way.</p>
+<h4>Using <code>type switch</code>, it works too</h4>
+<p>Since we want to handle <code>A</code> and <code>B</code> the same way, we could think
+  that we could group them into the same <code>case</code>, which would work:</p>
+<div class="highlight"><pre><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;--- Grouping A and B: &quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">thing</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">t</span> <span class="p">{</span>
+  <span class="k">switch</span> <span class="nx">o</span> <span class="o">:=</span> <span class="nx">thing</span><span class="p">.(</span><span class="kd">type</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">case</span> <span class="o">*</span><span class="nx">A</span><span class="p">,</span> <span class="o">*</span><span class="nx">B</span><span class="p">:</span>
+      <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type A or B.&quot;</span><span class="p">)</span>
+    <span class="k">case</span> <span class="o">*</span><span class="nx">C</span><span class="p">:</span>
+      <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type C.&quot;</span><span class="p">)</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+<h5>Results</h5>
+<pre class="example">
+*main.A is of type A or B.
+*main.B is of type A or B.
+*main.C is of type C.
+</pre>
+<h4>Until it doesn&#8217;t</h4>
+<p>Let&#8217;s suppose that we want to inspect the value of the <code>Name</code> field. Then it breaks:</p>
+<div class="highlight"><pre><span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">thing</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">t</span> <span class="p">{</span>
+	<span class="k">switch</span> <span class="nx">o</span> <span class="o">:=</span> <span class="nx">thing</span><span class="p">.(</span><span class="kd">type</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">case</span> <span class="o">*</span><span class="nx">A</span><span class="p">,</span> <span class="o">*</span><span class="nx">B</span><span class="p">:</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type A or B. Name is:&quot;</span><span class="p">,</span> <span class="nx">o</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+	<span class="k">case</span> <span class="o">*</span><span class="nx">C</span><span class="p">:</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type C. Name is:&quot;</span><span class="p">,</span> <span class="nx">o</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+<p>The above would throw the following error:</p>
+<pre class="example">
+o.Name undefined (type interface {} has no field or method Name)
+</pre>
+<h4>Back to <code>interface</code></h4>
+<p>What happened here is that by trying to group <code>A</code>, <code>B</code> types, we ended up again
+  with an <code>interface</code>, so we cannot rely on the first type switch anymore.</p>
+<p>We could type switch once more time then:</p>
+<div class="highlight"><pre><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;--- Double type switch all the way&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">thing</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">t</span> <span class="p">{</span>
+	<span class="k">switch</span> <span class="nx">o</span> <span class="o">:=</span> <span class="nx">thing</span><span class="p">.(</span><span class="kd">type</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">case</span> <span class="o">*</span><span class="nx">A</span><span class="p">,</span> <span class="o">*</span><span class="nx">B</span><span class="p">:</span>
+		<span class="k">switch</span> <span class="nx">oo</span> <span class="o">:=</span> <span class="nx">o</span><span class="p">.(</span><span class="kd">type</span><span class="p">)</span> <span class="p">{</span>
+		<span class="k">case</span> <span class="o">*</span><span class="nx">A</span><span class="p">:</span>
+			<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type A or B. Name is:&quot;</span><span class="p">,</span> <span class="nx">oo</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+		<span class="k">case</span> <span class="o">*</span><span class="nx">B</span><span class="p">:</span>
+			<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type A or B. Name is:&quot;</span><span class="p">,</span> <span class="nx">oo</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+		<span class="p">}</span>
+	<span class="k">case</span> <span class="o">*</span><span class="nx">C</span><span class="p">:</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type C. Name is:&quot;</span><span class="p">,</span> <span class="nx">o</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+<h5>Results</h5>
+<div class="highlight"><pre>--- Double type switch all the way
+*main.A is of type A or B. Name is: A
+*main.B is of type A or B. Name is: B
+*main.C is of type C. Name is: C
+</pre></div>
+<p>&#8230;which looks a bit messy. A more straightforward way would be to
+  flinch away our desire to make things &#8220;DRY&#8221;, still rely on the first type switch
+  and just repeat more code:</p>
+<div class="highlight"><pre><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;--- The Go Way™&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">thing</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">t</span> <span class="p">{</span>
+	<span class="k">switch</span> <span class="nx">o</span> <span class="o">:=</span> <span class="nx">thing</span><span class="p">.(</span><span class="kd">type</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">case</span> <span class="o">*</span><span class="nx">A</span><span class="p">:</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type A or B. Name is:&quot;</span><span class="p">,</span> <span class="nx">o</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+	<span class="k">case</span> <span class="o">*</span><span class="nx">B</span><span class="p">:</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type A or B. Name is:&quot;</span><span class="p">,</span> <span class="nx">o</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+	<span class="k">case</span> <span class="o">*</span><span class="nx">C</span><span class="p">:</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type C. Name is:&quot;</span><span class="p">,</span> <span class="nx">o</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+<p>&#8230;which results in:</p>
+<pre class="example">
+--- The Go Way™
+*main.A is of type A or B. Name is: A
+*main.B is of type A or B. Name is: B
+*main.C is of type C. Name is: C
+</pre>
+<h3>Conclusion</h3>
+<p>So which one of the approaches is better?</p>
+<p>I would say that probably the one with the
+  multiple case statements where the same line is repeated, since when
+  we type switch and have a <code>case</code> statement with one more type,
+  we end up once again with an <code>interface</code>, and we need yet another <code>type switch</code>
+  for it that generates more code which more or less says the
+  same thing, so it seems that it is about as DRY as it could get
+  for now using only type switch.</p>
+<p><a href="https://play.golang.org/p/PEsLe_ZRzE">Link to the Go playground with the example</a></p>
+
+
+
+</div>
+
+<div class="related">
+  <h2>Related Posts</h2>
+  <ul class="related-posts">
+    
+      <li>
+        <h3>
+          <a href="/posts/2014/12/12/using-tcpdump/">
+            Quickly inspecting HTTP traffic with tcpdump
+            <small>12 Dec 2014</small>
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/posts/2014/12/12/using-org-babel-for-lp-jp/">
+            Org Babelで文芸的プログラミング
+            <small>12 Dec 2014</small>
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/posts/2014/12/12/using-org-babel-for-lp/">
+            Using Org Babel for Literate Programming
+            <small>12 Dec 2014</small>
+          </a>
+        </h3>
+      </li>
+    
+  </ul>
+</div>
+
+    </div>
+
+  </body>
+</html>
