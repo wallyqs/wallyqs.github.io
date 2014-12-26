@@ -256,7 +256,7 @@ o.Name undefined (type interface {} has no field or method Name)
 *main.B is of type A or B. Name is: B
 *main.C is of type C. Name is: C
 </pre>
-<h3>Conclusion</h3>
+<h3>Progress so far</h3>
 <p>So which one of the approaches is better?</p>
 <p>I would say that probably the one with the
   multiple case statements where the same line is repeated, since when
@@ -264,8 +264,64 @@ o.Name undefined (type interface {} has no field or method Name)
   we end up once again with an <code>interface</code>, and we need yet another <code>type switch</code>
   for it that generates more code which more or less says the
   same thing, so it seems that it is about as DRY as it could get
-  for now using only type switch.</p>
+  for now using only <code>type switch</code>.</p>
 <p><a href="https://play.golang.org/p/PEsLe_ZRzE">Link to the Go playground with the example</a></p>
+<p>To solve the grouping problem, there is something else that we can
+  try besides only using the <code>type switch</code>, which is using <code>interface</code> types.</p>
+<h3>Example #3</h3>
+<p>Another alternative would be to use a <code>Nameable</code> interface when creating the slice.
+  This means first having to declare something like this:</p>
+<div class="highlight"><pre><span class="kd">type</span> <span class="nx">Nameable</span> <span class="kd">interface</span> <span class="p">{</span>
+  <span class="nx">GetName</span><span class="p">()</span> <span class="kt">string</span>
+<span class="p">}</span>
+
+<span class="kd">type</span> <span class="nx">BasicAttrs</span> <span class="kd">struct</span> <span class="p">{</span> 
+  <span class="nx">Name</span> <span class="kt">string</span>
+<span class="p">}</span>
+
+<span class="c1">// Code generation could help with this...</span>
+<span class="kd">type</span> <span class="nx">A</span> <span class="kd">struct</span> <span class="p">{</span> <span class="nx">BasicAttrs</span> <span class="p">}</span>
+<span class="kd">func</span> <span class="p">(</span><span class="nx">o</span> <span class="o">*</span><span class="nx">A</span><span class="p">)</span> <span class="nx">GetName</span><span class="p">()</span> <span class="kt">string</span> <span class="p">{</span> <span class="k">return</span> <span class="nx">o</span><span class="p">.</span><span class="nx">Name</span> <span class="p">}</span>
+
+<span class="kd">type</span> <span class="nx">B</span> <span class="kd">struct</span> <span class="p">{</span> <span class="nx">BasicAttrs</span> <span class="p">}</span>
+<span class="kd">func</span> <span class="p">(</span><span class="nx">o</span> <span class="o">*</span><span class="nx">B</span><span class="p">)</span> <span class="nx">GetName</span><span class="p">()</span> <span class="kt">string</span> <span class="p">{</span> <span class="k">return</span> <span class="nx">o</span><span class="p">.</span><span class="nx">Name</span> <span class="p">}</span>
+
+<span class="kd">type</span> <span class="nx">C</span> <span class="kd">struct</span> <span class="p">{</span> <span class="nx">BasicAttrs</span> <span class="p">}</span>
+<span class="kd">func</span> <span class="p">(</span><span class="nx">o</span> <span class="o">*</span><span class="nx">C</span><span class="p">)</span> <span class="nx">GetName</span><span class="p">()</span> <span class="kt">string</span> <span class="p">{</span> <span class="k">return</span> <span class="nx">o</span><span class="p">.</span><span class="nx">Name</span> <span class="p">}</span>
+</pre></div>
+<p>So that we can later on use it as follows:</p>
+<div class="highlight"><pre><span class="kd">func</span> <span class="nx">main</span><span class="p">()</span> <span class="p">{</span>
+
+	<span class="nx">a</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">A</span><span class="p">{</span><span class="nx">BasicAttrs</span><span class="p">:</span><span class="nx">BasicAttrs</span> <span class="p">{</span> <span class="nx">Name</span><span class="p">:</span> <span class="s">&quot;A&quot;</span> <span class="p">}}</span>
+	<span class="nx">b</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">B</span><span class="p">{</span><span class="nx">BasicAttrs</span><span class="p">:</span><span class="nx">BasicAttrs</span> <span class="p">{</span> <span class="nx">Name</span><span class="p">:</span> <span class="s">&quot;B&quot;</span> <span class="p">}}</span>
+	<span class="nx">c</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">C</span><span class="p">{</span><span class="nx">BasicAttrs</span><span class="p">:</span><span class="nx">BasicAttrs</span> <span class="p">{</span> <span class="nx">Name</span><span class="p">:</span> <span class="s">&quot;C&quot;</span> <span class="p">}}</span>
+
+	<span class="nx">t</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="nx">Nameable</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+	<span class="nx">t</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span> <span class="nx">a</span><span class="p">)</span>
+	<span class="nx">t</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span>
+	<span class="nx">t</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span> <span class="nx">c</span><span class="p">)</span>
+
+	<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;--- The correct Go way?&quot;</span><span class="p">)</span>
+	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">thing</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">t</span> <span class="p">{</span>
+	<span class="k">switch</span> <span class="nx">o</span> <span class="o">:=</span> <span class="nx">thing</span><span class="p">.(</span><span class="kd">type</span><span class="p">)</span> <span class="p">{</span>
+	   <span class="k">case</span> <span class="o">*</span><span class="nx">A</span><span class="p">,</span> <span class="o">*</span><span class="nx">B</span><span class="p">:</span>
+	      <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type A or B. Name is:&quot;</span><span class="p">,</span> <span class="nx">o</span><span class="p">.</span><span class="nx">GetName</span><span class="p">())</span>
+	   <span class="k">case</span> <span class="o">*</span><span class="nx">C</span><span class="p">:</span>
+	     <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="nx">reflect</span><span class="p">.</span><span class="nx">TypeOf</span><span class="p">(</span><span class="nx">o</span><span class="p">),</span> <span class="s">&quot;is of type C. Name is:&quot;</span><span class="p">,</span> <span class="nx">o</span><span class="p">.</span><span class="nx">GetName</span><span class="p">())</span>
+	  <span class="p">}</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+<h5>Results</h5>
+<pre class="example">
+--- The correct Go way?
+*main.A is of type A or B. Name is: A
+*main.B is of type A or B. Name is: B
+*main.C is of type C. Name is: C
+</pre>
+<h3>Is this better?</h3>
+<p>I think so.  Even though the implementation is a bit more verbose, the last example using a <code>type interface</code>
+  might be the way to go in case we face the grouping issue from the raw interface.</p>
 
 
 
