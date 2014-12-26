@@ -206,7 +206,7 @@ for _, thing := range t {
 *main.C is of type C. Name is: C
 #+END_EXAMPLE
 
-*** Conclusion
+*** Progress so far
 
 So which one of the approaches is better? 
 
@@ -216,8 +216,76 @@ we type switch and have a =case= statement with one more type,
 we end up once again with an =interface=, and we need yet another =type switch= 
 for it that generates more code which more or less says the
 same thing, so it seems that it is about as DRY as it could get
-for now using only type switch.
+for now using only =type switch=.
 
 [[https://play.golang.org/p/PEsLe_ZRzE][Link to the Go playground with the example]]
+
+To solve the grouping problem, there is something else that we can
+try besides only using the =type switch=, which is using =interface= types.
+
+*** Example #3
+
+Another alternative would be to use a ~Nameable~ interface when creating the slice.
+This means first having to declare something like this:
+
+#+BEGIN_SRC go
+type Nameable interface {
+  GetName() string
+}
+
+type BasicAttrs struct { 
+  Name string
+}
+
+// Code generation could help with this...
+type A struct { BasicAttrs }
+func (o *A) GetName() string { return o.Name }
+
+type B struct { BasicAttrs }
+func (o *B) GetName() string { return o.Name }
+
+type C struct { BasicAttrs }
+func (o *C) GetName() string { return o.Name }
+#+END_SRC
+
+So that we can later on use it as follows:
+
+#+BEGIN_SRC go
+func main() {
+
+	a := &A{BasicAttrs:BasicAttrs { Name: "A" }}
+	b := &B{BasicAttrs:BasicAttrs { Name: "B" }}
+	c := &C{BasicAttrs:BasicAttrs { Name: "C" }}
+
+	t := make([]Nameable, 0)
+	t = append(t, a)
+	t = append(t, b)
+	t = append(t, c)
+
+	fmt.Println("--- The correct Go way?")
+	for _, thing := range t {
+	switch o := thing.(type) {
+	   case *A, *B:
+	      fmt.Println(reflect.TypeOf(o), "is of type A or B. Name is:", o.GetName())
+	   case *C:
+	     fmt.Println(reflect.TypeOf(o), "is of type C. Name is:", o.GetName())
+	  }
+	}
+}
+#+END_SRC
+
+***** Results
+
+#+BEGIN_EXAMPLE
+--- The correct Go way?
+,*main.A is of type A or B. Name is: A
+,*main.B is of type A or B. Name is: B
+,*main.C is of type C. Name is: C
+#+END_EXAMPLE
+
+*** Is this better?
+
+I think so.  Even though the implementation is a bit more verbose, the last example using a =type interface=
+might be the way to go in case we face the grouping issue from the raw interface.
 
 # Zzz...
