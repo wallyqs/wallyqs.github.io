@@ -41,8 +41,8 @@ netstat -an | grep ESTABLISHED | wc -l
        5
 #+END_SRC
 
-この二つのコマンドの結果を集まって、 HTTPクライアントを使えば
-=GET /vars= で取れるようにします：
+この二つのコマンドの結果を集めて、 HTTPクライアントを使えば
+=GET /vars= で取れるようになります：
 
 #+BEGIN_SRC sh :results output
 curl 127.0.0.1:9292/vars
@@ -60,7 +60,7 @@ curl 127.0.0.1:9292/vars
 
 *** 事前準備
 
-まず、ディレクトリの作成は必要です:
+まず、ディレクトリの作成が必要です:
 
 #+BEGIN_SRC sh :result output
 mkdir -p org
@@ -71,7 +71,7 @@ touch readme.org
 - =org/= ディレクトリの下に置くファイルはOrg mode で書きます
 - =src/= ディレクトリの下に置くファイルはSinatraアプリケーションのソースコード
 
-(=readme.org= の作成は必要ではないけど、best practiceとしておすすめします...)
+(=readme.org= の作成は必要ではないですが、best practiceとしておすすめします...)
 
 最終的に、ディレクトリ構成はこんな感じになります:
 
@@ -162,7 +162,7 @@ run Sinatra::Application
 
 EmacsのOrg modeバッファーで, =C-c C-v t= か =C-c C-v C-t= を叩けば、
 Org modeの =org-babel-tangle= の機能を呼び出します。
-これで、動かせるプログラムは =src/= ディレクトリのしたに現れます。
+これで、動かせるプログラムは =src/= ディレクトリの下に現れます。
 
 #+BEGIN_HTML html
 <pre class="src src-org"><span style="color: #b3b3b3;">#+TITLE:</span> <span style="color: #cafe12; font-size: 144%; font-weight: bold;">Monitoring HTTP endpoint</span>
@@ -238,7 +238,7 @@ Org modeの =org-babel-tangle= の機能を呼び出します。
 *** 動かす方法
 
 次、プログラムを動かす方法を =org/run.org= にまとめます。
-プログラムを動かす前に、Sinatraのプログラムに修正修正があったかもしれないから、 
+プログラムを動かす前に、Sinatraのプログラムに修正があったかも知れないので、 
 =#+include: org/app.org= でこの依存関係を設定します。
 
 #+BEGIN_HTML
@@ -268,8 +268,8 @@ Now let's send some requests to it:
 </pre>
 #+END_HTML
 
-Emacsでlong running processesを実行出来ますが、そうするとEmacsがコードブロック
-の結果を待ちしちゃいます... それは少し残念ですけれども、
+Emacsでlong running processesを実行できますが、そうするとEmacsがコードブロック
+の結果待ちをしてしまいます... それを避けるため、
 コードブロックの上に、 =#+name= を設定すれば、私が作ったgemで叩くことができます:
 
 : gem install org-converge
@@ -315,9 +315,9 @@ curl      --
 
 *** まとめ
 
-Org modeはすごく便利！皆使いましょう！
-そして、Githubさんが org-rubyを使って =.org= ファイルをHTMLに変換してくれる！
-Ruby の Org modeパーサはまだOrg mode のすべての機能に追いついていないけど、
+Org modeはすごく便利です！
+しかも、Githubさんが org-rubyを使って =.org= ファイルをHTMLに変換してくれるのです！
+Ruby の Org modeパーサはまだOrg mode のすべての機能に追いついていませんが、
 私がある程度メンテナンスしています。もしOrg Rubyに何かの問題があれば、
 こちらに [[https://github.com/wallyqs/org-ruby/issues][issue]] を発行していただければと思います。 :)
 
