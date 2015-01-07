@@ -91,7 +91,7 @@
 
     </nav>
 
-    <p>&copy; 2014. All rights reserved.</p>
+    <p>&copy; 2015. All rights reserved.</p>
   </div>
 </div>
 
@@ -416,7 +416,7 @@ Accept-Language: en-US,en<span class="p">;</span><span class="nv">q</span><span 
     
 <p>(This is a post for the <a href="http://qiita.com/advent-calendar/2014/emacs">Emacs Advent Calendar 2014</a> from Japan, a similar English version can be found <a href="http://literateinfrastructure.org/posts/2014/12/12/using-org-babel-for-lp/">here</a>)</p>
 <p>Org modeの話を聞いたことがある方は、Org modeは「TODOリスト管理ツールの
-  一つだ」と思われる方が多いかもしれません。それは当たっていますが、
+  一つだ」と思われる方が多いかもしれません。それはその通りですが、
   Org Babelというモードで、「文芸的プログラミング(Literate Programming)」を実現することができます。</p>
 <p>Org Babelの使い方を示すために、あるホストのモニタリング情報を表示する、
   単純なSinatraアプリケーションを例えにします。</p>
@@ -431,12 +431,12 @@ Accept-Language: en-US,en<span class="p">;</span><span class="nv">q</span><span 
 
        5
 </pre></div>
-<p>この二つのコマンドの結果を集まって、 HTTPクライアントを使えば
-  <code>GET /vars</code> で取れるようにします：</p>
+<p>この二つのコマンドの結果を集めて、 HTTPクライアントを使えば
+  <code>GET /vars</code> で取れるようになります：</p>
 <div class="highlight"><pre>curl 127.0.0.1:9292/vars
 </pre></div>
 <h3>事前準備</h3>
-<p>まず、ディレクトリの作成は必要です:</p>
+<p>まず、ディレクトリの作成が必要です:</p>
 <div class="highlight"><pre>mkdir -p org
 mkdir -p src
 touch readme.org
@@ -445,7 +445,7 @@ touch readme.org
   <li><code>org/</code> ディレクトリの下に置くファイルはOrg mode で書きます</li>
   <li><code>src/</code> ディレクトリの下に置くファイルはSinatraアプリケーションのソースコード</li>
 </ul>
-<p>(<code>readme.org</code> の作成は必要ではないけど、best practiceとしておすすめします&#8230;)</p>
+<p>(<code>readme.org</code> の作成は必要ではないですが、best practiceとしておすすめします&#8230;)</p>
 <p>最終的に、ディレクトリ構成はこんな感じになります:</p>
 <div class="highlight"><pre>.
 ├── org
@@ -511,10 +511,10 @@ require <span class="s1">&#39;./app.rb&#39;</span>
 run Sinatra::Application
 <span class="c">#+END_SRC</span>
 </pre></div>
-<h4><i>Full Example</i></h4>
+<h4><i>全体例</i></h4>
 <p>EmacsのOrg modeバッファーで, <code>C-c C-v t</code> か <code>C-c C-v C-t</code> を叩けば、
   Org modeの <code>org-babel-tangle</code> の機能を呼び出します。
-  これで、動かせるプログラムは <code>src/</code> ディレクトリのしたに現れます。</p>
+  これで、動かせるプログラムは <code>src/</code> ディレクトリの下に現れます。</p>
 <pre class="src src-org"><span style="color: #b3b3b3;">#+TITLE:</span> <span style="color: #cafe12; font-size: 144%; font-weight: bold;">Monitoring HTTP endpoint</span>
 
   This is a simple Sinatra application that provides
@@ -584,8 +584,8 @@ run Sinatra::Application
 </pre>
 
 <h3>動かす方法</h3>
-<p>次、プログラムを動かす方法を <code>org/run.org</code> にまとめます。
-  プログラムを動かす前に、Sinatraのプログラムに修正修正があったかもしれないから、
+<p>次に、プログラムを動かす方法を <code>org/run.org</code> にまとめます。
+  プログラムを動かす前に、Sinatraのプログラムに修正があったかも知れないので、
   <code>#+include: org/app.org</code> でこの依存関係を設定します。</p>
 <pre class="src src-org"><span style="color: #b3b3b3;">#+TITLE:</span>   <span style="color: #cafe12; font-size: 144%; font-weight: bold;">Running the Application</span>
 <span style="color: #465457; font-style: italic;">#+include: "org/app.org"</span>
@@ -611,8 +611,8 @@ Now let's send some requests to it:
 <span style="color: #66D9EF;">done</span>
 <span style="color: #465457; font-style: italic;">#+END_SRC</span>
 </pre>
-<p>Emacsでlong running processesを実行出来ますが、そうするとEmacsがコードブロック
-  の結果を待ちしちゃいます&#8230; それは少し残念ですけれども、
+<p>Emacsでlong running processesを実行できますが、そうするとEmacsがコードブロック
+  の結果待ちをしてしまいます&#8230; それを避けるため、
   コードブロックの上に、 <code>#+name</code> を設定すれば、私が作ったgemで叩くことができます:</p>
 <pre class="example">
 gem install org-converge
@@ -654,9 +654,9 @@ curl      --
 curl      -- 
 </pre></div>
 <h3>まとめ</h3>
-<p>Org modeはすごく便利！皆使いましょう！
-  そして、Githubさんが org-rubyを使って <code>.org</code> ファイルをHTMLに変換してくれる！
-  Ruby の Org modeパーサはまだOrg mode のすべての機能に追いついていないけど、
+<p>Org modeはとても便利です！皆さんぜひお試しください。
+  しかも、Githubさんが org-rubyを使って <code>.org</code> ファイルをHTMLに変換してくれるのです。
+  Ruby の Org modeパーサはまだOrg mode のすべての機能に追いついていませんが、
   私がある程度メンテナンスしています。もしOrg Rubyに何かの問題があれば、
   こちらに <a href="https://github.com/wallyqs/org-ruby/issues">issue</a> を発行していただければと思います。 :)</p>
 <p>(そして、日本語が間違っている場合、こちらに <a href="https://github.com/wallyqs/wallyqs.github.io/tree/source/org/posts">PR</a> ください&#8230;)</p>
