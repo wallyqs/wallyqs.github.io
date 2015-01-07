@@ -6,7 +6,7 @@
 (This is a post for the [[http://qiita.com/advent-calendar/2014/emacs][Emacs Advent Calendar 2014]] from Japan, a similar English version can be found [[http://literateinfrastructure.org/posts/2014/12/12/using-org-babel-for-lp/][here]])
 
 Org modeの話を聞いたことがある方は、Org modeは「TODOリスト管理ツールの
-一つだ」と思われる方が多いかもしれません。それは当たっていますが、
+一つだ」と思われる方が多いかもしれません。それはその通りですが、
 Org Babelというモードで、「文芸的プログラミング(Literate Programming)」を実現することができます。
 
 # Most people that have heard about Org mode are aware that
@@ -158,7 +158,7 @@ run Sinatra::Application
 
 #+END_SRC
 
-**** /Full Example/
+**** /全体例/
 
 EmacsのOrg modeバッファーで, =C-c C-v t= か =C-c C-v C-t= を叩けば、
 Org modeの =org-babel-tangle= の機能を呼び出します。
@@ -237,7 +237,7 @@ Org modeの =org-babel-tangle= の機能を呼び出します。
 
 *** 動かす方法
 
-次、プログラムを動かす方法を =org/run.org= にまとめます。
+次に、プログラムを動かす方法を =org/run.org= にまとめます。
 プログラムを動かす前に、Sinatraのプログラムに修正があったかも知れないので、 
 =#+include: org/app.org= でこの依存関係を設定します。
 
@@ -315,8 +315,8 @@ curl      --
 
 *** まとめ
 
-Org modeはすごく便利です！
-しかも、Githubさんが org-rubyを使って =.org= ファイルをHTMLに変換してくれるのです！
+Org modeはとても便利です！皆さんぜひお試しください。
+しかも、Githubさんが org-rubyを使って =.org= ファイルをHTMLに変換してくれるのです。
 Ruby の Org modeパーサはまだOrg mode のすべての機能に追いついていませんが、
 私がある程度メンテナンスしています。もしOrg Rubyに何かの問題があれば、
 こちらに [[https://github.com/wallyqs/org-ruby/issues][issue]] を発行していただければと思います。 :)
