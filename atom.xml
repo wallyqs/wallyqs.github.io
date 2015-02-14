@@ -13,9 +13,9 @@
 
  
  <entry>
-   <title>Learning Go backwards: Using Type Switch</title>
+   <title>About type switch usage in Go</title>
    <link href="/posts/2014/12/25/learning-go-backwards/"/>
-   <updated>2014-12-25T00:00:00-05:00</updated>
+   <updated>2014-12-25T00:00:00+09:00</updated>
    <id>/posts/2014/12/25/learning-go-backwards</id>
    <content type="html">
 &lt;p&gt;One of the features that I have been relying a lot in Go is the &lt;a href=&quot;https://golang.org/doc/effective_go.html#type_switch&quot;&gt;type switch&lt;/a&gt;.
