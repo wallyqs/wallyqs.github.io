@@ -1,0 +1,255 @@
+# -*- mode: org; mode: auto-fill -*-
+#+TITLE:	Running Org Babel workloads on top of Mesos with Go
+#+CATEGORY:	posts
+#+LAYOUT:	post
+
+[[./public/mesos-tasks-output.png]]
+
+One of the things that I left pending from my stay at
+[[https://www.hackerschool.com][HackerSchool]], was to combine a couple of the technologies
+that have caught most of my attention: [[http://mesos.apache.org/][Mesos]] and [[http://orgmode.org/worg/org-contrib/babel/][Org mode]].
+
+#+BEGIN_HTML
+<img src="./public/Mesos-Org.png" alt="./public/Mesos-Org.png" style="margin-left: auto; margin-right: auto; display: block;" />
+#+END_HTML
+
+Although I'm a big fan of the literate programming and active documents
+that Org Babel enables for Emacs there are some limitations in the way
+it does it.  It works perfectly for local runs to get the results in
+place within Emacs, but it does not work very well for long running
+processes:
+
+#+BEGIN_HTML
+<div class="org-src-container">
+
+<pre class="src src-org"><span style="color: #465457; font-style: italic;">#+BEGIN_SRC sh</span>
+<span style="color: #66D9EF;">while</span> true; <span style="color: #A6E22E;">echo</span> <span style="color: #E6DB74;">"hanging the Emacs session :P"</span>; <span style="color: #66D9EF;">done</span>
+<span style="color: #465457; font-style: italic;">#+END_SRC</span>
+</pre>
+</div>
+#+END_HTML
+
+Also in case you want to run a code block remotely, 
+you need to do it via ssh.  Combining this with =#+call= blocks is
+still very cool though:
+
+#+BEGIN_HTML
+<div class="org-src-container">
+
+<pre class="src src-org"><span style="color: #465457; font-style: italic;">#+name: install-emacs</span>
+<span style="color: #465457; font-style: italic;">#+BEGIN_SRC sh :dir /ubuntu@192.168.0.7:/home/ubuntu</span>
+sudo apt-get update
+sudo apt-get install -y emacs24-nox org-mode
+<span style="color: #465457; font-style: italic;">#+END_SRC</span>
+
+<span style="color: #465457; font-style: italic;">#+call: install-emacs() :dir /ubuntu@192.168.0.8:/home/ubuntu</span>
+<span style="color: #465457; font-style: italic;">#+call: install-emacs() :dir /ubuntu@192.168.0.9:/home/ubuntu</span>
+</pre>
+</div>
+#+END_HTML
+
+For some cases, like provisioning and installing packages (usually the
+domain of tools like Chef, Puppet, Ansible, etc...) this may work
+well, but for running jobs remotely we still have the same issue
+of the session hanging and running the code blocks sequentially:
+
+#+BEGIN_HTML
+<div class="org-src-container">
+
+<pre class="src src-org"><span style="color: #465457; font-style: italic;">#+name: run-remotely</span>
+<span style="color: #465457; font-style: italic;">#+BEGIN_SRC sh :dir /ubuntu@192.168.0.7:/home/ubuntu</span>
+<span style="color: #66D9EF;">while</span> true; <span style="color: #66D9EF;">do </span><span style="color: #A6E22E;">echo</span> <span style="color: #E6DB74;">"called sequentially, blocks, not really what we want"</span>; <span style="color: #66D9EF;">done</span>
+<span style="color: #465457; font-style: italic;">#+END_SRC</span>
+
+<span style="color: #465457; font-style: italic;">#+call: run-remotely() :dir /ubuntu@192.168.0.8:/home/ubuntu</span>
+<span style="color: #465457; font-style: italic;">#+call: run-remotely() :dir /ubuntu@192.168.0.9:/home/ubuntu</span>
+</pre>
+</div>
+#+END_HTML
+
+Not only that though, we also have to specify both the credentials
+and resources that we are using for running the workloads.
+Luckily, that is an area where Mesos really shines.
+
+*** How it would look
+
+For the end result, I wanted something like this:
+
+#+BEGIN_HTML
+<div class="org-src-container">
+
+<pre class="src src-org"><span style="color: #b3b3b3;">#+title:</span> <span style="color: #cafe12; font-size: 144%; font-weight: bold;">Example of running Org Babel workloads on Mesos</span>
+
+<span style="color: #A6E22E;">*** Mesos settings</span>
+
+<span style="color: #465457; font-style: italic;">#+address: 192.168.0.7</span>
+<span style="color: #465457; font-style: italic;">#+master:  192.168.0.7:5050</span>
+
+<span style="color: #A6E22E;">*** Code blocks</span>
+
+<span style="color: #465457; font-style: italic;">#+name: hello-mesos</span>
+<span style="color: #465457; font-style: italic;">#+header: :cpus 2 :mem 128</span>
+<span style="color: #465457; font-style: italic;">#+BEGIN_SRC sh</span>
+<span style="color: #66D9EF;">while</span> true; <span style="color: #66D9EF;">do</span> 
+  <span style="color: #A6E22E;">echo</span> <span style="color: #E6DB74;">"hello world from Org Babel!!!"</span>
+  sleep 1
+<span style="color: #66D9EF;">done</span>
+<span style="color: #465457; font-style: italic;">#+END_SRC</span>
+
+<span style="color: #465457; font-style: italic;">#+name: date-example</span>
+<span style="color: #465457; font-style: italic;">#+header: :cpus 2 :mem 256</span>
+<span style="color: #465457; font-style: italic;">#+BEGIN_SRC sh</span>
+<span style="color: #66D9EF;">while</span> true; <span style="color: #66D9EF;">do</span> 
+  <span style="color: #A6E22E;">echo</span> <span style="color: #E6DB74;">"Telling the time!"</span>
+  date
+  sleep 1
+<span style="color: #66D9EF;">done</span>
+<span style="color: #465457; font-style: italic;">#+END_SRC</span>
+</pre>
+</div>
+#+END_HTML
+
+Here, I am defining 2 code blocks, allocating 2 cpus to each.
+Also the second one will have a bit more memory than the other one.
+Only Mesos related configuration that we need is the location of a
+Mesos master and the ip address of the server from where we are
+running the scheduler.
+
+# (if we don't do this it will use the loopback
+# address for some reason and scheduler will fail communicating with the slave).
+
+*** Implementation using the Mesos Go bindings
+
+Mesos with its /level of indirection/ approach, exposes a set of APIs
+that we can rely on to be able to write custom schedulers in a
+different runtime.  The [[https://github.com/mesos/mesos-go][mesos-go]] bindings seem in actively development
+in particular, so I decided to base on those to write the scheduler.
+
+Then, another thing we need is something which can understand Org mode
+documents, for this I implemented a basic parser of [[http://github.com/wallyqs/org-go][Org mode in Go]]
+which can be loaded by the scheduler to orchestrate the run.
+
+Using the Go bindings, we start defining our scheduler:
+
+#+BEGIN_SRC go
+type OrgBabelScheduler struct {
+	tasksLaunched int
+	tasksFinished int
+	blocks        []*org.OrgSrcBlock
+}
+#+END_SRC
+
+And below is a a basic example of how the =ResourceOffers=  handle
+would look.  Once having loaded the contents of the Org mode document,
+we will be inspecting the content of the code block its header
+arguments to procure the resources we want:
+
+#+BEGIN_SRC go
+
+func (sched *OrgBabelScheduler) ResourceOffers(driver sched.SchedulerDriver, offers []*mesos.Offer) {
+
+        // We will get many resource offerings,
+	// but sometimes the resources being offered will not be enough
+	// so we will need to implement backing off in case that happens.
+	for _, offer := range offers {
+
+	        ...
+
+		var tasks []*mesos.TaskInfo
+
+		for _, src := range sched.blocks {
+			sched.tasksLaunched++
+
+			taskId := &mesos.TaskID{
+				Value: proto.String(strconv.Itoa(sched.tasksLaunched)),
+			}
+
+			// Should build the command properly depending of the runtime
+			// Currenty only bash supported, but good enough
+			// since I can just call the runtime from there
+			cmd := src.RawContent
+
+			fmt.Println("[OFFER ] Executing this code block:", src.Name, src.Headers)
+
+			// The code block specifies the resources it should allocate
+			//
+			taskCpus := MIN_CPUS_PER_TASK
+			if src.Headers[":cpus"] != "" {
+			  taskCpus, _ = strconv.Atoi(src.Headers[":cpus"])
+			}
+
+			taskMem := MIN_MEM_PER_TASK
+			if src.Headers[":mem"] != "" {
+			  taskMem, _ = strconv.Atoi(src.Headers[":mem"])
+			}
+
+			task := &mesos.TaskInfo{
+				Name:     proto.String("ob-mesos-" + taskId.GetValue()),
+				TaskId:   taskId,
+				SlaveId:  offer.SlaveId,
+				// Executor: sched.executor,
+				Resources: []*mesos.Resource{
+					util.NewScalarResource("cpus", float64(taskCpus)),
+					util.NewScalarResource("mem", float64(taskMem)),
+				},
+			        Command: &mesos.CommandInfo{
+				 	Value: proto.String(cmd),
+				},
+			}
+			fmt.Printf("[OFFER ] Prepared to launch task:%s with offer %s \n", task.GetName(), offer.Id.GetValue())
+
+			tasks = append(tasks, task)
+		}
+		fmt.Println("[OFFER ] Launching ", len(tasks), "tasks for offer", offer.Id.GetValue())
+		driver.LaunchTasks([]*mesos.OfferID{offer.Id}, tasks, &mesos.Filters{RefuseSeconds: proto.Float64(1)})
+	}
+}
+#+END_SRC
+
+*** Results
+
+The end result of this experiment looks like this:
+
+#+BEGIN_SRC conf
+$ go run examples/org_scheduler.go -f org/job.org -logtostderr=true 
+
+...
+[REGIST] Framework Registered with Master  &MasterInfo{Id:*20150225-084641-117483712-5050-23902,Ip:*117483712,Port:*5050,Pid:*master@192.168.0.7:5050,Hostname:*192.168.0.7,XXX_unrecognized:[],}
+[OFFER ] offerId = 20150225-084641-117483712-5050-23902-O60 , cpus = 4 , mem = 2812
+[OFFER ] Executing this code block: hello-mesos map[:procs:5 :cpus:2 :mem:128]
+[OFFER ] Prepared to launch task:ob-mesos-1 with offer 20150225-084641-117483712-5050-23902-O60 
+[OFFER ] Executing this code block: date-example map[:cpus:2 :mem:256]
+[OFFER ] Prepared to launch task:ob-mesos-2 with offer 20150225-084641-117483712-5050-23902-O60 
+[OFFER ] Launching  2 tasks for offer 20150225-084641-117483712-5050-23902-O60
+[STATUS] task 1  is in state  TASK_RUNNING
+[STATUS] task 2  is in state  TASK_RUNNING
+#+END_SRC
+
+We can also check the logs within the Mesos slave sandbox:
+
+[[./public/mesos-tasks.png]]
+
+Full source of the implementation can be found [[https://github.com/wallyqs/mesos-notes/blob/master/org/org-scheduler.org][here]], written in
+literate programming with Org mode of course..
+
+*** Conclusion
+
+But, why even use Org mode for this?  Well, the best thing I think
+that it has for it is that we are *adding value transparently* to the
+way that we are executing our workloads along with its description.
+
+By having a document format where code blocks are first class citizen,
+we can both manipulate the way we run something without losing the
+thought process of how we ran it in the first place (since human writing also
+first class citizen), thus emphasizing both reproducibility and readability.
+
+Locally, the code blocks would still eval
+using the Org mode active document features, but by dispatching it to
+something like the =OrgBabelScheduler=, we can just /lift/ those code blocks and run
+them in a distributed fashion.
+
+There are still some ideas I have around this and the possibilites
+that it would open around /reproducible research/.
+
+Feedback is very welcome! You can also follow me on [[https://twitter.com/wallyqs][Twitter]] if you
+find this interesting...
