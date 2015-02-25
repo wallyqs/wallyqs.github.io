@@ -4,13 +4,225 @@
  <title>Literate Infrastructure</title>
  <link href="/atom.xml" rel="self"/>
  <link href="/"/>
- <updated>2014-12-25T04:01:53-05:00</updated>
+ <updated>2015-02-25T15:03:51+09:00</updated>
  <id></id>
  <author>
    <name>Waldemar Quevedo</name>
    <email></email>
  </author>
 
+ 
+ <entry>
+   <title>Running Org Babel workloads on top of Mesos with Go</title>
+   <link href="/posts/2015/02/25/ob-mesos/"/>
+   <updated>2015-02-25T00:00:00+09:00</updated>
+   <id>/posts/2015/02/25/ob-mesos</id>
+   <content type="html">
+&lt;p&gt;&lt;img src=&quot;./public/mesos-tasks-output.png&quot; alt=&quot;./public/mesos-tasks-output.png&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;One of the things that I left pending from my stay at
+  &lt;a href=&quot;https://www.hackerschool.com&quot;&gt;HackerSchool&lt;/a&gt;, was to combine a couple of the technologies
+  that have caught most of my attention: &lt;a href=&quot;http://mesos.apache.org/&quot;&gt;Mesos&lt;/a&gt; and &lt;a href=&quot;http://orgmode.org/worg/org-contrib/babel/&quot;&gt;Org mode&lt;/a&gt;.&lt;/p&gt;
+&lt;img src=&quot;./public/Mesos-Org.png&quot; alt=&quot;./public/Mesos-Org.png&quot; style=&quot;margin-left: auto; margin-right: auto; display: block;&quot; /&gt;
+&lt;p&gt;Although I&amp;#8217;m a big fan of the literate programming and active documents
+  that Org Babel enables for Emacs there are some limitations in the way
+  it does it.  It works perfectly for local runs to get the results in
+  place within Emacs, but it does not work very well for long running
+  processes:&lt;/p&gt;
+&lt;div class=&quot;org-src-container&quot;&gt;
+
+&lt;pre class=&quot;src src-org&quot;&gt;&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+BEGIN_SRC sh&lt;/span&gt;
+&lt;span style=&quot;color: #66D9EF;&quot;&gt;while&lt;/span&gt; true; &lt;span style=&quot;color: #A6E22E;&quot;&gt;echo&lt;/span&gt; &lt;span style=&quot;color: #E6DB74;&quot;&gt;&quot;hanging the Emacs session :P&quot;&lt;/span&gt;; &lt;span style=&quot;color: #66D9EF;&quot;&gt;done&lt;/span&gt;
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+END_SRC&lt;/span&gt;
+&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;Also in case you want to run a code block remotely,
+  you need to do it via ssh.  Combining this with &lt;code&gt;#+call&lt;/code&gt; blocks is
+  still very cool though:&lt;/p&gt;
+&lt;div class=&quot;org-src-container&quot;&gt;
+
+&lt;pre class=&quot;src src-org&quot;&gt;&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+name: install-emacs&lt;/span&gt;
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+BEGIN_SRC sh :dir /ubuntu@192.168.0.7:/home/ubuntu&lt;/span&gt;
+sudo apt-get update
+sudo apt-get install -y emacs24-nox org-mode
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+END_SRC&lt;/span&gt;
+
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+call: install-emacs() :dir /ubuntu@192.168.0.8:/home/ubuntu&lt;/span&gt;
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+call: install-emacs() :dir /ubuntu@192.168.0.9:/home/ubuntu&lt;/span&gt;
+&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;For some cases, like provisioning and installing packages (usually the
+  domain of tools like Chef, Puppet, Ansible, etc&amp;#8230;) this may work
+  well, but for running jobs remotely we still have the same issue
+  of the session hanging and running the code blocks sequentially:&lt;/p&gt;
+&lt;div class=&quot;org-src-container&quot;&gt;
+
+&lt;pre class=&quot;src src-org&quot;&gt;&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+name: run-remotely&lt;/span&gt;
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+BEGIN_SRC sh :dir /ubuntu@192.168.0.7:/home/ubuntu&lt;/span&gt;
+&lt;span style=&quot;color: #66D9EF;&quot;&gt;while&lt;/span&gt; true; &lt;span style=&quot;color: #66D9EF;&quot;&gt;do &lt;/span&gt;&lt;span style=&quot;color: #A6E22E;&quot;&gt;echo&lt;/span&gt; &lt;span style=&quot;color: #E6DB74;&quot;&gt;&quot;called sequentially, blocks, not really what we want&quot;&lt;/span&gt;; &lt;span style=&quot;color: #66D9EF;&quot;&gt;done&lt;/span&gt;
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+END_SRC&lt;/span&gt;
+
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+call: run-remotely() :dir /ubuntu@192.168.0.8:/home/ubuntu&lt;/span&gt;
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+call: run-remotely() :dir /ubuntu@192.168.0.9:/home/ubuntu&lt;/span&gt;
+&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;Not only that though, we also have to specify both the credentials
+  and resources that we are using for running the workloads.
+  Luckily, that is an area where Mesos really shines.&lt;/p&gt;
+&lt;h3&gt;How it would look&lt;/h3&gt;
+&lt;p&gt;For the end result, I wanted something like this:&lt;/p&gt;
+&lt;div class=&quot;org-src-container&quot;&gt;
+
+&lt;pre class=&quot;src src-org&quot;&gt;&lt;span style=&quot;color: #b3b3b3;&quot;&gt;#+title:&lt;/span&gt; &lt;span style=&quot;color: #cafe12; font-size: 144%; font-weight: bold;&quot;&gt;Example of running Org Babel workloads on Mesos&lt;/span&gt;
+
+&lt;span style=&quot;color: #A6E22E;&quot;&gt;*** Mesos settings&lt;/span&gt;
+
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+address: 192.168.0.7&lt;/span&gt;
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+master:  192.168.0.7:5050&lt;/span&gt;
+
+&lt;span style=&quot;color: #A6E22E;&quot;&gt;*** Code blocks&lt;/span&gt;
+
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+name: hello-mesos&lt;/span&gt;
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+header: :cpus 2 :mem 128&lt;/span&gt;
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+BEGIN_SRC sh&lt;/span&gt;
+&lt;span style=&quot;color: #66D9EF;&quot;&gt;while&lt;/span&gt; true; &lt;span style=&quot;color: #66D9EF;&quot;&gt;do&lt;/span&gt; 
+  &lt;span style=&quot;color: #A6E22E;&quot;&gt;echo&lt;/span&gt; &lt;span style=&quot;color: #E6DB74;&quot;&gt;&quot;hello world from Org Babel!!!&quot;&lt;/span&gt;
+  sleep 1
+&lt;span style=&quot;color: #66D9EF;&quot;&gt;done&lt;/span&gt;
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+END_SRC&lt;/span&gt;
+
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+name: date-example&lt;/span&gt;
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+header: :cpus 2 :mem 256&lt;/span&gt;
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+BEGIN_SRC sh&lt;/span&gt;
+&lt;span style=&quot;color: #66D9EF;&quot;&gt;while&lt;/span&gt; true; &lt;span style=&quot;color: #66D9EF;&quot;&gt;do&lt;/span&gt; 
+  &lt;span style=&quot;color: #A6E22E;&quot;&gt;echo&lt;/span&gt; &lt;span style=&quot;color: #E6DB74;&quot;&gt;&quot;Telling the time!&quot;&lt;/span&gt;
+  date
+  sleep 1
+&lt;span style=&quot;color: #66D9EF;&quot;&gt;done&lt;/span&gt;
+&lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+END_SRC&lt;/span&gt;
+&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;Here, I am defining 2 code blocks, allocating 2 cpus to each.
+  Also the second one will have a bit more memory than the other one.
+  Only Mesos related configuration that we need is the location of a
+  Mesos master and the ip address of the server from where we are
+  running the scheduler.&lt;/p&gt;
+&lt;h3&gt;Implementation using the Mesos Go bindings&lt;/h3&gt;
+&lt;p&gt;Mesos with its &lt;i&gt;level of indirection&lt;/i&gt; approach, exposes a set of APIs
+  that we can rely on to be able to write custom schedulers in a
+  different runtime.  The &lt;a href=&quot;https://github.com/mesos/mesos-go&quot;&gt;mesos-go&lt;/a&gt; bindings seem in actively development
+  in particular, so I decided to base on those to write the scheduler.&lt;/p&gt;
+&lt;p&gt;Then, another thing we need is something which can understand Org mode
+  documents, for this I implemented a basic parser of &lt;a href=&quot;http://github.com/wallyqs/org-go&quot;&gt;Org mode in Go&lt;/a&gt;
+  which can be loaded by the scheduler to orchestrate the run.&lt;/p&gt;
+&lt;p&gt;Using the Go bindings, we start defining our scheduler:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;kd&quot;&gt;type&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;OrgBabelScheduler&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;struct&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+	&lt;span class=&quot;nx&quot;&gt;tasksLaunched&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt;
+	&lt;span class=&quot;nx&quot;&gt;tasksFinished&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt;
+	&lt;span class=&quot;nx&quot;&gt;blocks&lt;/span&gt;        &lt;span class=&quot;p&quot;&gt;[]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;org&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;OrgSrcBlock&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;And below is a a basic example of how the &lt;code&gt;ResourceOffers&lt;/code&gt;  handle
+  would look.  Once having loaded the contents of the Org mode document,
+  we will be inspecting the content of the code block its header
+  arguments to procure the resources we want:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;kd&quot;&gt;func&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;sched&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;OrgBabelScheduler&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;ResourceOffers&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;driver&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;sched&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;SchedulerDriver&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;offers&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;mesos&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;Offer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+
+        &lt;span class=&quot;c1&quot;&gt;// We will get many resource offerings,&lt;/span&gt;
+	&lt;span class=&quot;c1&quot;&gt;// but sometimes the resources being offered will not be enough&lt;/span&gt;
+	&lt;span class=&quot;c1&quot;&gt;// so we will need to implement backing off in case that happens.&lt;/span&gt;
+	&lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;_&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;offer&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;range&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;offers&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+
+	        &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt;
+
+		&lt;span class=&quot;kd&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;tasks&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;mesos&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;TaskInfo&lt;/span&gt;
+
+		&lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;_&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;src&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;range&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;sched&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;blocks&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+			&lt;span class=&quot;nx&quot;&gt;sched&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;tasksLaunched&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;++&lt;/span&gt;
+
+			&lt;span class=&quot;nx&quot;&gt;taskId&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;mesos&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;TaskID&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+				&lt;span class=&quot;nx&quot;&gt;Value&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;proto&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;strconv&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;Itoa&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;sched&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;tasksLaunched&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)),&lt;/span&gt;
+			&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+			&lt;span class=&quot;c1&quot;&gt;// Should build the command properly depending of the runtime&lt;/span&gt;
+			&lt;span class=&quot;c1&quot;&gt;// Currenty only bash supported, but good enough&lt;/span&gt;
+			&lt;span class=&quot;c1&quot;&gt;// since I can just call the runtime from there&lt;/span&gt;
+			&lt;span class=&quot;nx&quot;&gt;cmd&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;src&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;RawContent&lt;/span&gt;
+
+			&lt;span class=&quot;nx&quot;&gt;fmt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;Println&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;[OFFER ] Executing this code block:&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;src&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;Name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;src&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;Headers&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+			&lt;span class=&quot;c1&quot;&gt;// The code block specifies the resources it should allocate&lt;/span&gt;
+			&lt;span class=&quot;c1&quot;&gt;//&lt;/span&gt;
+			&lt;span class=&quot;nx&quot;&gt;taskCpus&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;MIN_CPUS_PER_TASK&lt;/span&gt;
+			&lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;src&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;Headers&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;:cpus&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+			  &lt;span class=&quot;nx&quot;&gt;taskCpus&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;_&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;strconv&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;Atoi&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;src&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;Headers&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;:cpus&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;])&lt;/span&gt;
+			&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+			&lt;span class=&quot;nx&quot;&gt;taskMem&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;MIN_MEM_PER_TASK&lt;/span&gt;
+			&lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;src&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;Headers&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;:mem&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+			  &lt;span class=&quot;nx&quot;&gt;taskMem&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;_&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;strconv&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;Atoi&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;src&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;Headers&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;:mem&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;])&lt;/span&gt;
+			&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+			&lt;span class=&quot;nx&quot;&gt;task&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;mesos&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;TaskInfo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+				&lt;span class=&quot;nx&quot;&gt;Name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;     &lt;span class=&quot;nx&quot;&gt;proto&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;ob-mesos-&amp;quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;taskId&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;GetValue&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()),&lt;/span&gt;
+				&lt;span class=&quot;nx&quot;&gt;TaskId&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;   &lt;span class=&quot;nx&quot;&gt;taskId&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+				&lt;span class=&quot;nx&quot;&gt;SlaveId&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;  &lt;span class=&quot;nx&quot;&gt;offer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;SlaveId&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+				&lt;span class=&quot;c1&quot;&gt;// Executor: sched.executor,&lt;/span&gt;
+				&lt;span class=&quot;nx&quot;&gt;Resources&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;mesos&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;Resource&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+					&lt;span class=&quot;nx&quot;&gt;util&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;NewScalarResource&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;cpus&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;float64&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;taskCpus&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)),&lt;/span&gt;
+					&lt;span class=&quot;nx&quot;&gt;util&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;NewScalarResource&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;mem&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;float64&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;taskMem&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)),&lt;/span&gt;
+				&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+			        &lt;span class=&quot;nx&quot;&gt;Command&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;mesos&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;CommandInfo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+				 	&lt;span class=&quot;nx&quot;&gt;Value&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;proto&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;cmd&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;
+				&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+			&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+			&lt;span class=&quot;nx&quot;&gt;fmt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;Printf&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;[OFFER ] Prepared to launch task:%s with offer %s \n&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;task&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;GetName&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;offer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;Id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;GetValue&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;())&lt;/span&gt;
+
+			&lt;span class=&quot;nx&quot;&gt;tasks&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;append&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;tasks&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;task&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+		&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+		&lt;span class=&quot;nx&quot;&gt;fmt&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;Println&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;[OFFER ] Launching &amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;len&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;tasks&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;tasks for offer&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;offer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;Id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;GetValue&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;())&lt;/span&gt;
+		&lt;span class=&quot;nx&quot;&gt;driver&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;LaunchTasks&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;([]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;mesos&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;OfferID&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;offer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;Id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;tasks&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;mesos&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;Filters&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;RefuseSeconds&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;proto&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;Float64&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)})&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h3&gt;Results&lt;/h3&gt;
+&lt;p&gt;The end result of this experiment looks like this:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;$ go run examples/org_scheduler.go -f org/job.org -logtostderr=true 
+
+...
+[REGIST] Framework Registered with Master  &amp;amp;MasterInfo{Id:*20150225-084641-117483712-5050-23902,Ip:*117483712,Port:*5050,Pid:*master@192.168.0.7:5050,Hostname:*192.168.0.7,XXX_unrecognized:[],}
+[OFFER ] offerId = 20150225-084641-117483712-5050-23902-O60 , cpus = 4 , mem = 2812
+[OFFER ] Executing this code block: hello-mesos map[:procs:5 :cpus:2 :mem:128]
+[OFFER ] Prepared to launch task:ob-mesos-1 with offer 20150225-084641-117483712-5050-23902-O60 
+[OFFER ] Executing this code block: date-example map[:cpus:2 :mem:256]
+[OFFER ] Prepared to launch task:ob-mesos-2 with offer 20150225-084641-117483712-5050-23902-O60 
+[OFFER ] Launching  2 tasks for offer 20150225-084641-117483712-5050-23902-O60
+[STATUS] task 1  is in state  TASK_RUNNING
+[STATUS] task 2  is in state  TASK_RUNNING
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;We can also check the logs within the Mesos slave sandbox:&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;./public/mesos-tasks.png&quot; alt=&quot;./public/mesos-tasks.png&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;Full source of the implementation can be found &lt;a href=&quot;https://github.com/wallyqs/mesos-notes/blob/master/org/org-scheduler.org&quot;&gt;here&lt;/a&gt;, written in
+  literate programming with Org mode of course..&lt;/p&gt;
+&lt;h3&gt;Conclusion&lt;/h3&gt;
+&lt;p&gt;But, why even use Org mode for this?  Well, the best thing I think
+  that it has for it is that we are &lt;b&gt;adding value transparently&lt;/b&gt; to the
+  way that we are executing our workloads along with its description.&lt;/p&gt;
+&lt;p&gt;By having a document format where code blocks are first class citizen,
+  we can both manipulate the way we run something without losing the
+  thought process of how we ran it in the first place (since human writing also
+  first class citizen), thus emphasizing both reproducibility and readability.&lt;/p&gt;
+&lt;p&gt;Locally, the code blocks would still eval
+  using the Org mode active document features, but by dispatching it to
+  something like the &lt;code&gt;OrgBabelScheduler&lt;/code&gt;, we can just &lt;i&gt;lift&lt;/i&gt; those code blocks and run
+  them in a distributed fashion.&lt;/p&gt;
+&lt;p&gt;There are still some ideas I have around this and the possibilites
+  that it would open around &lt;i&gt;reproducible research&lt;/i&gt;.&lt;/p&gt;
+&lt;p&gt;Feedback is very welcome! You can also follow me on &lt;a href=&quot;https://twitter.com/wallyqs&quot;&gt;Twitter&lt;/a&gt; if you
+  find this interesting&amp;#8230;&lt;/p&gt;
+
+
+</content>
+ </entry>
  
  <entry>
    <title>About type switch usage in Go</title>
@@ -247,7 +459,7 @@ o.Name undefined (type interface {} has no field or method Name)
  <entry>
    <title>Quickly inspecting HTTP traffic with tcpdump</title>
    <link href="/posts/2014/12/12/using-tcpdump/"/>
-   <updated>2014-12-12T00:00:00-05:00</updated>
+   <updated>2014-12-12T00:00:00+09:00</updated>
    <id>/posts/2014/12/12/using-tcpdump</id>
    <content type="html">
 &lt;p&gt;Just a quick post on one of my favorite features of &lt;code&gt;tcpdump&lt;/code&gt; that I
@@ -312,12 +524,12 @@ Accept-Language: en-US,en&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;&lt;span 
  <entry>
    <title>Org Babelで文芸的プログラミング</title>
    <link href="/posts/2014/12/12/using-org-babel-for-lp-jp/"/>
-   <updated>2014-12-12T00:00:00-05:00</updated>
+   <updated>2014-12-12T00:00:00+09:00</updated>
    <id>/posts/2014/12/12/using-org-babel-for-lp-jp</id>
    <content type="html">
 &lt;p&gt;(This is a post for the &lt;a href=&quot;http://qiita.com/advent-calendar/2014/emacs&quot;&gt;Emacs Advent Calendar 2014&lt;/a&gt; from Japan, a similar English version can be found &lt;a href=&quot;http://literateinfrastructure.org/posts/2014/12/12/using-org-babel-for-lp/&quot;&gt;here&lt;/a&gt;)&lt;/p&gt;
 &lt;p&gt;Org modeの話を聞いたことがある方は、Org modeは「TODOリスト管理ツールの
-  一つだ」と思われる方が多いかもしれません。それは当たっていますが、
+  一つだ」と思われる方が多いかもしれません。それはその通りですが、
   Org Babelというモードで、「文芸的プログラミング(Literate Programming)」を実現することができます。&lt;/p&gt;
 &lt;p&gt;Org Babelの使い方を示すために、あるホストのモニタリング情報を表示する、
   単純なSinatraアプリケーションを例えにします。&lt;/p&gt;
@@ -332,12 +544,12 @@ Accept-Language: en-US,en&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;&lt;span 
 
        5
 &lt;/pre&gt;&lt;/div&gt;
-&lt;p&gt;この二つのコマンドの結果を集まって、 HTTPクライアントを使えば
-  &lt;code&gt;GET /vars&lt;/code&gt; で取れるようにします：&lt;/p&gt;
+&lt;p&gt;この二つのコマンドの結果を集めて、 HTTPクライアントを使えば
+  &lt;code&gt;GET /vars&lt;/code&gt; で取れるようになります：&lt;/p&gt;
 &lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;curl 127.0.0.1:9292/vars
 &lt;/pre&gt;&lt;/div&gt;
 &lt;h3&gt;事前準備&lt;/h3&gt;
-&lt;p&gt;まず、ディレクトリの作成は必要です:&lt;/p&gt;
+&lt;p&gt;まず、ディレクトリの作成が必要です:&lt;/p&gt;
 &lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;mkdir -p org
 mkdir -p src
 touch readme.org
@@ -346,7 +558,7 @@ touch readme.org
   &lt;li&gt;&lt;code&gt;org/&lt;/code&gt; ディレクトリの下に置くファイルはOrg mode で書きます&lt;/li&gt;
   &lt;li&gt;&lt;code&gt;src/&lt;/code&gt; ディレクトリの下に置くファイルはSinatraアプリケーションのソースコード&lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;(&lt;code&gt;readme.org&lt;/code&gt; の作成は必要ではないけど、best practiceとしておすすめします&amp;#8230;)&lt;/p&gt;
+&lt;p&gt;(&lt;code&gt;readme.org&lt;/code&gt; の作成は必要ではないですが、best practiceとしておすすめします&amp;#8230;)&lt;/p&gt;
 &lt;p&gt;最終的に、ディレクトリ構成はこんな感じになります:&lt;/p&gt;
 &lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;.
 ├── org
@@ -412,10 +624,10 @@ require &lt;span class=&quot;s1&quot;&gt;&amp;#39;./app.rb&amp;#39;&lt;/span&gt;
 run Sinatra::Application
 &lt;span class=&quot;c&quot;&gt;#+END_SRC&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
-&lt;h4&gt;&lt;i&gt;Full Example&lt;/i&gt;&lt;/h4&gt;
+&lt;h4&gt;&lt;i&gt;全体例&lt;/i&gt;&lt;/h4&gt;
 &lt;p&gt;EmacsのOrg modeバッファーで, &lt;code&gt;C-c C-v t&lt;/code&gt; か &lt;code&gt;C-c C-v C-t&lt;/code&gt; を叩けば、
   Org modeの &lt;code&gt;org-babel-tangle&lt;/code&gt; の機能を呼び出します。
-  これで、動かせるプログラムは &lt;code&gt;src/&lt;/code&gt; ディレクトリのしたに現れます。&lt;/p&gt;
+  これで、動かせるプログラムは &lt;code&gt;src/&lt;/code&gt; ディレクトリの下に現れます。&lt;/p&gt;
 &lt;pre class=&quot;src src-org&quot;&gt;&lt;span style=&quot;color: #b3b3b3;&quot;&gt;#+TITLE:&lt;/span&gt; &lt;span style=&quot;color: #cafe12; font-size: 144%; font-weight: bold;&quot;&gt;Monitoring HTTP endpoint&lt;/span&gt;
 
   This is a simple Sinatra application that provides
@@ -485,8 +697,8 @@ run Sinatra::Application
 &lt;/pre&gt;
 
 &lt;h3&gt;動かす方法&lt;/h3&gt;
-&lt;p&gt;次、プログラムを動かす方法を &lt;code&gt;org/run.org&lt;/code&gt; にまとめます。
-  プログラムを動かす前に、Sinatraのプログラムに修正修正があったかもしれないから、
+&lt;p&gt;次に、プログラムを動かす方法を &lt;code&gt;org/run.org&lt;/code&gt; にまとめます。
+  プログラムを動かす前に、Sinatraのプログラムに修正があったかも知れないので、
   &lt;code&gt;#+include: org/app.org&lt;/code&gt; でこの依存関係を設定します。&lt;/p&gt;
 &lt;pre class=&quot;src src-org&quot;&gt;&lt;span style=&quot;color: #b3b3b3;&quot;&gt;#+TITLE:&lt;/span&gt;   &lt;span style=&quot;color: #cafe12; font-size: 144%; font-weight: bold;&quot;&gt;Running the Application&lt;/span&gt;
 &lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+include: &quot;org/app.org&quot;&lt;/span&gt;
@@ -512,8 +724,8 @@ Now let&#39;s send some requests to it:
 &lt;span style=&quot;color: #66D9EF;&quot;&gt;done&lt;/span&gt;
 &lt;span style=&quot;color: #465457; font-style: italic;&quot;&gt;#+END_SRC&lt;/span&gt;
 &lt;/pre&gt;
-&lt;p&gt;Emacsでlong running processesを実行出来ますが、そうするとEmacsがコードブロック
-  の結果を待ちしちゃいます&amp;#8230; それは少し残念ですけれども、
+&lt;p&gt;Emacsでlong running processesを実行できますが、そうするとEmacsがコードブロック
+  の結果待ちをしてしまいます&amp;#8230; それを避けるため、
   コードブロックの上に、 &lt;code&gt;#+name&lt;/code&gt; を設定すれば、私が作ったgemで叩くことができます:&lt;/p&gt;
 &lt;pre class=&quot;example&quot;&gt;
 gem install org-converge
@@ -555,9 +767,9 @@ curl      --
 curl      -- 
 &lt;/pre&gt;&lt;/div&gt;
 &lt;h3&gt;まとめ&lt;/h3&gt;
-&lt;p&gt;Org modeはすごく便利！皆使いましょう！
-  そして、Githubさんが org-rubyを使って &lt;code&gt;.org&lt;/code&gt; ファイルをHTMLに変換してくれる！
-  Ruby の Org modeパーサはまだOrg mode のすべての機能に追いついていないけど、
+&lt;p&gt;Org modeはとても便利です！皆さんぜひお試しください。
+  しかも、Githubさんが org-rubyを使って &lt;code&gt;.org&lt;/code&gt; ファイルをHTMLに変換してくれるのです。
+  Ruby の Org modeパーサはまだOrg mode のすべての機能に追いついていませんが、
   私がある程度メンテナンスしています。もしOrg Rubyに何かの問題があれば、
   こちらに &lt;a href=&quot;https://github.com/wallyqs/org-ruby/issues&quot;&gt;issue&lt;/a&gt; を発行していただければと思います。 :)&lt;/p&gt;
 &lt;p&gt;(そして、日本語が間違っている場合、こちらに &lt;a href=&quot;https://github.com/wallyqs/wallyqs.github.io/tree/source/org/posts&quot;&gt;PR&lt;/a&gt; ください&amp;#8230;)&lt;/p&gt;
@@ -569,7 +781,7 @@ curl      --
  <entry>
    <title>Using Org Babel for Literate Programming</title>
    <link href="/posts/2014/12/12/using-org-babel-for-lp/"/>
-   <updated>2014-12-12T00:00:00-05:00</updated>
+   <updated>2014-12-12T00:00:00+09:00</updated>
    <id>/posts/2014/12/12/using-org-babel-for-lp</id>
    <content type="html">
 &lt;p&gt;Most people that have heard about Org mode are aware that
@@ -857,7 +1069,7 @@ curl      --
  <entry>
    <title>The Eternal Recurrence of PaaS</title>
    <link href="/posts/2014/12/08/eternal-recurrence-of-paas/"/>
-   <updated>2014-12-08T00:00:00-05:00</updated>
+   <updated>2014-12-08T00:00:00+09:00</updated>
    <id>/posts/2014/12/08/eternal-recurrence-of-paas</id>
    <content type="html">
 &lt;p&gt;Distributed Systems are hard.&lt;/p&gt;
@@ -980,7 +1192,7 @@ curl      --
  <entry>
    <title>Gradually adopting Org mode, part 1</title>
    <link href="/posts/2014/12/04/using-org-babel/"/>
-   <updated>2014-12-04T00:00:00-05:00</updated>
+   <updated>2014-12-04T00:00:00+09:00</updated>
    <id>/posts/2014/12/04/using-org-babel</id>
    <content type="html">
 &lt;p&gt;Like most Org mode users, I started using Org mode as a TODO list.
@@ -1196,7 +1408,7 @@ Dear Alice...
  <entry>
    <title>Basic NATS</title>
    <link href="/posts/2014/11/17/basic-nats-client/"/>
-   <updated>2014-11-17T00:00:00-05:00</updated>
+   <updated>2014-11-17T00:00:00+09:00</updated>
    <id>/posts/2014/11/17/basic-nats-client</id>
    <content type="html">
 &lt;p&gt;There aren&amp;#8217;t many docs out there on &lt;a href=&quot;http://nats.io/&quot;&gt;NATS&lt;/a&gt; even though it is
@@ -1425,7 +1637,7 @@ nats-client	-- 137 messages received
  <entry>
    <title>Counting words with NATS</title>
    <link href="/posts/2014/10/16/counting-words-with-nats/"/>
-   <updated>2014-10-16T00:00:00-04:00</updated>
+   <updated>2014-10-16T00:00:00+09:00</updated>
    <id>/posts/2014/10/16/counting-words-with-nats</id>
    <content type="html">
 &lt;p&gt;Still going through the &lt;i&gt;&lt;a href=&quot;http://www.amazon.com/Exercises-Programming-Style-Cristina-Videira/dp/1482227371/&quot;&gt;Exercises in Programming Styles&lt;/a&gt;&lt;/i&gt;, after
@@ -1729,7 +1941,7 @@ aggregator          -- good  -  201
  <entry>
    <title>Term Frequency with Transducers gem in Ruby</title>
    <link href="/posts/2014/10/11/transducers-in-ruby/"/>
-   <updated>2014-10-11T00:00:00-04:00</updated>
+   <updated>2014-10-11T00:00:00+09:00</updated>
    <id>/posts/2014/10/11/transducers-in-ruby</id>
    <content type="html">
 &lt;p&gt;Yesterday, Cognitect &lt;a href=&quot;https://twitter.com/cognitect/status/520644214116212736https://twitter.com/cognitect/status/520644214116212736&quot;&gt;announced&lt;/a&gt; about a Ruby implementation among
@@ -1893,7 +2105,7 @@ aggregator          -- good  -  201
  <entry>
    <title>Hacker School - week #1 recap</title>
    <link href="/posts/2014/10/10/hs-recap-1st-week/"/>
-   <updated>2014-10-10T00:00:00-04:00</updated>
+   <updated>2014-10-10T00:00:00+09:00</updated>
    <id>/posts/2014/10/10/hs-recap-1st-week</id>
    <content type="html">
 &lt;p&gt;It&amp;#8217;s been almost a week since I came to New York to join
@@ -1941,7 +2153,7 @@ aggregator          -- good  -  201
  <entry>
    <title>Switching to Hyde</title>
    <link href="/posts/2014/10/08/moved-to-hyde/"/>
-   <updated>2014-10-08T00:00:00-04:00</updated>
+   <updated>2014-10-08T00:00:00+09:00</updated>
    <id>/posts/2014/10/08/moved-to-hyde</id>
    <content type="html">
 &lt;p&gt;Here is a modified version of the original Hyde fit for my flow
@@ -1955,7 +2167,7 @@ aggregator          -- good  -  201
  <entry>
    <title>At Hacker School in NY</title>
    <link href="/posts/2014/10/06/first-day-at-hackerschool/"/>
-   <updated>2014-10-06T00:00:00-04:00</updated>
+   <updated>2014-10-06T00:00:00+09:00</updated>
    <id>/posts/2014/10/06/first-day-at-hackerschool</id>
    <content type="html">
 &lt;p&gt;I managed to get into the Fall batch from Hacker School.
@@ -1988,7 +2200,7 @@ aggregator          -- good  -  201
  <entry>
    <title>About Org Converge</title>
    <link href="/posts/2014/06/04/org-converge-post/"/>
-   <updated>2014-06-04T00:00:00-04:00</updated>
+   <updated>2014-06-04T00:00:00+09:00</updated>
    <id>/posts/2014/06/04/org-converge-post</id>
    <content type="html">
 &lt;p&gt;In a past release from Org Ruby, I added the functionality to be able
@@ -2124,7 +2336,7 @@ for i in range(0, 20):
  <entry>
    <title>Replacing Jekyll YAML headers with Org mode buffer settings</title>
    <link href="/posts/2013/12/06/jekyll-without-yaml/"/>
-   <updated>2013-12-06T00:00:00-05:00</updated>
+   <updated>2013-12-06T00:00:00+09:00</updated>
    <id>/posts/2013/12/06/jekyll-without-yaml</id>
    <content type="html">
 &lt;p&gt;I took a quick look at what would be required
@@ -2235,7 +2447,7 @@ for i in range(0, 20):
  <entry>
    <title>Started to blog with Jekyll</title>
    <link href="/posts/2013/11/24/hello/"/>
-   <updated>2013-11-24T00:00:00-05:00</updated>
+   <updated>2013-11-24T00:00:00+09:00</updated>
    <id>/posts/2013/11/24/hello</id>
    <content type="html">
 &lt;p&gt;Starting a blog using the &lt;a href=&quot;https://github.com/holman/left&quot;&gt;Left&lt;/a&gt; theme for &lt;a href=&quot;https://github.com/mojombo/jekyll&quot;&gt;Jekyll&lt;/a&gt;.&lt;/p&gt;

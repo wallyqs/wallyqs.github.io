@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+
+  <head>
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+  <!-- Enable responsiveness on mobile devices-->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  <title>
+    
+      Running Org Babel workloads on top of Mesos with Go &middot; Literate Infrastructure
+    
+  </title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/public/css/poole.css">
+  <link rel="stylesheet" href="/public/css/syntax.css">
+  <link rel="stylesheet" href="/public/css/hyde.css">
+  <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+
+  <!-- Icons -->
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/public/apple-touch-icon-144-precomposed.png">
+                                 <link rel="shortcut icon" href="/public/favicon.ico">
+
+  <!-- RSS -->
+  <link rel="alternate" type="application/rss+xml" title="RSS" href="/atom.xml">
+</head>
+
+
+  <body>
+  <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-55629836-1', 'auto');
+    ga('send', 'pageview');
+
+  </script>
+    <div class="sidebar">
+  <div class="container sidebar-sticky">
+    <div class="sidebar-about">
+      <h2>
+        <a href="/">
+          Literate Infrastructure
+        </a>
+      </h2>
+      <p>PaaS + Org mode</p>
+      <p class="lead"><a href="https://twitter.com/wallyqs" target="_blank">@wallyqs</a></p>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="sidebar-nav-item" href="/">Home</a>
+
+      
+      
+        
+          
+        
+      
+        
+          
+            <a class="sidebar-nav-item" href="/about.html">About</a>
+          
+        
+      
+        
+      
+        
+          
+        
+      
+        
+          
+            <a class="sidebar-nav-item" href="/posts/">Posts</a>
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+        
+          
+        
+      
+
+    </nav>
+
+    <p>&copy; 2015. All rights reserved.</p>
+  </div>
+</div>
+
+
+    <div class="content container">
+      <div class="post">
+  <h1 class="post-title">Running Org Babel workloads on top of Mesos with Go</h1>
+  <span class="post-date">25 Feb 2015</span>
+  
+<p><img src="./public/mesos-tasks-output.png" alt="./public/mesos-tasks-output.png" /></p>
+<p>One of the things that I left pending from my stay at
+  <a href="https://www.hackerschool.com">HackerSchool</a>, was to combine a couple of the technologies
+  that have caught most of my attention: <a href="http://mesos.apache.org/">Mesos</a> and <a href="http://orgmode.org/worg/org-contrib/babel/">Org mode</a>.</p>
+<img src="./public/Mesos-Org.png" alt="./public/Mesos-Org.png" style="margin-left: auto; margin-right: auto; display: block;" />
+<p>Although I&#8217;m a big fan of the literate programming and active documents
+  that Org Babel enables for Emacs there are some limitations in the way
+  it does it.  It works perfectly for local runs to get the results in
+  place within Emacs, but it does not work very well for long running
+  processes:</p>
+<div class="org-src-container">
+
+<pre class="src src-org"><span style="color: #465457; font-style: italic;">#+BEGIN_SRC sh</span>
+<span style="color: #66D9EF;">while</span> true; <span style="color: #A6E22E;">echo</span> <span style="color: #E6DB74;">"hanging the Emacs session :P"</span>; <span style="color: #66D9EF;">done</span>
+<span style="color: #465457; font-style: italic;">#+END_SRC</span>
+</pre>
+</div>
+<p>Also in case you want to run a code block remotely,
+  you need to do it via ssh.  Combining this with <code>#+call</code> blocks is
+  still very cool though:</p>
+<div class="org-src-container">
+
+<pre class="src src-org"><span style="color: #465457; font-style: italic;">#+name: install-emacs</span>
+<span style="color: #465457; font-style: italic;">#+BEGIN_SRC sh :dir /ubuntu@192.168.0.7:/home/ubuntu</span>
+sudo apt-get update
+sudo apt-get install -y emacs24-nox org-mode
+<span style="color: #465457; font-style: italic;">#+END_SRC</span>
+
+<span style="color: #465457; font-style: italic;">#+call: install-emacs() :dir /ubuntu@192.168.0.8:/home/ubuntu</span>
+<span style="color: #465457; font-style: italic;">#+call: install-emacs() :dir /ubuntu@192.168.0.9:/home/ubuntu</span>
+</pre>
+</div>
+<p>For some cases, like provisioning and installing packages (usually the
+  domain of tools like Chef, Puppet, Ansible, etc&#8230;) this may work
+  well, but for running jobs remotely we still have the same issue
+  of the session hanging and running the code blocks sequentially:</p>
+<div class="org-src-container">
+
+<pre class="src src-org"><span style="color: #465457; font-style: italic;">#+name: run-remotely</span>
+<span style="color: #465457; font-style: italic;">#+BEGIN_SRC sh :dir /ubuntu@192.168.0.7:/home/ubuntu</span>
+<span style="color: #66D9EF;">while</span> true; <span style="color: #66D9EF;">do </span><span style="color: #A6E22E;">echo</span> <span style="color: #E6DB74;">"called sequentially, blocks, not really what we want"</span>; <span style="color: #66D9EF;">done</span>
+<span style="color: #465457; font-style: italic;">#+END_SRC</span>
+
+<span style="color: #465457; font-style: italic;">#+call: run-remotely() :dir /ubuntu@192.168.0.8:/home/ubuntu</span>
+<span style="color: #465457; font-style: italic;">#+call: run-remotely() :dir /ubuntu@192.168.0.9:/home/ubuntu</span>
+</pre>
+</div>
+<p>Not only that though, we also have to specify both the credentials
+  and resources that we are using for running the workloads.
+  Luckily, that is an area where Mesos really shines.</p>
+<h3>How it would look</h3>
+<p>For the end result, I wanted something like this:</p>
+<div class="org-src-container">
+
+<pre class="src src-org"><span style="color: #b3b3b3;">#+title:</span> <span style="color: #cafe12; font-size: 144%; font-weight: bold;">Example of running Org Babel workloads on Mesos</span>
+
+<span style="color: #A6E22E;">*** Mesos settings</span>
+
+<span style="color: #465457; font-style: italic;">#+address: 192.168.0.7</span>
+<span style="color: #465457; font-style: italic;">#+master:  192.168.0.7:5050</span>
+
+<span style="color: #A6E22E;">*** Code blocks</span>
+
+<span style="color: #465457; font-style: italic;">#+name: hello-mesos</span>
+<span style="color: #465457; font-style: italic;">#+header: :cpus 2 :mem 128</span>
+<span style="color: #465457; font-style: italic;">#+BEGIN_SRC sh</span>
+<span style="color: #66D9EF;">while</span> true; <span style="color: #66D9EF;">do</span> 
+  <span style="color: #A6E22E;">echo</span> <span style="color: #E6DB74;">"hello world from Org Babel!!!"</span>
+  sleep 1
+<span style="color: #66D9EF;">done</span>
+<span style="color: #465457; font-style: italic;">#+END_SRC</span>
+
+<span style="color: #465457; font-style: italic;">#+name: date-example</span>
+<span style="color: #465457; font-style: italic;">#+header: :cpus 2 :mem 256</span>
+<span style="color: #465457; font-style: italic;">#+BEGIN_SRC sh</span>
+<span style="color: #66D9EF;">while</span> true; <span style="color: #66D9EF;">do</span> 
+  <span style="color: #A6E22E;">echo</span> <span style="color: #E6DB74;">"Telling the time!"</span>
+  date
+  sleep 1
+<span style="color: #66D9EF;">done</span>
+<span style="color: #465457; font-style: italic;">#+END_SRC</span>
+</pre>
+</div>
+<p>Here, I am defining 2 code blocks, allocating 2 cpus to each.
+  Also the second one will have a bit more memory than the other one.
+  Only Mesos related configuration that we need is the location of a
+  Mesos master and the ip address of the server from where we are
+  running the scheduler.</p>
+<h3>Implementation using the Mesos Go bindings</h3>
+<p>Mesos with its <i>level of indirection</i> approach, exposes a set of APIs
+  that we can rely on to be able to write custom schedulers in a
+  different runtime.  The <a href="https://github.com/mesos/mesos-go">mesos-go</a> bindings seem in actively development
+  in particular, so I decided to base on those to write the scheduler.</p>
+<p>Then, another thing we need is something which can understand Org mode
+  documents, for this I implemented a basic parser of <a href="http://github.com/wallyqs/org-go">Org mode in Go</a>
+  which can be loaded by the scheduler to orchestrate the run.</p>
+<p>Using the Go bindings, we start defining our scheduler:</p>
+<div class="highlight"><pre><span class="kd">type</span> <span class="nx">OrgBabelScheduler</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">tasksLaunched</span> <span class="kt">int</span>
+	<span class="nx">tasksFinished</span> <span class="kt">int</span>
+	<span class="nx">blocks</span>        <span class="p">[]</span><span class="o">*</span><span class="nx">org</span><span class="p">.</span><span class="nx">OrgSrcBlock</span>
+<span class="p">}</span>
+</pre></div>
+<p>And below is a a basic example of how the <code>ResourceOffers</code>  handle
+  would look.  Once having loaded the contents of the Org mode document,
+  we will be inspecting the content of the code block its header
+  arguments to procure the resources we want:</p>
+<div class="highlight"><pre><span class="kd">func</span> <span class="p">(</span><span class="nx">sched</span> <span class="o">*</span><span class="nx">OrgBabelScheduler</span><span class="p">)</span> <span class="nx">ResourceOffers</span><span class="p">(</span><span class="nx">driver</span> <span class="nx">sched</span><span class="p">.</span><span class="nx">SchedulerDriver</span><span class="p">,</span> <span class="nx">offers</span> <span class="p">[]</span><span class="o">*</span><span class="nx">mesos</span><span class="p">.</span><span class="nx">Offer</span><span class="p">)</span> <span class="p">{</span>
+
+        <span class="c1">// We will get many resource offerings,</span>
+	<span class="c1">// but sometimes the resources being offered will not be enough</span>
+	<span class="c1">// so we will need to implement backing off in case that happens.</span>
+	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">offer</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">offers</span> <span class="p">{</span>
+
+	        <span class="o">...</span>
+
+		<span class="kd">var</span> <span class="nx">tasks</span> <span class="p">[]</span><span class="o">*</span><span class="nx">mesos</span><span class="p">.</span><span class="nx">TaskInfo</span>
+
+		<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">src</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">sched</span><span class="p">.</span><span class="nx">blocks</span> <span class="p">{</span>
+			<span class="nx">sched</span><span class="p">.</span><span class="nx">tasksLaunched</span><span class="o">++</span>
+
+			<span class="nx">taskId</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">mesos</span><span class="p">.</span><span class="nx">TaskID</span><span class="p">{</span>
+				<span class="nx">Value</span><span class="p">:</span> <span class="nx">proto</span><span class="p">.</span><span class="nx">String</span><span class="p">(</span><span class="nx">strconv</span><span class="p">.</span><span class="nx">Itoa</span><span class="p">(</span><span class="nx">sched</span><span class="p">.</span><span class="nx">tasksLaunched</span><span class="p">)),</span>
+			<span class="p">}</span>
+
+			<span class="c1">// Should build the command properly depending of the runtime</span>
+			<span class="c1">// Currenty only bash supported, but good enough</span>
+			<span class="c1">// since I can just call the runtime from there</span>
+			<span class="nx">cmd</span> <span class="o">:=</span> <span class="nx">src</span><span class="p">.</span><span class="nx">RawContent</span>
+
+			<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;[OFFER ] Executing this code block:&quot;</span><span class="p">,</span> <span class="nx">src</span><span class="p">.</span><span class="nx">Name</span><span class="p">,</span> <span class="nx">src</span><span class="p">.</span><span class="nx">Headers</span><span class="p">)</span>
+
+			<span class="c1">// The code block specifies the resources it should allocate</span>
+			<span class="c1">//</span>
+			<span class="nx">taskCpus</span> <span class="o">:=</span> <span class="nx">MIN_CPUS_PER_TASK</span>
+			<span class="k">if</span> <span class="nx">src</span><span class="p">.</span><span class="nx">Headers</span><span class="p">[</span><span class="s">&quot;:cpus&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="s">&quot;&quot;</span> <span class="p">{</span>
+			  <span class="nx">taskCpus</span><span class="p">,</span> <span class="nx">_</span> <span class="p">=</span> <span class="nx">strconv</span><span class="p">.</span><span class="nx">Atoi</span><span class="p">(</span><span class="nx">src</span><span class="p">.</span><span class="nx">Headers</span><span class="p">[</span><span class="s">&quot;:cpus&quot;</span><span class="p">])</span>
+			<span class="p">}</span>
+
+			<span class="nx">taskMem</span> <span class="o">:=</span> <span class="nx">MIN_MEM_PER_TASK</span>
+			<span class="k">if</span> <span class="nx">src</span><span class="p">.</span><span class="nx">Headers</span><span class="p">[</span><span class="s">&quot;:mem&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="s">&quot;&quot;</span> <span class="p">{</span>
+			  <span class="nx">taskMem</span><span class="p">,</span> <span class="nx">_</span> <span class="p">=</span> <span class="nx">strconv</span><span class="p">.</span><span class="nx">Atoi</span><span class="p">(</span><span class="nx">src</span><span class="p">.</span><span class="nx">Headers</span><span class="p">[</span><span class="s">&quot;:mem&quot;</span><span class="p">])</span>
+			<span class="p">}</span>
+
+			<span class="nx">task</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">mesos</span><span class="p">.</span><span class="nx">TaskInfo</span><span class="p">{</span>
+				<span class="nx">Name</span><span class="p">:</span>     <span class="nx">proto</span><span class="p">.</span><span class="nx">String</span><span class="p">(</span><span class="s">&quot;ob-mesos-&quot;</span> <span class="o">+</span> <span class="nx">taskId</span><span class="p">.</span><span class="nx">GetValue</span><span class="p">()),</span>
+				<span class="nx">TaskId</span><span class="p">:</span>   <span class="nx">taskId</span><span class="p">,</span>
+				<span class="nx">SlaveId</span><span class="p">:</span>  <span class="nx">offer</span><span class="p">.</span><span class="nx">SlaveId</span><span class="p">,</span>
+				<span class="c1">// Executor: sched.executor,</span>
+				<span class="nx">Resources</span><span class="p">:</span> <span class="p">[]</span><span class="o">*</span><span class="nx">mesos</span><span class="p">.</span><span class="nx">Resource</span><span class="p">{</span>
+					<span class="nx">util</span><span class="p">.</span><span class="nx">NewScalarResource</span><span class="p">(</span><span class="s">&quot;cpus&quot;</span><span class="p">,</span> <span class="nb">float64</span><span class="p">(</span><span class="nx">taskCpus</span><span class="p">)),</span>
+					<span class="nx">util</span><span class="p">.</span><span class="nx">NewScalarResource</span><span class="p">(</span><span class="s">&quot;mem&quot;</span><span class="p">,</span> <span class="nb">float64</span><span class="p">(</span><span class="nx">taskMem</span><span class="p">)),</span>
+				<span class="p">},</span>
+			        <span class="nx">Command</span><span class="p">:</span> <span class="o">&amp;</span><span class="nx">mesos</span><span class="p">.</span><span class="nx">CommandInfo</span><span class="p">{</span>
+				 	<span class="nx">Value</span><span class="p">:</span> <span class="nx">proto</span><span class="p">.</span><span class="nx">String</span><span class="p">(</span><span class="nx">cmd</span><span class="p">),</span>
+				<span class="p">},</span>
+			<span class="p">}</span>
+			<span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;[OFFER ] Prepared to launch task:%s with offer %s \n&quot;</span><span class="p">,</span> <span class="nx">task</span><span class="p">.</span><span class="nx">GetName</span><span class="p">(),</span> <span class="nx">offer</span><span class="p">.</span><span class="nx">Id</span><span class="p">.</span><span class="nx">GetValue</span><span class="p">())</span>
+
+			<span class="nx">tasks</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">tasks</span><span class="p">,</span> <span class="nx">task</span><span class="p">)</span>
+		<span class="p">}</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;[OFFER ] Launching &quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">tasks</span><span class="p">),</span> <span class="s">&quot;tasks for offer&quot;</span><span class="p">,</span> <span class="nx">offer</span><span class="p">.</span><span class="nx">Id</span><span class="p">.</span><span class="nx">GetValue</span><span class="p">())</span>
+		<span class="nx">driver</span><span class="p">.</span><span class="nx">LaunchTasks</span><span class="p">([]</span><span class="o">*</span><span class="nx">mesos</span><span class="p">.</span><span class="nx">OfferID</span><span class="p">{</span><span class="nx">offer</span><span class="p">.</span><span class="nx">Id</span><span class="p">},</span> <span class="nx">tasks</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">mesos</span><span class="p">.</span><span class="nx">Filters</span><span class="p">{</span><span class="nx">RefuseSeconds</span><span class="p">:</span> <span class="nx">proto</span><span class="p">.</span><span class="nx">Float64</span><span class="p">(</span><span class="mi">1</span><span class="p">)})</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+<h3>Results</h3>
+<p>The end result of this experiment looks like this:</p>
+<div class="highlight"><pre>$ go run examples/org_scheduler.go -f org/job.org -logtostderr=true 
+
+...
+[REGIST] Framework Registered with Master  &amp;MasterInfo{Id:*20150225-084641-117483712-5050-23902,Ip:*117483712,Port:*5050,Pid:*master@192.168.0.7:5050,Hostname:*192.168.0.7,XXX_unrecognized:[],}
+[OFFER ] offerId = 20150225-084641-117483712-5050-23902-O60 , cpus = 4 , mem = 2812
+[OFFER ] Executing this code block: hello-mesos map[:procs:5 :cpus:2 :mem:128]
+[OFFER ] Prepared to launch task:ob-mesos-1 with offer 20150225-084641-117483712-5050-23902-O60 
+[OFFER ] Executing this code block: date-example map[:cpus:2 :mem:256]
+[OFFER ] Prepared to launch task:ob-mesos-2 with offer 20150225-084641-117483712-5050-23902-O60 
+[OFFER ] Launching  2 tasks for offer 20150225-084641-117483712-5050-23902-O60
+[STATUS] task 1  is in state  TASK_RUNNING
+[STATUS] task 2  is in state  TASK_RUNNING
+</pre></div>
+<p>We can also check the logs within the Mesos slave sandbox:</p>
+<p><img src="./public/mesos-tasks.png" alt="./public/mesos-tasks.png" /></p>
+<p>Full source of the implementation can be found <a href="https://github.com/wallyqs/mesos-notes/blob/master/org/org-scheduler.org">here</a>, written in
+  literate programming with Org mode of course..</p>
+<h3>Conclusion</h3>
+<p>But, why even use Org mode for this?  Well, the best thing I think
+  that it has for it is that we are <b>adding value transparently</b> to the
+  way that we are executing our workloads along with its description.</p>
+<p>By having a document format where code blocks are first class citizen,
+  we can both manipulate the way we run something without losing the
+  thought process of how we ran it in the first place (since human writing also
+  first class citizen), thus emphasizing both reproducibility and readability.</p>
+<p>Locally, the code blocks would still eval
+  using the Org mode active document features, but by dispatching it to
+  something like the <code>OrgBabelScheduler</code>, we can just <i>lift</i> those code blocks and run
+  them in a distributed fashion.</p>
+<p>There are still some ideas I have around this and the possibilites
+  that it would open around <i>reproducible research</i>.</p>
+<p>Feedback is very welcome! You can also follow me on <a href="https://twitter.com/wallyqs">Twitter</a> if you
+  find this interesting&#8230;</p>
+
+
+
+</div>
+
+<div class="related">
+  <h2>Related Posts</h2>
+  <ul class="related-posts">
+    
+      <li>
+        <h3>
+          <a href="/posts/2014/12/25/learning-go-backwards/">
+            About type switch usage in Go
+            <small>25 Dec 2014</small>
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/posts/2014/12/12/using-tcpdump/">
+            Quickly inspecting HTTP traffic with tcpdump
+            <small>12 Dec 2014</small>
+          </a>
+        </h3>
+      </li>
+    
+      <li>
+        <h3>
+          <a href="/posts/2014/12/12/using-org-babel-for-lp-jp/">
+            Org Babelで文芸的プログラミング
+            <small>12 Dec 2014</small>
+          </a>
+        </h3>
+      </li>
+    
+  </ul>
+</div>
+
+    </div>
+
+  </body>
+</html>
