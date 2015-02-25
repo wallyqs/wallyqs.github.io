@@ -106,7 +106,7 @@
   <div class="post">
     <h1 class="post-title">
       <a href="/posts/2015/02/25/ob-mesos/">
-        Running Org Babel workloads on top of Mesos with Go
+        Running Org Babel workloads on top of Mesos with Go and the Docker Containerizer
       </a>
     </h1>
 
@@ -163,8 +163,101 @@ sudo apt-get install -y emacs24-nox org-mode
 <p>Not only that though, we also have to specify both the credentials
   and resources that we are using for running the workloads.
   Luckily, that is an area where Mesos really shines.</p>
-<h3>How it would look</h3>
-<p>For the end result, I wanted something like this:</p>
+<h3>Implementation using the Mesos Go bindings</h3>
+<p>Mesos with its <i>level of indirection</i> approach, exposes a set of APIs
+  that we can rely on to be able to write custom schedulers in a
+  different runtime.  The <a href="https://github.com/mesos/mesos-go">mesos-go</a> bindings seem in actively development
+  in particular, so I decided to base on those to write the scheduler.</p>
+<p>Then, another thing we need is something which can understand Org mode
+  documents, for this I implemented a basic parser of <a href="http://github.com/wallyqs/org-go">Org mode in Go</a>
+  which can be loaded by the scheduler to orchestrate the run.</p>
+<p>Using the Go bindings, we start defining our scheduler:</p>
+<div class="highlight"><pre><span class="kd">type</span> <span class="nx">OrgBabelScheduler</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">tasksLaunched</span> <span class="kt">int</span>
+	<span class="nx">tasksFinished</span> <span class="kt">int</span>
+	<span class="nx">blocks</span>        <span class="p">[]</span><span class="o">*</span><span class="nx">org</span><span class="p">.</span><span class="nx">OrgSrcBlock</span>
+<span class="p">}</span>
+</pre></div>
+<p>And below is a a basic example of how the <code>ResourceOffers</code>  handle
+  would look.  Once having loaded the contents of the Org mode document,
+  we will be inspecting the content of the code block its header
+  arguments to procure the resources we want:</p>
+<div class="highlight"><pre><span class="kd">func</span> <span class="p">(</span><span class="nx">sched</span> <span class="o">*</span><span class="nx">OrgBabelScheduler</span><span class="p">)</span> <span class="nx">ResourceOffers</span><span class="p">(</span><span class="nx">driver</span> <span class="nx">sched</span><span class="p">.</span><span class="nx">SchedulerDriver</span><span class="p">,</span> <span class="nx">offers</span> <span class="p">[]</span><span class="o">*</span><span class="nx">mesos</span><span class="p">.</span><span class="nx">Offer</span><span class="p">)</span> <span class="p">{</span>
+
+    <span class="c1">// We will get many resource offerings,</span>
+    <span class="c1">// but sometimes the resources being offered will not be enough</span>
+    <span class="c1">// so we will need to implement backing off in case that happens.</span>
+    <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">offer</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">offers</span> <span class="p">{</span>
+
+        <span class="o">...</span>
+
+        <span class="kd">var</span> <span class="nx">tasks</span> <span class="p">[]</span><span class="o">*</span><span class="nx">mesos</span><span class="p">.</span><span class="nx">TaskInfo</span>
+
+        <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">src</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">sched</span><span class="p">.</span><span class="nx">blocks</span> <span class="p">{</span>
+                <span class="nx">sched</span><span class="p">.</span><span class="nx">tasksLaunched</span><span class="o">++</span>
+
+                <span class="nx">taskId</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">mesos</span><span class="p">.</span><span class="nx">TaskID</span><span class="p">{</span>
+                        <span class="nx">Value</span><span class="p">:</span> <span class="nx">proto</span><span class="p">.</span><span class="nx">String</span><span class="p">(</span><span class="nx">strconv</span><span class="p">.</span><span class="nx">Itoa</span><span class="p">(</span><span class="nx">sched</span><span class="p">.</span><span class="nx">tasksLaunched</span><span class="p">)),</span>
+                <span class="p">}</span>
+
+                <span class="c1">// Should build the command properly depending of the runtime</span>
+                <span class="c1">// Currenty only sh supported, but good enough</span>
+                <span class="c1">// since I can just call the runtime from there</span>
+                <span class="nx">cmd</span> <span class="o">:=</span> <span class="nx">src</span><span class="p">.</span><span class="nx">RawContent</span>
+
+                <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;[OFFER ] Executing this code block:&quot;</span><span class="p">,</span> <span class="nx">src</span><span class="p">.</span><span class="nx">Name</span><span class="p">,</span> <span class="nx">src</span><span class="p">.</span><span class="nx">Headers</span><span class="p">)</span>
+
+                <span class="c1">// The code block specifies the resources it should allocate</span>
+                <span class="c1">//</span>
+                <span class="nx">taskCpus</span> <span class="o">:=</span> <span class="nx">MIN_CPUS_PER_TASK</span>
+                <span class="k">if</span> <span class="nx">src</span><span class="p">.</span><span class="nx">Headers</span><span class="p">[</span><span class="s">&quot;:cpus&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="s">&quot;&quot;</span> <span class="p">{</span>
+                  <span class="nx">taskCpus</span><span class="p">,</span> <span class="nx">_</span> <span class="p">=</span> <span class="nx">strconv</span><span class="p">.</span><span class="nx">Atoi</span><span class="p">(</span><span class="nx">src</span><span class="p">.</span><span class="nx">Headers</span><span class="p">[</span><span class="s">&quot;:cpus&quot;</span><span class="p">])</span>
+                <span class="p">}</span>
+
+                <span class="nx">taskMem</span> <span class="o">:=</span> <span class="nx">MIN_MEM_PER_TASK</span>
+                <span class="k">if</span> <span class="nx">src</span><span class="p">.</span><span class="nx">Headers</span><span class="p">[</span><span class="s">&quot;:mem&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="s">&quot;&quot;</span> <span class="p">{</span>
+                  <span class="nx">taskMem</span><span class="p">,</span> <span class="nx">_</span> <span class="p">=</span> <span class="nx">strconv</span><span class="p">.</span><span class="nx">Atoi</span><span class="p">(</span><span class="nx">src</span><span class="p">.</span><span class="nx">Headers</span><span class="p">[</span><span class="s">&quot;:mem&quot;</span><span class="p">])</span>
+                <span class="p">}</span>
+
+                <span class="nx">task</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">mesos</span><span class="p">.</span><span class="nx">TaskInfo</span><span class="p">{</span>
+                        <span class="nx">Name</span><span class="p">:</span>     <span class="nx">proto</span><span class="p">.</span><span class="nx">String</span><span class="p">(</span><span class="s">&quot;ob-mesos-&quot;</span> <span class="o">+</span> <span class="nx">taskId</span><span class="p">.</span><span class="nx">GetValue</span><span class="p">()),</span>
+                        <span class="nx">TaskId</span><span class="p">:</span>   <span class="nx">taskId</span><span class="p">,</span>
+                        <span class="nx">SlaveId</span><span class="p">:</span>  <span class="nx">offer</span><span class="p">.</span><span class="nx">SlaveId</span><span class="p">,</span>
+                        <span class="c1">// Executor: sched.executor,</span>
+                        <span class="nx">Resources</span><span class="p">:</span> <span class="p">[]</span><span class="o">*</span><span class="nx">mesos</span><span class="p">.</span><span class="nx">Resource</span><span class="p">{</span>
+                                <span class="nx">util</span><span class="p">.</span><span class="nx">NewScalarResource</span><span class="p">(</span><span class="s">&quot;cpus&quot;</span><span class="p">,</span> <span class="nb">float64</span><span class="p">(</span><span class="nx">taskCpus</span><span class="p">)),</span>
+                                <span class="nx">util</span><span class="p">.</span><span class="nx">NewScalarResource</span><span class="p">(</span><span class="s">&quot;mem&quot;</span><span class="p">,</span> <span class="nb">float64</span><span class="p">(</span><span class="nx">taskMem</span><span class="p">)),</span>
+                        <span class="p">},</span>
+                        <span class="nx">Command</span><span class="p">:</span> <span class="o">&amp;</span><span class="nx">mesos</span><span class="p">.</span><span class="nx">CommandInfo</span><span class="p">{</span>
+                                <span class="nx">Value</span><span class="p">:</span> <span class="nx">proto</span><span class="p">.</span><span class="nx">String</span><span class="p">(</span><span class="nx">cmd</span><span class="p">),</span>
+                        <span class="p">},</span>
+                <span class="p">}</span>
+
+                <span class="c1">// Run within a Docker container if :dockerimage is specified</span>
+                <span class="c1">//</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">src</span><span class="p">.</span><span class="nx">Headers</span><span class="p">[</span><span class="s">&quot;:dockerimage&quot;</span><span class="p">])</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+                        <span class="nx">task</span><span class="p">.</span><span class="nx">Container</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">mesos</span><span class="p">.</span><span class="nx">ContainerInfo</span><span class="p">{</span>
+                                <span class="nx">Type</span><span class="p">:</span> <span class="nx">mesos</span><span class="p">.</span><span class="nx">ContainerInfo_DOCKER</span><span class="p">.</span><span class="nx">Enum</span><span class="p">(),</span>
+                                <span class="nx">Docker</span><span class="p">:</span> <span class="o">&amp;</span><span class="nx">mesos</span><span class="p">.</span><span class="nx">ContainerInfo_DockerInfo</span><span class="p">{</span>
+                                        <span class="nx">Image</span><span class="p">:</span> <span class="nx">proto</span><span class="p">.</span><span class="nx">String</span><span class="p">(</span><span class="nx">src</span><span class="p">.</span><span class="nx">Headers</span><span class="p">[</span><span class="s">&quot;:dockerimage&quot;</span><span class="p">]),</span>
+					<span class="c1">// ...</span>
+                                <span class="p">},</span>
+                        <span class="p">}</span>
+                <span class="p">}</span>
+
+                <span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;[OFFER ] Prepared to launch task:%s with offer %s \n&quot;</span><span class="p">,</span> <span class="nx">task</span><span class="p">.</span><span class="nx">GetName</span><span class="p">(),</span> <span class="nx">offer</span><span class="p">.</span><span class="nx">Id</span><span class="p">.</span><span class="nx">GetValue</span><span class="p">())</span>
+
+                <span class="nx">tasks</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">tasks</span><span class="p">,</span> <span class="nx">task</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;[OFFER ] Launching &quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">tasks</span><span class="p">),</span> <span class="s">&quot;tasks for offer&quot;</span><span class="p">,</span> <span class="nx">offer</span><span class="p">.</span><span class="nx">Id</span><span class="p">.</span><span class="nx">GetValue</span><span class="p">())</span>
+        <span class="nx">driver</span><span class="p">.</span><span class="nx">LaunchTasks</span><span class="p">([]</span><span class="o">*</span><span class="nx">mesos</span><span class="p">.</span><span class="nx">OfferID</span><span class="p">{</span><span class="nx">offer</span><span class="p">.</span><span class="nx">Id</span><span class="p">},</span> <span class="nx">tasks</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">mesos</span><span class="p">.</span><span class="nx">Filters</span><span class="p">{</span><span class="nx">RefuseSeconds</span><span class="p">:</span> <span class="nx">proto</span><span class="p">.</span><span class="nx">Float64</span><span class="p">(</span><span class="mi">1</span><span class="p">)})</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+<p>Full source of the implementation can be found <a href="https://github.com/wallyqs/mesos-notes/blob/master/org/org-scheduler.org">here</a>, written in
+  literate programming with Org mode of course..</p>
+<h3>Basic usage example: Running two commands in parallel</h3>
+<p>A basic example, would be something like this:</p>
 <div class="org-src-container">
 
 <pre class="src src-org"><span style="color: #b3b3b3;">#+title:</span> <span style="color: #cafe12; font-size: 144%; font-weight: bold;">Example of running Org Babel workloads on Mesos</span>
@@ -201,85 +294,7 @@ sudo apt-get install -y emacs24-nox org-mode
   Only Mesos related configuration that we need is the location of a
   Mesos master and the ip address of the server from where we are
   running the scheduler.</p>
-<h3>Implementation using the Mesos Go bindings</h3>
-<p>Mesos with its <i>level of indirection</i> approach, exposes a set of APIs
-  that we can rely on to be able to write custom schedulers in a
-  different runtime.  The <a href="https://github.com/mesos/mesos-go">mesos-go</a> bindings seem in actively development
-  in particular, so I decided to base on those to write the scheduler.</p>
-<p>Then, another thing we need is something which can understand Org mode
-  documents, for this I implemented a basic parser of <a href="http://github.com/wallyqs/org-go">Org mode in Go</a>
-  which can be loaded by the scheduler to orchestrate the run.</p>
-<p>Using the Go bindings, we start defining our scheduler:</p>
-<div class="highlight"><pre><span class="kd">type</span> <span class="nx">OrgBabelScheduler</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">tasksLaunched</span> <span class="kt">int</span>
-	<span class="nx">tasksFinished</span> <span class="kt">int</span>
-	<span class="nx">blocks</span>        <span class="p">[]</span><span class="o">*</span><span class="nx">org</span><span class="p">.</span><span class="nx">OrgSrcBlock</span>
-<span class="p">}</span>
-</pre></div>
-<p>And below is a a basic example of how the <code>ResourceOffers</code>  handle
-  would look.  Once having loaded the contents of the Org mode document,
-  we will be inspecting the content of the code block its header
-  arguments to procure the resources we want:</p>
-<div class="highlight"><pre><span class="kd">func</span> <span class="p">(</span><span class="nx">sched</span> <span class="o">*</span><span class="nx">OrgBabelScheduler</span><span class="p">)</span> <span class="nx">ResourceOffers</span><span class="p">(</span><span class="nx">driver</span> <span class="nx">sched</span><span class="p">.</span><span class="nx">SchedulerDriver</span><span class="p">,</span> <span class="nx">offers</span> <span class="p">[]</span><span class="o">*</span><span class="nx">mesos</span><span class="p">.</span><span class="nx">Offer</span><span class="p">)</span> <span class="p">{</span>
-
-        <span class="c1">// We will get many resource offerings,</span>
-	<span class="c1">// but sometimes the resources being offered will not be enough</span>
-	<span class="c1">// so we will need to implement backing off in case that happens.</span>
-	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">offer</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">offers</span> <span class="p">{</span>
-
-	        <span class="o">...</span>
-
-		<span class="kd">var</span> <span class="nx">tasks</span> <span class="p">[]</span><span class="o">*</span><span class="nx">mesos</span><span class="p">.</span><span class="nx">TaskInfo</span>
-
-		<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">src</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">sched</span><span class="p">.</span><span class="nx">blocks</span> <span class="p">{</span>
-			<span class="nx">sched</span><span class="p">.</span><span class="nx">tasksLaunched</span><span class="o">++</span>
-
-			<span class="nx">taskId</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">mesos</span><span class="p">.</span><span class="nx">TaskID</span><span class="p">{</span>
-				<span class="nx">Value</span><span class="p">:</span> <span class="nx">proto</span><span class="p">.</span><span class="nx">String</span><span class="p">(</span><span class="nx">strconv</span><span class="p">.</span><span class="nx">Itoa</span><span class="p">(</span><span class="nx">sched</span><span class="p">.</span><span class="nx">tasksLaunched</span><span class="p">)),</span>
-			<span class="p">}</span>
-
-			<span class="c1">// Should build the command properly depending of the runtime</span>
-			<span class="c1">// Currenty only bash supported, but good enough</span>
-			<span class="c1">// since I can just call the runtime from there</span>
-			<span class="nx">cmd</span> <span class="o">:=</span> <span class="nx">src</span><span class="p">.</span><span class="nx">RawContent</span>
-
-			<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;[OFFER ] Executing this code block:&quot;</span><span class="p">,</span> <span class="nx">src</span><span class="p">.</span><span class="nx">Name</span><span class="p">,</span> <span class="nx">src</span><span class="p">.</span><span class="nx">Headers</span><span class="p">)</span>
-
-			<span class="c1">// The code block specifies the resources it should allocate</span>
-			<span class="c1">//</span>
-			<span class="nx">taskCpus</span> <span class="o">:=</span> <span class="nx">MIN_CPUS_PER_TASK</span>
-			<span class="k">if</span> <span class="nx">src</span><span class="p">.</span><span class="nx">Headers</span><span class="p">[</span><span class="s">&quot;:cpus&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="s">&quot;&quot;</span> <span class="p">{</span>
-			  <span class="nx">taskCpus</span><span class="p">,</span> <span class="nx">_</span> <span class="p">=</span> <span class="nx">strconv</span><span class="p">.</span><span class="nx">Atoi</span><span class="p">(</span><span class="nx">src</span><span class="p">.</span><span class="nx">Headers</span><span class="p">[</span><span class="s">&quot;:cpus&quot;</span><span class="p">])</span>
-			<span class="p">}</span>
-
-			<span class="nx">taskMem</span> <span class="o">:=</span> <span class="nx">MIN_MEM_PER_TASK</span>
-			<span class="k">if</span> <span class="nx">src</span><span class="p">.</span><span class="nx">Headers</span><span class="p">[</span><span class="s">&quot;:mem&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="s">&quot;&quot;</span> <span class="p">{</span>
-			  <span class="nx">taskMem</span><span class="p">,</span> <span class="nx">_</span> <span class="p">=</span> <span class="nx">strconv</span><span class="p">.</span><span class="nx">Atoi</span><span class="p">(</span><span class="nx">src</span><span class="p">.</span><span class="nx">Headers</span><span class="p">[</span><span class="s">&quot;:mem&quot;</span><span class="p">])</span>
-			<span class="p">}</span>
-
-			<span class="nx">task</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">mesos</span><span class="p">.</span><span class="nx">TaskInfo</span><span class="p">{</span>
-				<span class="nx">Name</span><span class="p">:</span>     <span class="nx">proto</span><span class="p">.</span><span class="nx">String</span><span class="p">(</span><span class="s">&quot;ob-mesos-&quot;</span> <span class="o">+</span> <span class="nx">taskId</span><span class="p">.</span><span class="nx">GetValue</span><span class="p">()),</span>
-				<span class="nx">TaskId</span><span class="p">:</span>   <span class="nx">taskId</span><span class="p">,</span>
-				<span class="nx">SlaveId</span><span class="p">:</span>  <span class="nx">offer</span><span class="p">.</span><span class="nx">SlaveId</span><span class="p">,</span>
-				<span class="c1">// Executor: sched.executor,</span>
-				<span class="nx">Resources</span><span class="p">:</span> <span class="p">[]</span><span class="o">*</span><span class="nx">mesos</span><span class="p">.</span><span class="nx">Resource</span><span class="p">{</span>
-					<span class="nx">util</span><span class="p">.</span><span class="nx">NewScalarResource</span><span class="p">(</span><span class="s">&quot;cpus&quot;</span><span class="p">,</span> <span class="nb">float64</span><span class="p">(</span><span class="nx">taskCpus</span><span class="p">)),</span>
-					<span class="nx">util</span><span class="p">.</span><span class="nx">NewScalarResource</span><span class="p">(</span><span class="s">&quot;mem&quot;</span><span class="p">,</span> <span class="nb">float64</span><span class="p">(</span><span class="nx">taskMem</span><span class="p">)),</span>
-				<span class="p">},</span>
-			        <span class="nx">Command</span><span class="p">:</span> <span class="o">&amp;</span><span class="nx">mesos</span><span class="p">.</span><span class="nx">CommandInfo</span><span class="p">{</span>
-				 	<span class="nx">Value</span><span class="p">:</span> <span class="nx">proto</span><span class="p">.</span><span class="nx">String</span><span class="p">(</span><span class="nx">cmd</span><span class="p">),</span>
-				<span class="p">},</span>
-			<span class="p">}</span>
-			<span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;[OFFER ] Prepared to launch task:%s with offer %s \n&quot;</span><span class="p">,</span> <span class="nx">task</span><span class="p">.</span><span class="nx">GetName</span><span class="p">(),</span> <span class="nx">offer</span><span class="p">.</span><span class="nx">Id</span><span class="p">.</span><span class="nx">GetValue</span><span class="p">())</span>
-
-			<span class="nx">tasks</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">tasks</span><span class="p">,</span> <span class="nx">task</span><span class="p">)</span>
-		<span class="p">}</span>
-		<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;[OFFER ] Launching &quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">tasks</span><span class="p">),</span> <span class="s">&quot;tasks for offer&quot;</span><span class="p">,</span> <span class="nx">offer</span><span class="p">.</span><span class="nx">Id</span><span class="p">.</span><span class="nx">GetValue</span><span class="p">())</span>
-		<span class="nx">driver</span><span class="p">.</span><span class="nx">LaunchTasks</span><span class="p">([]</span><span class="o">*</span><span class="nx">mesos</span><span class="p">.</span><span class="nx">OfferID</span><span class="p">{</span><span class="nx">offer</span><span class="p">.</span><span class="nx">Id</span><span class="p">},</span> <span class="nx">tasks</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">mesos</span><span class="p">.</span><span class="nx">Filters</span><span class="p">{</span><span class="nx">RefuseSeconds</span><span class="p">:</span> <span class="nx">proto</span><span class="p">.</span><span class="nx">Float64</span><span class="p">(</span><span class="mi">1</span><span class="p">)})</span>
-	<span class="p">}</span>
-<span class="p">}</span>
-</pre></div>
-<h3>Results</h3>
+<h4>Results</h4>
 <p>The end result of this experiment looks like this:</p>
 <div class="highlight"><pre>$ go run examples/org_scheduler.go -f org/job.org -logtostderr=true 
 
@@ -296,8 +311,92 @@ sudo apt-get install -y emacs24-nox org-mode
 </pre></div>
 <p>We can also check the logs within the Mesos slave sandbox:</p>
 <p><img src="/public/mesos-tasks.png" alt="/public/mesos-tasks.png" /></p>
-<p>Full source of the implementation can be found <a href="https://github.com/wallyqs/mesos-notes/blob/master/org/org-scheduler.org">here</a>, written in
-  literate programming with Org mode of course..</p>
+<h3>Containerizer usage example: Running a command within a Docker container</h3>
+<p>Thanks to the built-in Docker containerizer from Mesos,
+  it would also be possible to specify a Docker image so
+  that the command gets executed within a container.</p>
+<p>In this example, the first block will specify the entrypoint and set
+  <code>:dockerimage redis</code> so that the redis image is pulled and ran.</p>
+<p>Then the second one will be using that redis container and updating a timestamp.</p>
+<div class="org-src-container">
+
+<pre class="src src-org"><span style="color: #b3b3b3;">#+title:</span>   <span style="color: #cafe12; font-size: 144%; font-weight: bold;">Org + Docker + Mesos + Redis Example</span>
+<span style="color: #465457; font-style: italic;">#+address: 192.168.0.7</span>
+<span style="color: #465457; font-style: italic;">#+master:  192.168.0.7:5050</span>
+
+Here is a redis server, we can define the entrypoint to be used
+within the Docker image via an Org Babel block:
+
+<span style="color: #465457; font-style: italic;">#+name: redis-server</span>
+<span style="color: #465457; font-style: italic;">#+header: :cpus 2 :mem 512 :dockerimage redis</span>
+<span style="color: #465457; font-style: italic;">#+BEGIN_SRC sh</span>
+redis-server
+<span style="color: #465457; font-style: italic;">#+END_SRC</span>
+
+In parallel, there will be another job running
+which will be setting the time in the redis server:
+
+<span style="color: #465457; font-style: italic;">#+name: set-time-in-redis</span>
+<span style="color: #465457; font-style: italic;">#+header: :cpus 2 :mem 256</span>
+<span style="color: #465457; font-style: italic;">#+BEGIN_SRC sh</span>
+<span style="color: #66D9EF;">while</span> true; <span style="color: #66D9EF;">do</span> 
+  <span style="color: #A6E22E;">echo</span> <span style="color: #E6DB74;">"SET time `date '+%s'`"</span> | nc 127.0.0.1 6379
+  sleep 1
+<span style="color: #66D9EF;">done</span>
+<span style="color: #465457; font-style: italic;">#+END_SRC</span>
+</pre>
+</div>
+<h4>Results</h4>
+<p>Output would be:</p>
+<div class="highlight"><pre>[OFFER ] offerId = 20150225-174751-117483712-5050-13334-O1376 , cpus = 4 , mem = 2812
+[OFFER ] Executing this code block: redis-server map[:mem:512 :dockerimage:redis :cpus:2]
+[OFFER ] Prepared to launch task:ob-mesos-1 with offer 20150225-174751-117483712-5050-13334-O1376 
+[OFFER ] Executing this code block: set-time-in-redis map[:mem:256 :cpus:2]
+[OFFER ] Prepared to launch task:ob-mesos-2 with offer 20150225-174751-117483712-5050-13334-O1376 
+[OFFER ] Launching  2 tasks for offer 20150225-174751-117483712-5050-13334-O1376
+[STATUS] task 2  is in state  TASK_RUNNING
+[STATUS] task 1  is in state  TASK_RUNNING
+[OFFER ] offerId = 20150225-174751-117483712-5050-13334-O1377 , cpus = 0 , mem = 2044
+</pre></div>
+<p>And we can also confirm that it has been run by the Docker engine:</p>
+<div class="highlight"><pre>sudo docker ps
+
+CONTAINER ID        IMAGE               COMMAND                CREATED             STATUS              PORTS               NAMES
+1a8b3c964c3e        redis:latest        <span class="err">&quot;</span><span class="se">\&quot;</span>/bin/sh -c redis-   17 minutes ago      Up 17 minutes                           mesos-88de0870-b613-4bda-9ed4-30995834ccab
+</pre></div>
+<p>and that a timestamp has been set:</p>
+<div class="highlight"><pre>telnet 127.0.0.1 6379
+
+Trying 127.0.0.1...
+Connected to 127.0.0.1.
+Escape character is <span class="s1">&#39;^]&#39;</span>.
+get <span class="nb">time</span>
+<span class="nv">$10</span>
+1424882889
+</pre></div>
+<p>We can also check the logs within the sandbox:</p>
+<div class="highlight"><pre>==&gt; /tmp/mesos/slaves/20150223-223304-117483712-5050-29395-S0/frameworks/20150225-174751-117483712-5050-13334-0018/executors/1/runs/88de0870-b613-4bda-9ed4-30995834ccab/stdout &lt;==
+[8] 25 Feb 16:25:07.322 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+                _._
+           _.-``__ &#39;&#39;-._
+      _.-``    `.  `_.  &#39;&#39;-._           Redis 2.8.17 (00000000/0) 64 bit
+  .-`` .-```.  ```\/    _.,_ &#39;&#39;-._
+ (    &#39;      ,       .-`  | `,    )     Running in stand alone mode
+ |`-._`-...-` __...-.``-._|&#39;` _.-&#39;|     Port: 6379
+ |    `-._   `._    /     _.-&#39;    |     PID: 8
+  `-._    `-._  `-./  _.-&#39;    _.-&#39;
+ |`-._`-._    `-.__.-&#39;    _.-&#39;_.-&#39;|
+ |    `-._`-._        _.-&#39;_.-&#39;    |           http://redis.io
+  `-._    `-._`-.__.-&#39;_.-&#39;    _.-&#39;
+ |`-._`-._    `-.__.-&#39;    _.-&#39;_.-&#39;|
+ |    `-._`-._        _.-&#39;_.-&#39;    |
+  `-._    `-._`-.__.-&#39;_.-&#39;    _.-&#39;
+      `-._    `-.__.-&#39;    _.-&#39;
+          `-._        _.-&#39;
+              `-.__.-&#39;
+
+[8] 25 Feb 16:25:07.349 # Server started, Redis version 2.8.17
+</pre></div>
 <h3>Conclusion</h3>
 <p>But, why even use Org mode for this?  Well, the best thing I think
   that it has for it is that we are <b>adding value transparently</b> to the
