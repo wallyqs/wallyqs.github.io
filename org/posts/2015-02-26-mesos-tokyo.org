@@ -1,5 +1,5 @@
 # -*- mode: org; mode: auto-fill -*-
-#+TITLE:	Attended Mesos Tokyo Meetup #1
+#+TITLE:	Talked at the Tokyo Mesos Meetup #1
 #+CATEGORY:	posts
 #+LAYOUT:	post
 
