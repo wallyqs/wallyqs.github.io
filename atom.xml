@@ -4,13 +4,30 @@
  <title>Literate Infrastructure</title>
  <link href="/atom.xml" rel="self"/>
  <link href="/"/>
- <updated>2015-02-26T01:54:33+09:00</updated>
+ <updated>2015-02-27T10:39:06+09:00</updated>
  <id></id>
  <author>
    <name>Waldemar Quevedo</name>
    <email></email>
  </author>
 
+ 
+ <entry>
+   <title>Talked at the Tokyo Mesos Meetup #1</title>
+   <link href="/posts/2015/02/26/mesos-tokyo/"/>
+   <updated>2015-02-26T00:00:00+09:00</updated>
+   <id>/posts/2015/02/26/mesos-tokyo</id>
+   <content type="html">
+&lt;p&gt;Yesterday it was held the first Mesos related even here in Tokyo.
+  It seems that interest Mesos had accumulated for some time now around here,
+  so the place quickly filled up even though it was the first event.&lt;/p&gt;
+&lt;p&gt;I gave a quick talk on some of the basics around writing schedulers for Mesos,
+  (it has been a while since I presented in Japanese!). Slides below:&lt;/p&gt;
+&lt;iframe src=&quot;//www.slideshare.net/slideshow/embed_code/45202017&quot; width=&quot;476&quot; height=&quot;400&quot; frameborder=&quot;0&quot; marginwidth=&quot;0&quot; marginheight=&quot;0&quot; scrolling=&quot;no&quot;&gt;&lt;/iframe&gt;
+
+
+</content>
+ </entry>
  
  <entry>
    <title>Running Org Babel workloads on top of Mesos with Go and the Docker Containerizer</title>
