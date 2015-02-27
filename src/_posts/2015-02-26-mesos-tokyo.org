@@ -1,0 +1,16 @@
+# -*- mode: org; mode: auto-fill -*-
+#+TITLE:	Attended Mesos Tokyo #1
+#+CATEGORY:	posts
+#+LAYOUT:	post
+
+Yesterday it was held the first Mesos related even here in Tokyo.
+It seems that interest Mesos had accumulated for some time now around here,
+so the place quickly filled up even though it was the first event.
+
+I gave a quick talk on some of the basics around writing schedulers for Mesos,
+(it has been a while since I presented in Japanese!). Slides below:
+
+#+BEGIN_HTML
+<iframe src="//www.slideshare.net/slideshow/embed_code/45202017" width="476" height="400" frameborder="0" marginwidth="0" marginheight="0" scrolling="no"></iframe>
+#+END_HTML
+
