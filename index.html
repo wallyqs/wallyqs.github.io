@@ -105,7 +105,7 @@
   
   <div class="post">
     <h1 class="post-title">
-      <a href="/2015/03/31/variations-code-blocks-execution/">
+      <a href="/posts/2015/03/31/variations-code-blocks-execution/">
         Variations around the execution of code blocks
       </a>
     </h1>
@@ -117,18 +117,203 @@
   by systems or tools which in the end result in the execution of a code block
   by means of some configuration format, dsl, http request, cli tool, etc&#8230;</p>
 <p>I decided to narrow down the list to the following for now:</p>
-<dl>
-  <dt>Kubernetes</dt><dd>The container orchestration system from Google based on what they have learned around that area</dd>
-  <dt>Marathon</dt><dd>Mesos framework for schedule long running jobs</dd>
-</dl>
-<dl>
-  <dt>Chef</dt><dd>Configuration management tool</dd>
-  <dt>Puppet</dt><dd>Configuration management tool</dd>
-  <dt>Cloud Init</dt><dd>Configuration</dd>
-  <dt>Packer</dt><dd>&#8220;Packer is a tool for creating identical machine images for multiple platforms from a single source configuration&#8221;</dd>
-  <dt>Terraform</dt><dd>Tool from Hashicorp to have reproducible infrastructure setups</dd>
-</dl>
-<h3>Kubernetes</h3>
+<ul>
+  <li>Configuration management tools
+    <dl>
+      <dt>Chef</dt><dd>Configuration management tool</dd>
+      <dt>Puppet</dt><dd>Configuration management tool</dd>
+      <dt>Cloud Init</dt><dd>For configuration too..</dd>
+    </dl>
+  </li>
+  <li>Infrastructure
+    <dl>
+      <dt>Packer</dt><dd>&#8220;Packer is a tool for creating identical machine images for multiple platforms from a single source configuration&#8221;</dd>
+      <dt>Terraform</dt><dd>Tool from Hashicorp to have reproducible infrastructure setups</dd>
+    </dl>
+  </li>
+  <li>Workloads scheduling
+    <dl>
+      <dt>Kubernetes</dt><dd>The container orchestration system from Google based on what they have learned around that area</dd>
+      <dt>Marathon</dt><dd>Mesos framework for schedule long running jobs</dd>
+    </dl>
+  </li>
+</ul>
+<h1>Configuration</h1>
+<h2>Chef</h2>
+<ul>
+  <li>Docs:
+    <ul>
+      <li><a href="https://docs.chef.io/resource_execute.html">https://docs.chef.io/resource_execute.html</a></li>
+      <li><a href="https://docs.chef.io/resource_bash.html">https://docs.chef.io/resource_bash.html</a></li>
+    </ul>
+  </li>
+</ul>
+<p>Chef has some <i>resources</i> which help in the execution of code blocks.
+  The configuration is driven by Ruby, which allows to not only having to rely</p>
+<p>The following is based on the example found <a href="https://docs.chef.io/resource_execute.html">here</a>.  We have 2 code blocks
+  in this case.  The first one creates a change in the server and the second one
+  checks whether that code block has been executed in the past already,
+  in order to make the resource <i>idempotent</i>.</p>
+<div class="highlight"><pre><span class="sx">%w{rover fido bubbers}</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">pet_name</span><span class="o">|</span>
+  <span class="n">execute</span> <span class="s2">&quot;feed_pet_</span><span class="si">#{</span><span class="n">pet_name</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">do</span>
+    <span class="n">command</span> <span class="s2">&quot;echo &#39;Feeding: </span><span class="si">#{</span><span class="n">pet_name</span><span class="si">}</span><span class="s2">&#39;; touch &#39;/tmp/</span><span class="si">#{</span><span class="n">pet_name</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+    <span class="c1"># not_if { ::File.exists?(&quot;/tmp/#{pet_name}&quot;)}</span>
+    <span class="n">not_if</span> <span class="s2">&quot;cat /tmp/</span><span class="si">#{</span><span class="n">pet_name</span><span class="si">}</span><span class="s2"> | grep Feeding&quot;</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</pre></div>
+<h2>Puppet</h2>
+<ul>
+  <li>Docs:
+    <ul>
+      <li><a href="https://docs.puppetlabs.com/references/latest/type.html#exec">https://docs.puppetlabs.com/references/latest/type.html#exec</a></li>
+    </ul>
+  </li>
+</ul>
+<p>Puppet also tries to achieve idempotent runs of the code blocks.
+  According to the docs:</p>
+<blockquote>
+  <p>There are three main ways for an exec to be idempotent:</p>
+  <p>The command itself is already idempotent. (For example, <code>apt-get update</code>.)
+    The exec has an <code>onlyif</code>, <code>unless</code>, or <code>creates attribute</code>, which prevents Puppet from running the command unless some condition is met.
+    The exec has <code>refreshonly =&gt; true</code>, which only allows Puppet to run the command when some other resource is changed.</p>
+</blockquote>
+<p>Here the execution is driven via a specialized DSL (though Ruby inspired?)
+  in order to make things declarative.</p>
+<p>An example of its usage:</p>
+<div class="highlight"><pre><span class="vg">$my_file_arg</span> <span class="o">=</span> <span class="s1">&#39;/tmp/myarg.txt&#39;</span>
+
+<span class="n">file</span> <span class="p">{</span> <span class="vg">$my_file_arg</span><span class="p">:</span>
+  <span class="n">content</span> <span class="o">=&gt;</span> <span class="s2">&quot;Hello now&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="nb">exec</span> <span class="p">{</span><span class="s2">&quot;Use $my_file_arg&quot;</span><span class="p">:</span>
+  <span class="nb">require</span> <span class="o">=&gt;</span> <span class="no">File</span><span class="o">[</span><span class="vg">$my_file_arg</span><span class="o">]</span><span class="p">,</span>
+  <span class="n">command</span> <span class="o">=&gt;</span> <span class="s2">&quot;/bin/sed -i s/Hello/Bye/g $my_file_arg&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+<p>Here we have 2 types of code blocks:</p>
+<ul>
+  <li>One expressing the contents of a file</li>
+  <li>Another expressing the execution of a sed command</li>
+</ul>
+<h1>Infrastructure</h1>
+<h2>Cloud config and Cloud Init</h2>
+<ul>
+  <li>Docs:
+    <ul>
+      <li><a href="http://cloudinit.readthedocs.org/en/latest/topics/format.html#cloud-config-data">http://cloudinit.readthedocs.org/en/latest/topics/format.html#cloud-config-data</a></li>
+      <li><a href="https://coreos.com/docs/cluster-management/setup/cloudinit-cloud-config/">https://coreos.com/docs/cluster-management/setup/cloudinit-cloud-config/</a></li>
+      <li><a href="http://cloudinit.readthedocs.org/en/latest/topics/examples.html#yaml-examples">http://cloudinit.readthedocs.org/en/latest/topics/examples.html#yaml-examples</a></li>
+    </ul>
+  </li>
+</ul>
+<p>Cloud config is an interesting case.  Its execution is leveraged via <i>Convention Over Configuration</i> approach
+  where anything under a certain path will be executed on the node.</p>
+<p>The execution in this case is driven by <code>YAML</code> as in Kubernetes.</p>
+<p>Here is an example of using <code>runcmd</code> (example taken from <a href="http://cloudinit.readthedocs.org/en/latest/topics/examples.html#yaml-examples">here</a>)</p>
+<div class="highlight"><pre><span class="c1">#cloud-config</span>
+
+<span class="c1"># run commands</span>
+<span class="c1"># default: none</span>
+<span class="c1"># runcmd contains a list of either lists or a string</span>
+<span class="c1"># each item will be executed in order at rc.local like level with</span>
+<span class="c1"># output to the console</span>
+<span class="c1"># - if the item is a list, the items will be properly executed as if</span>
+<span class="c1">#   passed to execve(3) (with the first arg as the command).</span>
+<span class="c1"># - if the item is a string, it will be simply written to the file and</span>
+<span class="c1">#   will be interpreted by &#39;sh&#39;</span>
+<span class="c1">#</span>
+<span class="c1"># Note, that the list has to be proper yaml, so you have to escape</span>
+<span class="c1"># any characters yaml would eat (&#39;:&#39; can be problematic)</span>
+<span class="l-Scalar-Plain">runcmd</span><span class="p-Indicator">:</span>
+ <span class="p-Indicator">-</span> <span class="p-Indicator">[</span> <span class="nv">ls</span><span class="p-Indicator">,</span> <span class="nv">-l</span><span class="p-Indicator">,</span> <span class="nv">/</span> <span class="p-Indicator">]</span>
+ <span class="p-Indicator">-</span> <span class="p-Indicator">[</span> <span class="nv">sh</span><span class="p-Indicator">,</span> <span class="nv">-xc</span><span class="p-Indicator">,</span> <span class="s">&quot;echo</span><span class="nv"> </span><span class="s">$(date)</span><span class="nv"> </span><span class="s">&#39;:</span><span class="nv"> </span><span class="s">hello</span><span class="nv"> </span><span class="s">world!&#39;&quot;</span> <span class="p-Indicator">]</span>
+ <span class="p-Indicator">-</span> <span class="p-Indicator">[</span> <span class="nv">sh</span><span class="p-Indicator">,</span> <span class="nv">-c</span><span class="p-Indicator">,</span> <span class="nv">echo &quot;=========hello world&#39;=========&quot;</span> <span class="p-Indicator">]</span>
+ <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">ls -l /root</span>
+ <span class="p-Indicator">-</span> <span class="p-Indicator">[</span> <span class="nv">wget</span><span class="p-Indicator">,</span> <span class="s">&quot;http://slashdot.org&quot;</span><span class="p-Indicator">,</span> <span class="nv">-O</span><span class="p-Indicator">,</span> <span class="nv">/tmp/index.html</span> <span class="p-Indicator">]</span>
+</pre></div>
+<h2>Packer</h2>
+<ul>
+  <li>Documentation:
+    <ul>
+      <li><a href="https://www.packer.io/docs/command-line/build.html">https://www.packer.io/docs/command-line/build.html</a></li>
+      <li><a href="https://www.packer.io/docs/provisioners/shell.html">https://www.packer.io/docs/provisioners/shell.html</a></li>
+    </ul>
+  </li>
+</ul>
+<p>Packer counts with a <code>shell provisioner</code>. A <i>provisioner</i> is a common theme in the tooling from Hashicorp.
+  The description from the website notes:</p>
+<blockquote>
+  <p>The shell Packer provisioner provisions machines built by Packer using
+    shell scripts. Shell provisioning is the easiest way to get software
+    installed and configured on a machine.</p>
+</blockquote>
+<p>As an example, we can have <code>JSON</code> express what we want to do with the execution of the code block</p>
+<div class="highlight"><pre><span class="p">{</span>
+  <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;shell&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;inline&quot;</span><span class="o">:</span> <span class="p">[</span><span class="s2">&quot;echo foo&quot;</span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+<p>The execution of the remote resource then, is driven by the <code>JSON</code> format.
+  Here is a more <a href="http://blog.endpoint.com/2014/03/provisioning-development-environment_14.html">complex example</a> I could find, one that invokes <code>Ansible</code>.</p>
+<div class="highlight"><pre><span class="s2">&quot;provisioners&quot;</span><span class="o">:</span> <span class="p">[</span>
+  <span class="p">{</span>
+    <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;shell&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;inline&quot;</span><span class="o">:</span> <span class="p">[</span>
+      <span class="s2">&quot;mkdir .ssh&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;echo &#39;{{user `public_key`}}&#39; &gt;&gt; .ssh/authorized_keys&quot;</span>
+    <span class="p">]</span>
+  <span class="p">},</span>
+  <span class="p">{</span>
+    <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;shell&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;execute_command&quot;</span><span class="o">:</span> <span class="s2">&quot;echo &#39;{{user `ssh_pass`}}&#39; | {{ .Vars }} sudo -E -S sh &#39;{{ .Path }}&#39;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;inline&quot;</span><span class="o">:</span> <span class="p">[</span>
+      <span class="s2">&quot;add-apt-repository ppa:rquillo/ansible&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;apt-get update&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;apt-get install -y ansible&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;echo &#39;%sudo    ALL=(ALL)  NOPASSWD:ALL&#39; &gt;&gt; /etc/sudoers&quot;</span>
+    <span class="p">]</span>
+  <span class="p">},</span>
+  <span class="p">{</span>
+    <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;ansible-local&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;playbook_file&quot;</span><span class="o">:</span> <span class="s2">&quot;site.yml&quot;</span>
+  <span class="p">}</span>
+<span class="p">]</span>
+</pre></div>
+<p>Here the provisioners are chained sequentially.
+  One notable example is that we are now defining another sub code block named <code>execute_command</code>
+  which is prepended to the execution of the original code block.</p>
+<blockquote>
+  <p>To many new users, the execute_command is puzzling. However, it provides an important function: customization of how the command is executed. The most common use case for this is dealing with sudo password prompts.</p>
+</blockquote>
+<h2>Terraform</h2>
+<ul>
+  <li>Docs:
+    <ul>
+      <li><a href="https://www.terraform.io/docs/provisioners/remote-exec.html">https://www.terraform.io/docs/provisioners/remote-exec.html</a></li>
+    </ul>
+  </li>
+</ul>
+<p>Terraform is an interesting case since it recognizes the limitations
+  of using JSON and YAML to drive the execution of a provisioning run.</p>
+<p>The following is an example of applying pupper, also taken from the docs.</p>
+<div class="highlight"><pre># Run puppet and join our Consul cluster
+resource &quot;aws_instance&quot; &quot;web&quot; {
+    ...
+    provisioner &quot;remote-exec&quot; {
+        inline = [
+        &quot;puppet apply&quot;,
+        &quot;consul join ${aws_instance.web.private_ip}&quot;
+        ]
+    }
+}
+</pre></div>
+<p>Here we are expressing that there is going to be a computing resource
+  in AWS, and then when the resource is ready, the code block would be executed
+  in that environment.</p>
+<h1>Workloads scheduling</h1>
+<h2>Kubernetes</h2>
 <ul>
   <li>Docs:
     <ul>
@@ -189,7 +374,7 @@
 <span class="l-Scalar-Plain">labels</span><span class="p-Indicator">:</span>
   <span class="l-Scalar-Plain">test</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">liveness</span>
 </pre></div>
-<h3>Marathon</h3>
+<h2>Marathon</h2>
 <ul>
   <li>Docs:
     <ul>
@@ -242,179 +427,7 @@
 <p>For the healthcheck code block, it is defined the path and one liner that should be executed
   to consider that the other job is healthy or not.  It is also expressed that after 3 failures
   something would happen, though not expressed explicitly in the configuration.</p>
-<h3>Chef</h3>
-<ul>
-  <li>Docs:
-    <ul>
-      <li><a href="https://docs.chef.io/resource_execute.html">https://docs.chef.io/resource_execute.html</a></li>
-      <li><a href="https://docs.chef.io/resource_bash.html">https://docs.chef.io/resource_bash.html</a></li>
-    </ul>
-  </li>
-</ul>
-<p>Chef has some <i>resources</i> which help in the execution of code blocks.
-  The configuration is driven by Ruby, which allows to not only having to rely</p>
-<p>The following is based on the example found <a href="https://docs.chef.io/resource_execute.html">here</a>.  We have 2 code blocks
-  in this case.  The first one creates a change in the server and the second one
-  checks whether that code block has been executed in the past already,
-  in order to make the resource <i>idempotent</i>.</p>
-<div class="highlight"><pre><span class="sx">%w{rover fido bubbers}</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">pet_name</span><span class="o">|</span>
-  <span class="n">execute</span> <span class="s2">&quot;feed_pet_</span><span class="si">#{</span><span class="n">pet_name</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">do</span>
-    <span class="n">command</span> <span class="s2">&quot;echo &#39;Feeding: </span><span class="si">#{</span><span class="n">pet_name</span><span class="si">}</span><span class="s2">&#39;; touch &#39;/tmp/</span><span class="si">#{</span><span class="n">pet_name</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
-    <span class="c1"># not_if { ::File.exists?(&quot;/tmp/#{pet_name}&quot;)}</span>
-    <span class="n">not_if</span> <span class="s2">&quot;cat /tmp/</span><span class="si">#{</span><span class="n">pet_name</span><span class="si">}</span><span class="s2"> | grep Feeding&quot;</span>
-  <span class="k">end</span>
-<span class="k">end</span>
-</pre></div>
-<h3>Puppet</h3>
-<ul>
-  <li>Docs:
-    <ul>
-      <li><a href="https://docs.puppetlabs.com/references/latest/type.html#exec">https://docs.puppetlabs.com/references/latest/type.html#exec</a></li>
-    </ul>
-  </li>
-</ul>
-<p>Puppet also tries to achieve idempotent runs of the code blocks.
-  According to the docs:</p>
-<blockquote>
-  <p>There are three main ways for an exec to be idempotent:</p>
-  <p>The command itself is already idempotent. (For example, <code>apt-get update</code>.)
-    The exec has an <code>onlyif</code>, <code>unless</code>, or <code>creates attribute</code>, which prevents Puppet from running the command unless some condition is met.
-    The exec has <code>refreshonly =&gt; true</code>, which only allows Puppet to run the command when some other resource is changed.</p>
-</blockquote>
-<p>Here the execution is driven via a specialized DSL (though Ruby inspired?)
-  in order to make things declarative.</p>
-<p>An example of its usage:</p>
-<div class="highlight"><pre><span class="vg">$my_file_arg</span> <span class="o">=</span> <span class="s1">&#39;/tmp/myarg.txt&#39;</span>
-
-<span class="n">file</span> <span class="p">{</span> <span class="vg">$my_file_arg</span><span class="p">:</span>
-  <span class="n">content</span> <span class="o">=&gt;</span> <span class="s2">&quot;Hello now&quot;</span><span class="p">,</span>
-<span class="p">}</span>
-
-<span class="nb">exec</span> <span class="p">{</span><span class="s2">&quot;Use $my_file_arg&quot;</span><span class="p">:</span>
-  <span class="nb">require</span> <span class="o">=&gt;</span> <span class="no">File</span><span class="o">[</span><span class="vg">$my_file_arg</span><span class="o">]</span><span class="p">,</span>
-  <span class="n">command</span> <span class="o">=&gt;</span> <span class="s2">&quot;/bin/sed -i s/Hello/Bye/g $my_file_arg&quot;</span><span class="p">,</span>
-<span class="p">}</span>
-</pre></div>
-<p>Here we have 2 types of code blocks:</p>
-<ul>
-  <li>One expressing the contents of a file</li>
-  <li>Another expressing the execution of a sed command</li>
-</ul>
-<h3>Cloud config and Cloud Init</h3>
-<ul>
-  <li>Docs:
-    <ul>
-      <li><a href="http://cloudinit.readthedocs.org/en/latest/topics/format.html#cloud-config-data">http://cloudinit.readthedocs.org/en/latest/topics/format.html#cloud-config-data</a></li>
-      <li><a href="https://coreos.com/docs/cluster-management/setup/cloudinit-cloud-config/">https://coreos.com/docs/cluster-management/setup/cloudinit-cloud-config/</a></li>
-      <li><a href="http://cloudinit.readthedocs.org/en/latest/topics/examples.html#yaml-examples">http://cloudinit.readthedocs.org/en/latest/topics/examples.html#yaml-examples</a></li>
-    </ul>
-  </li>
-</ul>
-<p>Cloud config is an interesting case.  Its execution is leveraged via <i>Convention Over Configuration</i> approach
-  where anything under a certain path will be executed on the node.</p>
-<p>The execution in this case is driven by <code>YAML</code> as in Kubernetes.</p>
-<p>Here is an example of using <code>runcmd</code> (example taken from <a href="http://cloudinit.readthedocs.org/en/latest/topics/examples.html#yaml-examples">here</a>)</p>
-<div class="highlight"><pre><span class="c1">#cloud-config</span>
-
-<span class="c1"># run commands</span>
-<span class="c1"># default: none</span>
-<span class="c1"># runcmd contains a list of either lists or a string</span>
-<span class="c1"># each item will be executed in order at rc.local like level with</span>
-<span class="c1"># output to the console</span>
-<span class="c1"># - if the item is a list, the items will be properly executed as if</span>
-<span class="c1">#   passed to execve(3) (with the first arg as the command).</span>
-<span class="c1"># - if the item is a string, it will be simply written to the file and</span>
-<span class="c1">#   will be interpreted by &#39;sh&#39;</span>
-<span class="c1">#</span>
-<span class="c1"># Note, that the list has to be proper yaml, so you have to escape</span>
-<span class="c1"># any characters yaml would eat (&#39;:&#39; can be problematic)</span>
-<span class="l-Scalar-Plain">runcmd</span><span class="p-Indicator">:</span>
- <span class="p-Indicator">-</span> <span class="p-Indicator">[</span> <span class="nv">ls</span><span class="p-Indicator">,</span> <span class="nv">-l</span><span class="p-Indicator">,</span> <span class="nv">/</span> <span class="p-Indicator">]</span>
- <span class="p-Indicator">-</span> <span class="p-Indicator">[</span> <span class="nv">sh</span><span class="p-Indicator">,</span> <span class="nv">-xc</span><span class="p-Indicator">,</span> <span class="s">&quot;echo</span><span class="nv"> </span><span class="s">$(date)</span><span class="nv"> </span><span class="s">&#39;:</span><span class="nv"> </span><span class="s">hello</span><span class="nv"> </span><span class="s">world!&#39;&quot;</span> <span class="p-Indicator">]</span>
- <span class="p-Indicator">-</span> <span class="p-Indicator">[</span> <span class="nv">sh</span><span class="p-Indicator">,</span> <span class="nv">-c</span><span class="p-Indicator">,</span> <span class="nv">echo &quot;=========hello world&#39;=========&quot;</span> <span class="p-Indicator">]</span>
- <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">ls -l /root</span>
- <span class="p-Indicator">-</span> <span class="p-Indicator">[</span> <span class="nv">wget</span><span class="p-Indicator">,</span> <span class="s">&quot;http://slashdot.org&quot;</span><span class="p-Indicator">,</span> <span class="nv">-O</span><span class="p-Indicator">,</span> <span class="nv">/tmp/index.html</span> <span class="p-Indicator">]</span>
-</pre></div>
-<h3>Packer</h3>
-<ul>
-  <li>Documentation:
-    <ul>
-      <li><a href="https://www.packer.io/docs/command-line/build.html">https://www.packer.io/docs/command-line/build.html</a></li>
-      <li><a href="https://www.packer.io/docs/provisioners/shell.html">https://www.packer.io/docs/provisioners/shell.html</a></li>
-    </ul>
-  </li>
-</ul>
-<p>Packer counts with a <code>shell provisioner</code>. A <i>provisioner</i> is a common theme in the tooling from Hashicorp.
-  The description from the website notes:</p>
-<blockquote>
-  <p>The shell Packer provisioner provisions machines built by Packer using
-    shell scripts. Shell provisioning is the easiest way to get software
-    installed and configured on a machine.</p>
-</blockquote>
-<p>As an example, we can have <code>JSON</code> express what we want to do with the execution of the code block</p>
-<div class="highlight"><pre><span class="p">{</span>
-  <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;shell&quot;</span><span class="p">,</span>
-  <span class="s2">&quot;inline&quot;</span><span class="o">:</span> <span class="p">[</span><span class="s2">&quot;echo foo&quot;</span><span class="p">]</span>
-<span class="p">}</span>
-</pre></div>
-<p>The execution of the remote resource then, is driven by the <code>JSON</code> format.
-  Here is a more <a href="http://blog.endpoint.com/2014/03/provisioning-development-environment_14.html">complex example</a> I could find, one that invokes <code>Ansible</code>.</p>
-<div class="highlight"><pre><span class="s2">&quot;provisioners&quot;</span><span class="o">:</span> <span class="p">[</span>
-  <span class="p">{</span>
-    <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;shell&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;inline&quot;</span><span class="o">:</span> <span class="p">[</span>
-      <span class="s2">&quot;mkdir .ssh&quot;</span><span class="p">,</span>
-      <span class="s2">&quot;echo &#39;{{user `public_key`}}&#39; &gt;&gt; .ssh/authorized_keys&quot;</span>
-    <span class="p">]</span>
-  <span class="p">},</span>
-  <span class="p">{</span>
-    <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;shell&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;execute_command&quot;</span><span class="o">:</span> <span class="s2">&quot;echo &#39;{{user `ssh_pass`}}&#39; | {{ .Vars }} sudo -E -S sh &#39;{{ .Path }}&#39;&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;inline&quot;</span><span class="o">:</span> <span class="p">[</span>
-      <span class="s2">&quot;add-apt-repository ppa:rquillo/ansible&quot;</span><span class="p">,</span>
-      <span class="s2">&quot;apt-get update&quot;</span><span class="p">,</span>
-      <span class="s2">&quot;apt-get install -y ansible&quot;</span><span class="p">,</span>
-      <span class="s2">&quot;echo &#39;%sudo    ALL=(ALL)  NOPASSWD:ALL&#39; &gt;&gt; /etc/sudoers&quot;</span>
-    <span class="p">]</span>
-  <span class="p">},</span>
-  <span class="p">{</span>
-    <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;ansible-local&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;playbook_file&quot;</span><span class="o">:</span> <span class="s2">&quot;site.yml&quot;</span>
-  <span class="p">}</span>
-<span class="p">]</span>
-</pre></div>
-<p>Here the provisioners are chained sequentially.
-  One notable example is that we are now defining another sub code block named <code>execute_command</code>
-  which is prepended to the execution of the original code block.</p>
-<blockquote>
-  <p>To many new users, the execute_command is puzzling. However, it provides an important function: customization of how the command is executed. The most common use case for this is dealing with sudo password prompts.</p>
-</blockquote>
-<h3>Terraform</h3>
-<ul>
-  <li>Docs:
-    <ul>
-      <li><a href="https://www.terraform.io/docs/provisioners/remote-exec.html">https://www.terraform.io/docs/provisioners/remote-exec.html</a></li>
-    </ul>
-  </li>
-</ul>
-<p>Terraform is an interesting case since it recognizes the limitations
-  of using JSON and YAML to drive the execution of a provisioning run.</p>
-<p>The following is an example of applying pupper, also taken from the docs.</p>
-<div class="highlight"><pre># Run puppet and join our Consul cluster
-resource &quot;aws_instance&quot; &quot;web&quot; {
-    ...
-    provisioner &quot;remote-exec&quot; {
-        inline = [
-        &quot;puppet apply&quot;,
-        &quot;consul join ${aws_instance.web.private_ip}&quot;
-        ]
-    }
-}
-</pre></div>
-<p>Here we are expressing that there is going to be a computing resource
-  in AWS, and then when the resource is ready, the code block would be executed
-  in that environment.</p>
-<h3>Conclusions</h3>
+<h2>Thoughts</h2>
 <p>Again, what I found interesting of all of these systems and tooling,
   is that they are variations around the same idea: wrap some configuration
   around the execution of a code block to transparently add some behavior
