@@ -117,28 +117,14 @@
   by systems or tools which in the end result in the execution of a code block
   by means of some configuration format, dsl, http request, cli tool, etc&#8230;</p>
 <p>I decided to narrow down the list to the following for now:</p>
-<ul>
-  <li>Configuration management tools
-    <dl>
-      <dt>Chef</dt><dd>Configuration management tool</dd>
-      <dt>Puppet</dt><dd>Configuration management tool</dd>
-      <dt>Cloud Init</dt><dd>For configuration too..</dd>
-    </dl>
-  </li>
-  <li>Infrastructure
-    <dl>
-      <dt>Packer</dt><dd>&#8220;Packer is a tool for creating identical machine images for multiple platforms from a single source configuration&#8221;</dd>
-      <dt>Terraform</dt><dd>Tool from Hashicorp to have reproducible infrastructure setups</dd>
-    </dl>
-  </li>
-  <li>Workloads scheduling
-    <dl>
-      <dt>Kubernetes</dt><dd>The container orchestration system from Google based on what they have learned around that area</dd>
-      <dt>Marathon</dt><dd>Mesos framework for schedule long running jobs</dd>
-    </dl>
-  </li>
-</ul>
-<h1>Configuration</h1>
+<table>
+  <tr><td>Domain</td><td></td></tr>
+  <tr><td></td><td></td></tr>
+  <tr><td>Configuration Management</td><td>Chef, Puppet</td></tr>
+  <tr><td>Infrastructure</td><td>Cloud Init, Packer, Terraform</td></tr>
+  <tr><td>Workloads scheduling</td><td>Kubernetes, Marathon</td></tr>
+</table>
+<h1>Configuration Management</h1>
 <h2>Chef</h2>
 <ul>
   <li>Docs:
@@ -198,7 +184,7 @@
   <li>Another expressing the execution of a sed command</li>
 </ul>
 <h1>Infrastructure</h1>
-<h2>Cloud config and Cloud Init</h2>
+<h2>Cloud Config and Cloud Init</h2>
 <ul>
   <li>Docs:
     <ul>
@@ -297,7 +283,7 @@
 </ul>
 <p>Terraform is an interesting case since it recognizes the limitations
   of using JSON and YAML to drive the execution of a provisioning run.</p>
-<p>The following is an example of applying pupper, also taken from the docs.</p>
+<p>The following is an example of applying puppet, also taken from the docs.</p>
 <div class="highlight"><pre># Run puppet and join our Consul cluster
 resource &quot;aws_instance&quot; &quot;web&quot; {
     ...
@@ -349,8 +335,10 @@ resource &quot;aws_instance&quot; &quot;web&quot; {
 <p>The full example is <a href="https://github.com/GoogleCloudPlatform/kubernetes/commit/f1b55c04e2936fafb3c89d29dc474bb5b08f3673">here</a>.</p>
 <h4>Example: A workload with a Healthcheck</h4>
 <p>Here we have a container that has a <code>livenessProbe</code>,
-  which can be done by either a command or a http request.
-  The code block which</p>
+  which can be done by either a command or a http request.</p>
+<p>There are 2 code blocks: the <code>liveness-exec</code> which is going to be
+  periodically writing <code>ok</code> into <code>/tmp/health</code> and its liveness probe,
+  which is another code block that will be checking <code>cat /tmp/health</code></p>
 <div class="highlight"><pre><span class="l-Scalar-Plain">apiVersion</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">v1beta1</span>
 <span class="l-Scalar-Plain">desiredState</span><span class="p-Indicator">:</span>
   <span class="l-Scalar-Plain">manifest</span><span class="p-Indicator">:</span>
@@ -374,6 +362,9 @@ resource &quot;aws_instance&quot; &quot;web&quot; {
 <span class="l-Scalar-Plain">labels</span><span class="p-Indicator">:</span>
   <span class="l-Scalar-Plain">test</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">liveness</span>
 </pre></div>
+<p>We can see some of the limitations already in deciding to use <code>YAML</code>
+  for this since it looks unnatural that now a command has to be
+  break apart and fit into an array structure by using YAML lists.</p>
 <h2>Marathon</h2>
 <ul>
   <li>Docs:
