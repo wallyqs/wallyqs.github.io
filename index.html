@@ -105,6 +105,330 @@
   
   <div class="post">
     <h1 class="post-title">
+      <a href="/2015/03/31/variations-code-blocks-execution/">
+        Variations around the execution of code blocks
+      </a>
+    </h1>
+
+    <span class="post-date">31 Mar 2015</span>
+
+    
+<p>The following is an enumeration of the approach taken
+  by systems or tools which in the end result in the execution of a code block
+  by means of some configuration format, dsl, http request, cli tool, etc&#8230;</p>
+<p>I decided to narrow down the list to the following for now:</p>
+<dl>
+  <dt>Kubernetes</dt><dd>The container orchestration system from Google based on what they have learned around that area</dd>
+  <dt>Marathon</dt><dd>Mesos framework for schedule long running jobs</dd>
+</dl>
+<dl>
+  <dt>Chef</dt><dd>Configuration management tool</dd>
+  <dt>Puppet</dt><dd>Configuration management tool</dd>
+  <dt>Cloud Init</dt><dd>Configuration</dd>
+  <dt>Packer</dt><dd>&#8220;Packer is a tool for creating identical machine images for multiple platforms from a single source configuration&#8221;</dd>
+  <dt>Terraform</dt><dd>Tool from Hashicorp to have reproducible infrastructure setups</dd>
+</dl>
+<h3>Kubernetes</h3>
+<ul>
+  <li>Docs:
+    <ul>
+      <li><a href="https://github.com/GoogleCloudPlatform/kubernetes/blob/master/examples/update-demo/nautilus-rc.yaml">https://github.com/GoogleCloudPlatform/kubernetes/blob/master/examples/update-demo/nautilus-rc.yaml</a></li>
+    </ul>
+  </li>
+</ul>
+<p>In the case of Kubernetes, the execution is driven via a YAML file.</p>
+<p>A couple of examples below:</p>
+<h4>Example: An Nginx service</h4>
+<ul>
+  <li>Explicitly say it is a <code>Service</code></li>
+  <li>Describe the ports it will use</li>
+  <li>Set a constraint about where to run the service</li>
+</ul>
+<div class="highlight"><pre><span class="l-Scalar-Plain">kind</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Service</span>
+<span class="l-Scalar-Plain">apiVersion</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">v1beta1</span>
+<span class="l-Scalar-Plain">id</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">nginx-example</span>
+<span class="c1"># the port that this service should serve on</span>
+<span class="l-Scalar-Plain">port</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">8000</span>
+<span class="c1"># just like the selector in the replication controller,</span>
+<span class="c1"># but this time it identifies the set of pods to load balance</span>
+<span class="c1"># traffic to.</span>
+<span class="l-Scalar-Plain">selector</span><span class="p-Indicator">:</span>
+  <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">nginx</span>
+<span class="c1"># the container on each pod to connect to, can be a name</span>
+<span class="c1"># (e.g. &#39;www&#39;) or a number (e.g. 80)</span>
+<span class="l-Scalar-Plain">containerPort</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">80</span>
+</pre></div>
+<p>Not very clear what it is running, but it seems that
+  an internal <code>containerport</code> will be exposed as the port 8000
+  and that it will only be running in nodes tagged to be running <code>nginx</code> workloads.</p>
+<p>The full example is <a href="https://github.com/GoogleCloudPlatform/kubernetes/commit/f1b55c04e2936fafb3c89d29dc474bb5b08f3673">here</a>.</p>
+<h4>Example: A workload with a Healthcheck</h4>
+<p>Here we have a container that has a <code>livenessProbe</code>,
+  which can be done by either a command or a http request.
+  The code block which</p>
+<div class="highlight"><pre><span class="l-Scalar-Plain">apiVersion</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">v1beta1</span>
+<span class="l-Scalar-Plain">desiredState</span><span class="p-Indicator">:</span>
+  <span class="l-Scalar-Plain">manifest</span><span class="p-Indicator">:</span>
+    <span class="l-Scalar-Plain">containers</span><span class="p-Indicator">:</span>
+      <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">image</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">busybox</span>
+        <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">liveness</span>
+        <span class="l-Scalar-Plain">livenessProbe</span><span class="p-Indicator">:</span>
+          <span class="l-Scalar-Plain">exec</span><span class="p-Indicator">:</span>
+            <span class="l-Scalar-Plain">command</span><span class="p-Indicator">:</span>
+              <span class="p-Indicator">-</span> <span class="s">&quot;cat&quot;</span>
+              <span class="p-Indicator">-</span> <span class="s">&quot;/tmp/health&quot;</span>
+          <span class="l-Scalar-Plain">initialDelaySeconds</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">15</span>
+        <span class="l-Scalar-Plain">command</span><span class="p-Indicator">:</span>
+          <span class="p-Indicator">-</span> <span class="s">&quot;/bin/sh&quot;</span>
+          <span class="p-Indicator">-</span> <span class="s">&quot;-c&quot;</span>
+          <span class="p-Indicator">-</span> <span class="s">&quot;echo</span><span class="nv"> </span><span class="s">ok</span><span class="nv"> </span><span class="s">&gt;</span><span class="nv"> </span><span class="s">/tmp/health;</span><span class="nv"> </span><span class="s">sleep</span><span class="nv"> </span><span class="s">10;</span><span class="nv"> </span><span class="s">echo</span><span class="nv"> </span><span class="s">fail</span><span class="nv"> </span><span class="s">&gt;</span><span class="nv"> </span><span class="s">/tmp/health;</span><span class="nv"> </span><span class="s">sleep</span><span class="nv"> </span><span class="s">600&quot;</span>
+    <span class="l-Scalar-Plain">id</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">liveness-exec</span>
+    <span class="l-Scalar-Plain">version</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">v1beta1</span>
+<span class="l-Scalar-Plain">id</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">liveness-exec</span>
+<span class="l-Scalar-Plain">kind</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Pod</span>
+<span class="l-Scalar-Plain">labels</span><span class="p-Indicator">:</span>
+  <span class="l-Scalar-Plain">test</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">liveness</span>
+</pre></div>
+<h3>Marathon</h3>
+<ul>
+  <li>Docs:
+    <ul>
+      <li><a href="https://github.com/mesosphere/marathon">https://github.com/mesosphere/marathon</a></li>
+    </ul>
+  </li>
+</ul>
+<p>In Marathon, scheduling of workloads is done via <code>JSON</code> payloads done to an HTTP API.</p>
+<p>Here is <a href="https://github.com/mesosphere/marathon/blob/master/examples/bridge.json">an example</a> of starting a couple of code blocks,
+  one which does a healthcheck and another one which is the job itself.</p>
+<div class="highlight"><pre><span class="p">{</span>
+  <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="s2">&quot;bridged-webapp&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;cmd&quot;</span><span class="o">:</span> <span class="s2">&quot;python3 -m http.server 8080&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;cpus&quot;</span><span class="o">:</span> <span class="mf">0.25</span><span class="p">,</span>
+  <span class="s2">&quot;mem&quot;</span><span class="o">:</span> <span class="mf">64.0</span><span class="p">,</span>
+  <span class="s2">&quot;instances&quot;</span><span class="o">:</span> <span class="mi">2</span><span class="p">,</span>
+  <span class="s2">&quot;container&quot;</span><span class="o">:</span> <span class="p">{</span>
+    <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;DOCKER&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;docker&quot;</span><span class="o">:</span> <span class="p">{</span>
+      <span class="s2">&quot;image&quot;</span><span class="o">:</span> <span class="s2">&quot;python:3&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;network&quot;</span><span class="o">:</span> <span class="s2">&quot;BRIDGE&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;portMappings&quot;</span><span class="o">:</span> <span class="p">[</span>
+        <span class="p">{</span> <span class="s2">&quot;containerPort&quot;</span><span class="o">:</span> <span class="mi">8080</span><span class="p">,</span> <span class="s2">&quot;hostPort&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;servicePort&quot;</span><span class="o">:</span> <span class="mi">9000</span><span class="p">,</span> <span class="s2">&quot;protocol&quot;</span><span class="o">:</span> <span class="s2">&quot;tcp&quot;</span> <span class="p">},</span>
+        <span class="p">{</span> <span class="s2">&quot;containerPort&quot;</span><span class="o">:</span> <span class="mi">161</span><span class="p">,</span> <span class="s2">&quot;hostPort&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;protocol&quot;</span><span class="o">:</span> <span class="s2">&quot;udp&quot;</span><span class="p">}</span>
+      <span class="p">]</span>
+    <span class="p">}</span>
+  <span class="p">},</span>
+  <span class="s2">&quot;healthChecks&quot;</span><span class="o">:</span> <span class="p">[</span>
+    <span class="p">{</span>
+      <span class="s2">&quot;protocol&quot;</span><span class="o">:</span> <span class="s2">&quot;HTTP&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;portIndex&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;path&quot;</span><span class="o">:</span> <span class="s2">&quot;/&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;gracePeriodSeconds&quot;</span><span class="o">:</span> <span class="mi">5</span><span class="p">,</span>
+      <span class="s2">&quot;intervalSeconds&quot;</span><span class="o">:</span> <span class="mi">20</span><span class="p">,</span>
+      <span class="s2">&quot;maxConsecutiveFailures&quot;</span><span class="o">:</span> <span class="mi">3</span>
+    <span class="p">},</span>
+    <span class="p">{</span>
+      <span class="s2">&quot;protocol&quot;</span><span class="o">:</span> <span class="s2">&quot;COMMAND&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;command&quot;</span><span class="o">:</span> <span class="p">{</span> <span class="s2">&quot;value&quot;</span><span class="o">:</span> <span class="s2">&quot;curl -f -X GET http://$HOST:$PORT&quot;</span> <span class="p">},</span>
+      <span class="s2">&quot;gracePeriodSeconds&quot;</span><span class="o">:</span> <span class="mi">5</span><span class="p">,</span>
+      <span class="s2">&quot;intervalSeconds&quot;</span><span class="o">:</span> <span class="mi">20</span><span class="p">,</span>
+      <span class="s2">&quot;maxConsecutiveFailures&quot;</span><span class="o">:</span> <span class="mi">3</span>
+    <span class="p">}</span>
+
+  <span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+<p>Via the JSON configuration we are able to say transparently modify the execution of the code block and express
+  that it should be done using a runtime which has <code>python:3</code> and a certain number of ports open.</p>
+<p>For the healthcheck code block, it is defined the path and one liner that should be executed
+  to consider that the other job is healthy or not.  It is also expressed that after 3 failures
+  something would happen, though not expressed explicitly in the configuration.</p>
+<h3>Chef</h3>
+<ul>
+  <li>Docs:
+    <ul>
+      <li><a href="https://docs.chef.io/resource_execute.html">https://docs.chef.io/resource_execute.html</a></li>
+      <li><a href="https://docs.chef.io/resource_bash.html">https://docs.chef.io/resource_bash.html</a></li>
+    </ul>
+  </li>
+</ul>
+<p>Chef has some <i>resources</i> which help in the execution of code blocks.
+  The configuration is driven by Ruby, which allows to not only having to rely</p>
+<p>The following is based on the example found <a href="https://docs.chef.io/resource_execute.html">here</a>.  We have 2 code blocks
+  in this case.  The first one creates a change in the server and the second one
+  checks whether that code block has been executed in the past already,
+  in order to make the resource <i>idempotent</i>.</p>
+<div class="highlight"><pre><span class="sx">%w{rover fido bubbers}</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">pet_name</span><span class="o">|</span>
+  <span class="n">execute</span> <span class="s2">&quot;feed_pet_</span><span class="si">#{</span><span class="n">pet_name</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">do</span>
+    <span class="n">command</span> <span class="s2">&quot;echo &#39;Feeding: </span><span class="si">#{</span><span class="n">pet_name</span><span class="si">}</span><span class="s2">&#39;; touch &#39;/tmp/</span><span class="si">#{</span><span class="n">pet_name</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+    <span class="c1"># not_if { ::File.exists?(&quot;/tmp/#{pet_name}&quot;)}</span>
+    <span class="n">not_if</span> <span class="s2">&quot;cat /tmp/</span><span class="si">#{</span><span class="n">pet_name</span><span class="si">}</span><span class="s2"> | grep Feeding&quot;</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</pre></div>
+<h3>Puppet</h3>
+<ul>
+  <li>Docs:
+    <ul>
+      <li><a href="https://docs.puppetlabs.com/references/latest/type.html#exec">https://docs.puppetlabs.com/references/latest/type.html#exec</a></li>
+    </ul>
+  </li>
+</ul>
+<p>Puppet also tries to achieve idempotent runs of the code blocks.
+  According to the docs:</p>
+<blockquote>
+  <p>There are three main ways for an exec to be idempotent:</p>
+  <p>The command itself is already idempotent. (For example, <code>apt-get update</code>.)
+    The exec has an <code>onlyif</code>, <code>unless</code>, or <code>creates attribute</code>, which prevents Puppet from running the command unless some condition is met.
+    The exec has <code>refreshonly =&gt; true</code>, which only allows Puppet to run the command when some other resource is changed.</p>
+</blockquote>
+<p>Here the execution is driven via a specialized DSL (though Ruby inspired?)
+  in order to make things declarative.</p>
+<p>An example of its usage:</p>
+<div class="highlight"><pre><span class="vg">$my_file_arg</span> <span class="o">=</span> <span class="s1">&#39;/tmp/myarg.txt&#39;</span>
+
+<span class="n">file</span> <span class="p">{</span> <span class="vg">$my_file_arg</span><span class="p">:</span>
+  <span class="n">content</span> <span class="o">=&gt;</span> <span class="s2">&quot;Hello now&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="nb">exec</span> <span class="p">{</span><span class="s2">&quot;Use $my_file_arg&quot;</span><span class="p">:</span>
+  <span class="nb">require</span> <span class="o">=&gt;</span> <span class="no">File</span><span class="o">[</span><span class="vg">$my_file_arg</span><span class="o">]</span><span class="p">,</span>
+  <span class="n">command</span> <span class="o">=&gt;</span> <span class="s2">&quot;/bin/sed -i s/Hello/Bye/g $my_file_arg&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+<p>Here we have 2 types of code blocks:</p>
+<ul>
+  <li>One expressing the contents of a file</li>
+  <li>Another expressing the execution of a sed command</li>
+</ul>
+<h3>Cloud config and Cloud Init</h3>
+<ul>
+  <li>Docs:
+    <ul>
+      <li><a href="http://cloudinit.readthedocs.org/en/latest/topics/format.html#cloud-config-data">http://cloudinit.readthedocs.org/en/latest/topics/format.html#cloud-config-data</a></li>
+      <li><a href="https://coreos.com/docs/cluster-management/setup/cloudinit-cloud-config/">https://coreos.com/docs/cluster-management/setup/cloudinit-cloud-config/</a></li>
+      <li><a href="http://cloudinit.readthedocs.org/en/latest/topics/examples.html#yaml-examples">http://cloudinit.readthedocs.org/en/latest/topics/examples.html#yaml-examples</a></li>
+    </ul>
+  </li>
+</ul>
+<p>Cloud config is an interesting case.  Its execution is leveraged via <i>Convention Over Configuration</i> approach
+  where anything under a certain path will be executed on the node.</p>
+<p>The execution in this case is driven by <code>YAML</code> as in Kubernetes.</p>
+<p>Here is an example of using <code>runcmd</code> (example taken from <a href="http://cloudinit.readthedocs.org/en/latest/topics/examples.html#yaml-examples">here</a>)</p>
+<div class="highlight"><pre><span class="c1">#cloud-config</span>
+
+<span class="c1"># run commands</span>
+<span class="c1"># default: none</span>
+<span class="c1"># runcmd contains a list of either lists or a string</span>
+<span class="c1"># each item will be executed in order at rc.local like level with</span>
+<span class="c1"># output to the console</span>
+<span class="c1"># - if the item is a list, the items will be properly executed as if</span>
+<span class="c1">#   passed to execve(3) (with the first arg as the command).</span>
+<span class="c1"># - if the item is a string, it will be simply written to the file and</span>
+<span class="c1">#   will be interpreted by &#39;sh&#39;</span>
+<span class="c1">#</span>
+<span class="c1"># Note, that the list has to be proper yaml, so you have to escape</span>
+<span class="c1"># any characters yaml would eat (&#39;:&#39; can be problematic)</span>
+<span class="l-Scalar-Plain">runcmd</span><span class="p-Indicator">:</span>
+ <span class="p-Indicator">-</span> <span class="p-Indicator">[</span> <span class="nv">ls</span><span class="p-Indicator">,</span> <span class="nv">-l</span><span class="p-Indicator">,</span> <span class="nv">/</span> <span class="p-Indicator">]</span>
+ <span class="p-Indicator">-</span> <span class="p-Indicator">[</span> <span class="nv">sh</span><span class="p-Indicator">,</span> <span class="nv">-xc</span><span class="p-Indicator">,</span> <span class="s">&quot;echo</span><span class="nv"> </span><span class="s">$(date)</span><span class="nv"> </span><span class="s">&#39;:</span><span class="nv"> </span><span class="s">hello</span><span class="nv"> </span><span class="s">world!&#39;&quot;</span> <span class="p-Indicator">]</span>
+ <span class="p-Indicator">-</span> <span class="p-Indicator">[</span> <span class="nv">sh</span><span class="p-Indicator">,</span> <span class="nv">-c</span><span class="p-Indicator">,</span> <span class="nv">echo &quot;=========hello world&#39;=========&quot;</span> <span class="p-Indicator">]</span>
+ <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">ls -l /root</span>
+ <span class="p-Indicator">-</span> <span class="p-Indicator">[</span> <span class="nv">wget</span><span class="p-Indicator">,</span> <span class="s">&quot;http://slashdot.org&quot;</span><span class="p-Indicator">,</span> <span class="nv">-O</span><span class="p-Indicator">,</span> <span class="nv">/tmp/index.html</span> <span class="p-Indicator">]</span>
+</pre></div>
+<h3>Packer</h3>
+<ul>
+  <li>Documentation:
+    <ul>
+      <li><a href="https://www.packer.io/docs/command-line/build.html">https://www.packer.io/docs/command-line/build.html</a></li>
+      <li><a href="https://www.packer.io/docs/provisioners/shell.html">https://www.packer.io/docs/provisioners/shell.html</a></li>
+    </ul>
+  </li>
+</ul>
+<p>Packer counts with a <code>shell provisioner</code>. A <i>provisioner</i> is a common theme in the tooling from Hashicorp.
+  The description from the website notes:</p>
+<blockquote>
+  <p>The shell Packer provisioner provisions machines built by Packer using
+    shell scripts. Shell provisioning is the easiest way to get software
+    installed and configured on a machine.</p>
+</blockquote>
+<p>As an example, we can have <code>JSON</code> express what we want to do with the execution of the code block</p>
+<div class="highlight"><pre><span class="p">{</span>
+  <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;shell&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;inline&quot;</span><span class="o">:</span> <span class="p">[</span><span class="s2">&quot;echo foo&quot;</span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+<p>The execution of the remote resource then, is driven by the <code>JSON</code> format.
+  Here is a more <a href="http://blog.endpoint.com/2014/03/provisioning-development-environment_14.html">complex example</a> I could find, one that invokes <code>Ansible</code>.</p>
+<div class="highlight"><pre><span class="s2">&quot;provisioners&quot;</span><span class="o">:</span> <span class="p">[</span>
+  <span class="p">{</span>
+    <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;shell&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;inline&quot;</span><span class="o">:</span> <span class="p">[</span>
+      <span class="s2">&quot;mkdir .ssh&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;echo &#39;{{user `public_key`}}&#39; &gt;&gt; .ssh/authorized_keys&quot;</span>
+    <span class="p">]</span>
+  <span class="p">},</span>
+  <span class="p">{</span>
+    <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;shell&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;execute_command&quot;</span><span class="o">:</span> <span class="s2">&quot;echo &#39;{{user `ssh_pass`}}&#39; | {{ .Vars }} sudo -E -S sh &#39;{{ .Path }}&#39;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;inline&quot;</span><span class="o">:</span> <span class="p">[</span>
+      <span class="s2">&quot;add-apt-repository ppa:rquillo/ansible&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;apt-get update&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;apt-get install -y ansible&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;echo &#39;%sudo    ALL=(ALL)  NOPASSWD:ALL&#39; &gt;&gt; /etc/sudoers&quot;</span>
+    <span class="p">]</span>
+  <span class="p">},</span>
+  <span class="p">{</span>
+    <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;ansible-local&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;playbook_file&quot;</span><span class="o">:</span> <span class="s2">&quot;site.yml&quot;</span>
+  <span class="p">}</span>
+<span class="p">]</span>
+</pre></div>
+<p>Here the provisioners are chained sequentially.
+  One notable example is that we are now defining another sub code block named <code>execute_command</code>
+  which is prepended to the execution of the original code block.</p>
+<blockquote>
+  <p>To many new users, the execute_command is puzzling. However, it provides an important function: customization of how the command is executed. The most common use case for this is dealing with sudo password prompts.</p>
+</blockquote>
+<h3>Terraform</h3>
+<ul>
+  <li>Docs:
+    <ul>
+      <li><a href="https://www.terraform.io/docs/provisioners/remote-exec.html">https://www.terraform.io/docs/provisioners/remote-exec.html</a></li>
+    </ul>
+  </li>
+</ul>
+<p>Terraform is an interesting case since it recognizes the limitations
+  of using JSON and YAML to drive the execution of a provisioning run.</p>
+<p>The following is an example of applying pupper, also taken from the docs.</p>
+<div class="highlight"><pre># Run puppet and join our Consul cluster
+resource &quot;aws_instance&quot; &quot;web&quot; {
+    ...
+    provisioner &quot;remote-exec&quot; {
+        inline = [
+        &quot;puppet apply&quot;,
+        &quot;consul join ${aws_instance.web.private_ip}&quot;
+        ]
+    }
+}
+</pre></div>
+<p>Here we are expressing that there is going to be a computing resource
+  in AWS, and then when the resource is ready, the code block would be executed
+  in that environment.</p>
+<h3>Conclusions</h3>
+<p>Again, what I found interesting of all of these systems and tooling,
+  is that they are variations around the same idea: wrap some configuration
+  around the execution of a code block to transparently add some behavior
+  to its execution.</p>
+<p>Note: There are some technologies that I want to cover as well
+  so I will be updating this post in the near future&#8230;</p>
+<p>If you think I&#8217;m onto something you can follow me on <a href="https://twitter.com/wallyqs">Twitter</a>.</p>
+
+
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
       <a href="/posts/2015/02/26/mesos-tokyo/">
         Talked at the Tokyo Mesos Meetup #1
       </a>
@@ -739,267 +1063,6 @@ Accept-Language: en-US,en<span class="p">;</span><span class="nv">q</span><span 
 </pre></div>
 <p>You can add more info to the path (e.g. <code>GET /v2/</code>) to narrow down the actions
   that are being investigated.</p>
-
-
-
-  </div>
-  
-  <div class="post">
-    <h1 class="post-title">
-      <a href="/posts/2014/12/12/using-org-babel-for-lp-jp/">
-        Org Babelで文芸的プログラミング
-      </a>
-    </h1>
-
-    <span class="post-date">12 Dec 2014</span>
-
-    
-<p>(This is a post for the <a href="http://qiita.com/advent-calendar/2014/emacs">Emacs Advent Calendar 2014</a> from Japan, a similar English version can be found <a href="http://literateinfrastructure.org/posts/2014/12/12/using-org-babel-for-lp/">here</a>)</p>
-<p>Org modeの話を聞いたことがある方は、Org modeは「TODOリスト管理ツールの
-  一つだ」と思われる方が多いかもしれません。それはその通りですが、
-  Org Babelというモードで、「文芸的プログラミング(Literate Programming)」を実現することができます。</p>
-<p>Org Babelの使い方を示すために、あるホストのモニタリング情報を表示する、
-  単純なSinatraアプリケーションを例えにします。</p>
-<h3>例: ホストのモニタリング情報を表示するSinatra app</h3>
-<p>表示したい項目をシステムの <code>uptime</code> と ESTABLISHEDコネクションの数に絞り込みます。</p>
-<div class="highlight"><pre>uptime
-
-20:37  up 4 days,  9:48, 5 users, load averages: 0.67 0.86 1.11
-</pre></div>
-<p><code>ESTABLISHED</code> コネクションの数:</p>
-<div class="highlight"><pre>netstat -an <span class="p">|</span> grep ESTABLISHED <span class="p">|</span> wc -l
-
-       5
-</pre></div>
-<p>この二つのコマンドの結果を集めて、 HTTPクライアントを使えば
-  <code>GET /vars</code> で取れるようになります：</p>
-<div class="highlight"><pre>curl 127.0.0.1:9292/vars
-</pre></div>
-<h3>事前準備</h3>
-<p>まず、ディレクトリの作成が必要です:</p>
-<div class="highlight"><pre>mkdir -p org
-mkdir -p src
-touch readme.org
-</pre></div>
-<ul>
-  <li><code>org/</code> ディレクトリの下に置くファイルはOrg mode で書きます</li>
-  <li><code>src/</code> ディレクトリの下に置くファイルはSinatraアプリケーションのソースコード</li>
-</ul>
-<p>(<code>readme.org</code> の作成は必要ではないですが、best practiceとしておすすめします&#8230;)</p>
-<p>最終的に、ディレクトリ構成はこんな感じになります:</p>
-<div class="highlight"><pre>.
-├── org
-│   ├── app.org
-│   └── run.org
-├── readme.org
-├── src
-│   ├── Gemfile
-│   ├── app.rb
-│   └── config.ru
-</pre></div>
-<h3>実装</h3>
-<p>アプリケーションの実装自体は <code>org/app.org</code> に書きます。</p>
-<pre class="example">
-touch org/app.org
-</pre>
-<h4>プロトタイプ</h4>
-<p>SinatraのWebアプリケーションを実装前に、Org Babel を使ってプロトタイプを作りましょう。
-  Rubyのcode blockを書いたら、 <code>C-c C-c</code> で実行することができます。</p>
-<pre class="src src-org"><span style="color: #A6E22E;">*** Notes on how to get the results</span>
-
-We could use something simple like:
-
-<span style="color: #465457; font-style: italic;">#+begin_src ruby :results output code</span>
-s = <span style="color: #E6DB74;">&lt;&lt;VARS</span>
-<span style="color: #E6DB74;">Uptime:</span>
-<span style="color: #F92672;">#{`uptime`}</span>
-
-<span style="color: #E6DB74;">ESTABLISHED connections:</span>
-<span style="color: #F92672;">#{`netstat -an | grep ESTABLISHED | wc -l`}</span>
-
-<span style="color: #E6DB74;">VARS</span>
-
-puts s
-<span style="color: #465457; font-style: italic;">#+end_src</span>
-
-<span style="color: #465457; font-style: italic;">#+RESULTS:</span>
-<span style="color: #465457; font-style: italic;">#+BEGIN_SRC ruby</span>
-<span style="color: #66D9EF;">Uptime</span>:
-22<span style="color: #AE81FF;">:23</span>  up 4 days, 11<span style="color: #AE81FF;">:34</span>, 5 users, load averages: 0.58 0.46 0.30
-
-
-<span style="color: #66D9EF;">ESTABLISHED</span> connections:
-       8
-
-
-<span style="color: #465457; font-style: italic;">#+END_SRC</span>
-</pre>
-<h4><code>:tangle</code> の使い方</h4>
-<p><code>:tangle</code> はOrg modeのcode block switch argumentsの一つです。
-  これを使えば、Org modeのcode blockは実装しているファイルを設定できます。</p>
-<p>例えば、 <code>:tangle</code> を使って <code>Gemfile</code> と <code>config.ru</code> の内容を書きましょう。</p>
-<div class="highlight"><pre>Dependencies from the app, just sinatra and webrick <span class="k">for </span>the server is ok <span class="k">for </span>now.
-
-<span class="c">#+BEGIN_SRC ruby :tangle src/Gemfile</span>
-gem <span class="s1">&#39;sinatra&#39;</span>
-<span class="c">#+END_SRC</span>
-
-Needed to start the Sinatra application:
-
-<span class="c">#+BEGIN_SRC ruby :tangle src/config.ru</span>
-require <span class="s1">&#39;./app.rb&#39;</span>
-run Sinatra::Application
-<span class="c">#+END_SRC</span>
-</pre></div>
-<h4><i>全体例</i></h4>
-<p>EmacsのOrg modeバッファーで, <code>C-c C-v t</code> か <code>C-c C-v C-t</code> を叩けば、
-  Org modeの <code>org-babel-tangle</code> の機能を呼び出します。
-  これで、動かせるプログラムは <code>src/</code> ディレクトリの下に現れます。</p>
-<pre class="src src-org"><span style="color: #b3b3b3;">#+TITLE:</span> <span style="color: #cafe12; font-size: 144%; font-weight: bold;">Monitoring HTTP endpoint</span>
-
-  This is a simple Sinatra application that provides
-  the following endpoints:
-
-  &hyphen; <span style="color: #cafe12; font-weight: bold;">=/=</span><span style="font-weight: bold;">        ::</span> which responds <span style="color: #cafe12;">=OK=</span> in case all is good with the server.
-  &hyphen; <span style="color: #cafe12; font-weight: bold;">=/vars=</span><span style="font-weight: bold;">    ::</span> to get info about the system
-
-  <span style="color: #F92672;">** Bootstrapping the app</span>
-
-  <span style="color: #A6E22E;">*** Gemfile</span>
-
-  Dependencies from the app, just sinatra and webrick for now is ok.
-
-  <span style="color: #465457; font-style: italic;">#+BEGIN_SRC ruby :tangle src/Gemfile</span>
-  gem <span style="color: #E6DB74;">'sinatra'</span>
-  <span style="color: #465457; font-style: italic;">#+END_SRC</span>
-
-  <span style="color: #A6E22E;">*** Config.ru</span>
-
-  Needed to start the sinatra application
-
-  <span style="color: #465457; font-style: italic;">#+BEGIN_SRC ruby :tangle src/config.ru</span>
-  require <span style="color: #E6DB74;">'./app.rb'</span>
-  run <span style="color: #66D9EF;">Sinatra</span>::<span style="color: #66D9EF;">Application</span>
-  <span style="color: #465457; font-style: italic;">#+END_SRC</span>
-
-  <span style="color: #F92672;">** The App</span>
-
-  <span style="color: #A6E22E;">*** Import dependencies</span>
-
-  <span style="color: #465457; font-style: italic;">#+BEGIN_SRC ruby :tangle src/app.rb</span>
-
-  require <span style="color: #E6DB74;">'sinatra'</span>
-
-  <span style="color: #465457; font-style: italic;">#+END_SRC</span>
-
-  <span style="color: #A6E22E;">*** </span><span style="color: #A6E22E;">=/=</span><span style="color: #A6E22E;"> endpoint</span>
-
-  Just respond with <span style="color: #cafe12;">=OK=</span>.
-
-  <span style="color: #465457; font-style: italic;">#+BEGIN_SRC ruby :tangle src/app.rb</span>
-  get <span style="color: #E6DB74;">'/'</span> <span style="color: #66D9EF;">do</span>
-  <span style="color: #E6DB74;">&nbsp;&nbsp;'OK'</span>
-  <span style="color: #66D9EF;">end</span>
-  <span style="color: #465457; font-style: italic;">#+END_SRC</span>
-
-  <span style="color: #A6E22E;">*** </span><span style="color: #A6E22E;">=/vars=</span><span style="color: #A6E22E;"> endpoint</span>
-
-  Respond with info about the system:
-
-  <span style="color: #465457; font-style: italic;">#+BEGIN_SRC ruby :tangle src/app.rb</span>
-  get <span style="color: #E6DB74;">'/vars'</span> <span style="color: #66D9EF;">do</span>
-
-  r = <span style="color: #E6DB74;">&lt;&lt;VARS</span>
-  <span style="color: #E6DB74;">Uptime:</span>
-  <span style="color: #F92672;">#{`uptime`}</span>
-
-  <span style="color: #E6DB74;">ESTABLISHED connections:</span>
-  <span style="color: #F92672;">#{`netstat -an | grep ESTABLISHED | wc -l`}</span>
-
-  <span style="color: #E6DB74;">VARS</span>
-
-  r
-  <span style="color: #66D9EF;">end</span>
-  <span style="color: #465457; font-style: italic;">#+END_SRC</span>
-</pre>
-
-<h3>動かす方法</h3>
-<p>次に、プログラムを動かす方法を <code>org/run.org</code> にまとめます。
-  プログラムを動かす前に、Sinatraのプログラムに修正があったかも知れないので、
-  <code>#+include: org/app.org</code> でこの依存関係を設定します。</p>
-<pre class="src src-org"><span style="color: #b3b3b3;">#+TITLE:</span>   <span style="color: #cafe12; font-size: 144%; font-weight: bold;">Running the Application</span>
-<span style="color: #465457; font-style: italic;">#+include: "org/app.org"</span>
-
-<span style="color: #F92672;">** Run it</span>
-
-To run it, we will need to get the dependencies first,
-and then start it with bundler:
-
-<span style="color: #465457; font-style: italic;">#+name: server</span>
-<span style="color: #465457; font-style: italic;">#+BEGIN_SRC sh :dir src</span>
-bundle install
-bundle exec rackup
-<span style="color: #465457; font-style: italic;">#+END_SRC</span>
-
-Now let's send some requests to it:
-
-<span style="color: #465457; font-style: italic;">#+name: curl</span>
-<span style="color: #465457; font-style: italic;">#+BEGIN_SRC sh :wait 1</span>
-<span style="color: #66D9EF;">while</span> true; <span style="color: #66D9EF;">do</span> 
-  curl 127.0.0.1:9292/vars 2&gt; /dev/null
-  sleep 1
-<span style="color: #66D9EF;">done</span>
-<span style="color: #465457; font-style: italic;">#+END_SRC</span>
-</pre>
-<p>Emacsでlong running processesを実行できますが、そうするとEmacsがコードブロック
-  の結果待ちをしてしまいます&#8230; それを避けるため、
-  コードブロックの上に、 <code>#+name</code> を設定すれば、私が作ったgemで叩くことができます:</p>
-<pre class="example">
-gem install org-converge
-org-run org/run.org
-</pre>
-<p>そうすると結果は以下のようになります：</p>
-<div class="highlight"><pre>org-run org/run.org
-...
-Running code blocks now! (2 runnable blocks found in total)
-server    -- started with pid 71840
-curl      -- started with pid 71841
-server    -- Using rack 1.5.2
-server    -- Using rack-protection 1.5.3
-server    -- Using tilt 1.4.1
-server    -- Using sinatra 1.4.5
-server    -- Using bundler 1.7.1
-server    -- Your bundle is complete!
-server    -- Use `bundle show [gemname]` to see where a bundled gem is installed.
-server    -- [2014-12-11 22:56:42] INFO  WEBrick 1.3.1
-server    -- [2014-12-11 22:56:42] INFO  ruby 2.1.2 (2014-05-08) [x86_64-darwin11.0]
-server    -- [2014-12-11 22:56:42] INFO  WEBrick::HTTPServer#start: pid=71848 port=9292
-server    -- 127.0.0.1 - - [11/Dec/2014 22:56:42] &quot;GET /vars HTTP/1.1&quot; 200 110 0.0527
-curl      -- Uptime:
-curl      -- 22:56  up 4 days, 12:07, 5 users, load averages: 0.78 0.84 0.76
-curl      -- 
-curl      -- 
-curl      -- ESTABLISHED connections:
-curl      --       12
-curl      -- 
-curl      -- 
-server    -- 127.0.0.1 - - [11/Dec/2014 22:56:43] &quot;GET /vars HTTP/1.1&quot; 200 110 0.0210
-curl      -- Uptime:
-curl      -- 22:56  up 4 days, 12:07, 5 users, load averages: 0.78 0.84 0.76
-curl      -- 
-curl      -- 
-curl      -- ESTABLISHED connections:
-curl      --       12
-curl      -- 
-curl      -- 
-</pre></div>
-<h3>まとめ</h3>
-<p>Org modeはとても便利です！皆さんぜひお試しください。
-  しかも、Githubさんが org-rubyを使って <code>.org</code> ファイルをHTMLに変換してくれるのです。
-  Ruby の Org modeパーサはまだOrg mode のすべての機能に追いついていませんが、
-  私がある程度メンテナンスしています。もしOrg Rubyに何かの問題があれば、
-  こちらに <a href="https://github.com/wallyqs/org-ruby/issues">issue</a> を発行していただければと思います。 :)</p>
-<p>(そして、日本語が間違っている場合、こちらに <a href="https://github.com/wallyqs/wallyqs.github.io/tree/source/org/posts">PR</a> ください&#8230;)</p>
 
 
 

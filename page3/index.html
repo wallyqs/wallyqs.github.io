@@ -105,6 +105,314 @@
   
   <div class="post">
     <h1 class="post-title">
+      <a href="/posts/2014/10/16/counting-words-with-nats/">
+        Counting words with NATS
+      </a>
+    </h1>
+
+    <span class="post-date">16 Oct 2014</span>
+
+    
+<p>Still going through the <i><a href="http://www.amazon.com/Exercises-Programming-Style-Cristina-Videira/dp/1482227371/">Exercises in Programming Styles</a></i>, after
+  diving into <a href="https://github.com/wallyqs/exercises-in-org/blob/master/org/prog-styles/03-monolith/haskell.org">Haskell</a> and <a href="https://github.com/wallyqs/exercises-in-org/blob/master/org/prog-styles/transducers/ruby.org">Transducers</a> for a bit, and since I&#8217;ve
+  mentioned to other HackerSchoolers about <a href="https://github.com/derekcollison/nats">NATS</a>, I decided to use it for
+  the map reduce programming example.  It is somewhat loosely based on the
+  <a href="https://github.com/derekcollison/dist-adder">dist-adder</a> example from Derek.</p>
+<h3>NATS server</h3>
+<p>There is readily available <a href="https://registry.hub.docker.com/u/apcera/gnatsd/">gnatsd Docker container</a> that we can use to
+  start the server that will be used by the clients to communicate:</p>
+<div class="highlight"><pre>sudo docker run -p 4222:4222 apcera/gnatsd
+</pre></div>
+<h3>Aggregator</h3>
+<p>I call it the aggregator, but basically this process will be in charge
+  of dispatching a range of the lines in the text and dispatch the task
+  to another node so that it computes the word frequency computation.</p>
+<div class="highlight"><pre><span class="nb">require</span> <span class="s1">&#39;nats/client&#39;</span>
+<span class="nb">require</span> <span class="s1">&#39;json&#39;</span>
+
+<span class="no">NATS</span><span class="o">.</span><span class="n">start</span> <span class="p">{</span>
+
+  <span class="c1"># Run options</span>
+  <span class="vg">$stdout</span><span class="o">.</span><span class="n">sync</span> <span class="o">=</span> <span class="kp">true</span>
+  <span class="o">[</span><span class="s2">&quot;TERM&quot;</span><span class="p">,</span> <span class="s2">&quot;INT&quot;</span><span class="o">].</span><span class="n">each</span> <span class="p">{</span> <span class="o">|</span><span class="n">sig</span><span class="o">|</span> <span class="nb">trap</span><span class="p">(</span><span class="n">sig</span><span class="p">)</span> <span class="p">{</span> <span class="no">NATS</span><span class="o">.</span><span class="n">stop</span> <span class="p">}</span> <span class="p">}</span>
+  <span class="no">SRC_ROOT</span>   <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">),</span> <span class="s2">&quot;src&quot;</span><span class="p">,</span> <span class="s2">&quot;exercises-in-programming-style&quot;</span><span class="p">)</span>
+  <span class="no">PRIDE_AND_PREJUDICE</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">SRC_ROOT</span><span class="p">,</span> <span class="s2">&quot;pride-and-prejudice.txt&quot;</span><span class="p">)</span>
+  <span class="no">STOP_WORDS</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">SRC_ROOT</span><span class="p">,</span> <span class="s1">&#39;stop_words.txt&#39;</span><span class="p">)</span>
+
+  <span class="c1"># Compute the stop words once.</span>
+  <span class="c1"># This payload information is small enough that it will be transmitted</span>
+  <span class="c1"># to the frequency counters via the channel</span>
+  <span class="vi">@stop_words</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="no">STOP_WORDS</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+  <span class="vi">@stop_words</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="o">.</span><span class="n">.</span><span class="s1">&#39;z&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">to_a</span> <span class="c1"># also the alphabet</span>
+  <span class="vi">@stop_words</span><span class="o">.</span><span class="n">flatten!</span><span class="o">.</span><span class="n">uniq!</span>
+
+  <span class="c1"># Initialize</span>
+  <span class="vi">@words</span> <span class="o">=</span> <span class="no">Hash</span><span class="o">.</span><span class="n">new</span> <span class="p">{</span><span class="o">|</span><span class="n">h</span><span class="p">,</span><span class="n">k</span><span class="o">|</span> <span class="n">h</span><span class="o">[</span><span class="n">k</span><span class="o">]</span> <span class="o">=</span> <span class="mi">0</span> <span class="p">}</span>
+  <span class="vi">@available_computing_nodes</span> <span class="o">=</span> <span class="o">[]</span>
+
+  <span class="c1"># Discovery Channel</span>
+  <span class="no">NATS</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="s1">&#39;pride-prejudice.discovery&#39;</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">msg</span><span class="p">,</span> <span class="n">reply</span><span class="p">,</span> <span class="nb">sub</span><span class="o">|</span>
+    <span class="n">computing_node</span> <span class="o">=</span> <span class="no">JSON</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">unless</span> <span class="vi">@available_computing_nodes</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="n">computing_node</span><span class="p">)</span>
+      <span class="nb">puts</span> <span class="s2">&quot;[DISCOVERED]      :: </span><span class="si">#{</span><span class="n">computing_node</span><span class="si">}</span><span class="s2">&quot;</span>
+      <span class="vi">@available_computing_nodes</span> <span class="o">&lt;&lt;</span> <span class="n">computing_node</span>
+      <span class="nb">puts</span> <span class="s2">&quot;[AVAILABLE NODES] :: </span><span class="si">#{</span><span class="vi">@available_computing_nodes</span><span class="o">.</span><span class="n">count</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+
+  <span class="c1"># {&quot;id&quot;=&gt;3, &quot;results&quot;=&gt;{&quot;words&quot;=&gt;[{&quot;test&quot;=&gt;1}]}}</span>
+  <span class="no">NATS</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="s1">&#39;pride-prejudice.responses&#39;</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">msg</span><span class="p">,</span> <span class="n">reply</span><span class="p">,</span> <span class="nb">sub</span><span class="o">|</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="no">JSON</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="nb">puts</span> <span class="s2">&quot;[DONE]      :: Job </span><span class="si">#{</span><span class="n">results</span><span class="o">[</span><span class="s1">&#39;id&#39;</span><span class="o">]</span><span class="si">}</span><span class="s2"> is done.&quot;</span>
+
+    <span class="c1"># Mark the job as done</span>
+    <span class="vi">@chunks</span><span class="o">[</span><span class="n">results</span><span class="o">[</span><span class="s1">&#39;id&#39;</span><span class="o">]][</span><span class="ss">:done</span><span class="o">]</span>    <span class="o">=</span> <span class="kp">true</span>
+
+    <span class="k">begin</span>
+      <span class="c1"># Use the partial results and start to count the words</span>
+      <span class="n">counted_words</span> <span class="o">=</span> <span class="n">results</span><span class="o">[</span><span class="s1">&#39;results&#39;</span><span class="o">][</span><span class="s1">&#39;words&#39;</span><span class="o">]</span>
+      <span class="n">counted_words</span><span class="o">.</span><span class="n">each_pair</span> <span class="k">do</span> <span class="o">|</span><span class="n">w</span><span class="p">,</span> <span class="n">c</span><span class="o">|</span>
+        <span class="vi">@words</span><span class="o">[</span><span class="n">w</span><span class="o">]</span> <span class="o">+=</span> <span class="n">c</span>
+      <span class="k">end</span>
+    <span class="k">rescue</span> <span class="o">=&gt;</span> <span class="n">e</span>
+      <span class="nb">puts</span> <span class="s2">&quot;Error while trying to count the words...&quot;</span>
+      <span class="nb">puts</span> <span class="n">e</span>
+      <span class="nb">puts</span> <span class="n">e</span><span class="o">.</span><span class="n">backtrace</span>
+    <span class="k">end</span>
+
+    <span class="nb">puts</span> <span class="s2">&quot;TOP counted words so far&quot;</span>
+    <span class="vi">@words</span><span class="o">.</span><span class="n">sort</span> <span class="p">{</span><span class="o">|</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="o">|</span> <span class="n">a</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span> <span class="o">&lt;=&gt;</span> <span class="n">b</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span><span class="p">}</span><span class="o">.</span><span class="n">reverse</span><span class="o">[</span><span class="mi">0</span><span class="o">.</span><span class="n">.</span><span class="o">.</span><span class="mi">25</span><span class="o">].</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="o">|</span>
+      <span class="nb">puts</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">k</span><span class="si">}</span><span class="s2">  -  </span><span class="si">#{</span><span class="n">v</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+
+  <span class="nb">puts</span> <span class="s2">&quot;Waiting 5 seconds to get resources for the job...&quot;</span>
+  <span class="no">EM</span><span class="o">.</span><span class="n">add_timer</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span> <span class="k">do</span>
+    <span class="n">pride_and_prejudice_text</span>  <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="no">PRIDE_AND_PREJUDICE</span><span class="p">)</span>
+    <span class="n">total_lines</span> <span class="o">=</span> <span class="n">pride_and_prejudice_text</span><span class="o">.</span><span class="n">lines</span><span class="o">.</span><span class="n">count</span>
+    <span class="nb">puts</span> <span class="s2">&quot;Total lines to split: </span><span class="si">#{</span><span class="n">total_lines</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="c1"># Most likely cannot split the computation perfectly into the number of nodes,</span>
+    <span class="c1"># so we take the remaining lines and add them to the first batch</span>
+    <span class="n">chunk_size</span> <span class="o">=</span> <span class="n">total_lines</span> <span class="o">/</span> <span class="p">(</span><span class="vi">@available_computing_nodes</span><span class="o">.</span><span class="n">count</span><span class="p">)</span>
+    <span class="n">out_of_chunk</span> <span class="o">=</span> <span class="n">total_lines</span> <span class="o">%</span> <span class="vi">@available_computing_nodes</span><span class="o">.</span><span class="n">count</span>
+    <span class="nb">puts</span> <span class="s2">&quot;Chunk size per node: </span><span class="si">#{</span><span class="n">chunk_size</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="c1"># Read the file, count the number of lines, and divide in chunks</span>
+    <span class="c1"># according to the number of available nodes</span>
+    <span class="vi">@chunks</span> <span class="o">=</span> <span class="p">{}</span> <span class="c1"># {index =&gt; {:start, :end, :done, :stop_words }}</span>
+    <span class="n">chunk_start</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">chunk_end</span>   <span class="o">=</span> <span class="mi">0</span>
+    <span class="mi">1</span><span class="o">.</span><span class="n">upto</span><span class="p">(</span><span class="vi">@available_computing_nodes</span><span class="o">.</span><span class="n">count</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">n</span><span class="o">|</span>
+      <span class="n">chunk_end</span> <span class="o">+=</span> <span class="n">chunk_size</span>
+      <span class="k">if</span> <span class="n">out_of_chunk</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="n">chunk_size</span> <span class="o">+=</span> <span class="n">out_of_chunk</span>
+        <span class="n">out_of_chunk</span> <span class="o">=</span> <span class="mi">0</span>
+      <span class="k">end</span>
+      <span class="n">chunk_end</span>  <span class="o">=</span> <span class="o">[</span><span class="n">chunk_end</span><span class="p">,</span> <span class="n">total_lines</span><span class="o">].</span><span class="n">min</span>
+      <span class="vi">@chunks</span><span class="o">[</span><span class="n">n</span><span class="o">]</span>  <span class="o">=</span> <span class="p">{</span><span class="ss">:start</span> <span class="o">=&gt;</span> <span class="n">chunk_start</span><span class="p">,</span> <span class="ss">:end</span> <span class="o">=&gt;</span> <span class="n">chunk_end</span><span class="p">,</span> <span class="ss">:done</span> <span class="o">=&gt;</span> <span class="kp">false</span><span class="p">,</span> <span class="ss">:stop_words</span> <span class="o">=&gt;</span> <span class="vi">@stop_words</span> <span class="p">}</span>
+      <span class="n">chunk_start</span> <span class="o">=</span> <span class="n">chunk_end</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="k">end</span>
+
+    <span class="vi">@chunks</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">job</span><span class="o">|</span>
+      <span class="n">job_id</span><span class="p">,</span> <span class="n">range</span> <span class="o">=</span> <span class="n">job</span>
+
+      <span class="c1"># Only want one checker to respond to this</span>
+      <span class="no">NATS</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="s1">&#39;pride-prejudice.requests&#39;</span><span class="p">,</span> <span class="kp">nil</span><span class="p">,</span> <span class="ss">:max</span> <span class="o">=&gt;</span> <span class="mi">1</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">response</span><span class="o">|</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="no">JSON</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+        <span class="nb">puts</span> <span class="s2">&quot;[REQUEST]   :: Job #</span><span class="si">#{</span><span class="n">job_id</span><span class="si">}</span><span class="s2"> needs to be done. Anyone can help? Range is (</span><span class="si">#{</span><span class="n">range</span><span class="o">[</span><span class="ss">:start</span><span class="o">]</span><span class="si">}</span><span class="s2">:</span><span class="si">#{</span><span class="n">range</span><span class="o">[</span><span class="ss">:end</span><span class="o">]</span><span class="si">}</span><span class="s2">)&quot;</span>
+        <span class="no">NATS</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s2">&quot;pride-prejudice.</span><span class="si">#{</span><span class="n">node</span><span class="o">[</span><span class="s1">&#39;id&#39;</span><span class="o">]</span><span class="si">}</span><span class="s2">.compute&quot;</span><span class="p">,</span> <span class="n">job</span><span class="o">.</span><span class="n">to_json</span><span class="p">)</span> <span class="k">do</span>
+          <span class="nb">puts</span> <span class="s2">&quot;[HOPING]    :: </span><span class="si">#{</span><span class="n">range</span><span class="o">[</span><span class="ss">:start</span><span class="o">]</span><span class="si">}</span><span class="s2"> -- </span><span class="si">#{</span><span class="n">range</span><span class="o">[</span><span class="ss">:end</span><span class="o">]</span><span class="si">}</span><span class="s2"> to be done by </span><span class="si">#{</span><span class="n">node</span><span class="o">[</span><span class="s1">&#39;id&#39;</span><span class="o">]</span><span class="si">}</span><span class="s2">.&quot;</span>
+        <span class="k">end</span>
+      <span class="k">end</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+<span class="p">}</span>
+</pre></div>
+<h3>Word Frequency Counter</h3>
+<p>Then each one of the counters, will receive a chunk of words to
+  process and ignore, then reply with the partial computed frequency when done.</p>
+<p>While receiving tasks, we counter taints itself a little
+  according to the number of tasks that it is in charge of processing.</p>
+<div class="highlight"><pre><span class="nb">require</span> <span class="s1">&#39;nats/client&#39;</span>
+<span class="nb">require</span> <span class="s1">&#39;securerandom&#39;</span>
+<span class="nb">require</span> <span class="s1">&#39;json&#39;</span>
+
+<span class="vg">$stdout</span><span class="o">.</span><span class="n">sync</span> <span class="o">=</span> <span class="kp">true</span>
+<span class="o">[</span><span class="s2">&quot;TERM&quot;</span><span class="p">,</span> <span class="s2">&quot;INT&quot;</span><span class="o">].</span><span class="n">each</span> <span class="p">{</span> <span class="o">|</span><span class="n">sig</span><span class="o">|</span> <span class="nb">trap</span><span class="p">(</span><span class="n">sig</span><span class="p">)</span> <span class="p">{</span> <span class="no">NATS</span><span class="o">.</span><span class="n">stop</span> <span class="p">}</span> <span class="p">}</span>
+<span class="no">SRC_ROOT</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">expand_path</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">),</span> <span class="s2">&quot;src&quot;</span><span class="p">,</span> <span class="s2">&quot;exercises-in-programming-style&quot;</span><span class="p">)</span>
+<span class="no">PRIDE_AND_PREJUDICE</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">SRC_ROOT</span><span class="p">,</span> <span class="s2">&quot;pride-and-prejudice.txt&quot;</span><span class="p">)</span>
+
+<span class="no">ID</span>   <span class="o">=</span> <span class="no">SecureRandom</span><span class="o">.</span><span class="n">uuid</span>
+<span class="no">INFO</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;id&#39;</span> <span class="o">=&gt;</span> <span class="no">ID</span> <span class="p">}</span>
+
+<span class="k">def</span> <span class="nf">compute</span><span class="p">(</span><span class="n">range</span><span class="p">)</span>
+  <span class="n">range_start</span>     <span class="o">=</span> <span class="n">range</span><span class="o">[</span><span class="s1">&#39;start&#39;</span><span class="o">].</span><span class="n">to_i</span>
+  <span class="n">range_end</span>       <span class="o">=</span> <span class="n">range</span><span class="o">[</span><span class="s1">&#39;end&#39;</span><span class="o">].</span><span class="n">to_i</span>
+  <span class="n">stop_words</span>      <span class="o">=</span> <span class="n">range</span><span class="o">[</span><span class="s1">&#39;stop_words&#39;</span><span class="o">]</span>
+  <span class="n">words_frequency</span> <span class="o">=</span> <span class="no">Hash</span><span class="o">.</span><span class="n">new</span> <span class="p">{</span><span class="o">|</span><span class="n">h</span><span class="p">,</span><span class="n">k</span><span class="o">|</span> <span class="n">h</span><span class="o">[</span><span class="n">k</span><span class="o">]</span> <span class="o">=</span> <span class="mi">0</span> <span class="p">}</span>
+
+  <span class="c1"># Read local copy of the document and fetch that range of lines</span>
+  <span class="n">lines</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="no">PRIDE_AND_PREJUDICE</span><span class="p">)</span><span class="o">.</span><span class="n">lines</span><span class="o">[</span><span class="n">range_start</span><span class="o">.</span><span class="n">.range_end</span><span class="o">]</span>
+  <span class="n">lines</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">line</span><span class="o">|</span>
+    <span class="n">line</span><span class="o">.</span><span class="n">gsub!</span><span class="p">(</span><span class="sr">/[^a-zA-Z0-9]/</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">)</span> <span class="c1"># remove non alphanumeric</span>
+    <span class="n">words</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
+    <span class="n">words</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">w</span><span class="o">|</span>
+      <span class="k">next</span> <span class="k">if</span> <span class="n">stop_words</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="n">w</span><span class="o">.</span><span class="n">downcase</span><span class="p">)</span>
+      <span class="n">words_frequency</span><span class="o">[</span><span class="n">w</span><span class="o">.</span><span class="n">downcase</span><span class="o">]</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+
+  <span class="n">results</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;words&#39;</span> <span class="o">=&gt;</span> <span class="n">words_frequency</span> <span class="p">}</span>
+
+  <span class="n">results</span>
+<span class="k">end</span>
+
+<span class="no">NATS</span><span class="o">.</span><span class="n">start</span> <span class="k">do</span>
+
+  <span class="vi">@offerings</span> <span class="o">=</span> <span class="mi">0</span>
+
+  <span class="no">EM</span><span class="o">.</span><span class="n">add_periodic_timer</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="k">do</span>
+    <span class="no">NATS</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s1">&#39;pride-prejudice.discovery&#39;</span><span class="p">,</span> <span class="no">INFO</span><span class="o">.</span><span class="n">to_json</span><span class="p">)</span>
+  <span class="k">end</span>
+
+  <span class="no">NATS</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="s1">&#39;pride-prejudice.requests&#39;</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">msg</span><span class="p">,</span> <span class="n">reply</span><span class="p">,</span> <span class="nb">sub</span><span class="o">|</span>
+    <span class="no">EM</span><span class="o">.</span><span class="n">add_timer</span><span class="p">(</span><span class="vi">@offerings</span><span class="p">)</span> <span class="p">{</span> <span class="no">NATS</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="n">reply</span><span class="p">,</span> <span class="no">INFO</span><span class="o">.</span><span class="n">to_json</span><span class="p">)</span> <span class="p">}</span>
+    <span class="vi">@offerings</span> <span class="o">+=</span> <span class="mi">1</span> <span class="c1"># decrease taint delay</span>
+  <span class="k">end</span>
+
+  <span class="no">NATS</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="s2">&quot;pride-prejudice.</span><span class="si">#{</span><span class="no">ID</span><span class="si">}</span><span class="s2">.compute&quot;</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">msg</span><span class="p">,</span> <span class="n">reply</span><span class="p">,</span> <span class="nb">sub</span><span class="o">|</span>
+    <span class="n">job</span> <span class="o">=</span> <span class="no">JSON</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="n">job_id</span><span class="p">,</span> <span class="n">range</span> <span class="o">=</span> <span class="n">job</span>
+    <span class="nb">puts</span> <span class="s2">&quot;[OK]        :: Start to work on (</span><span class="si">#{</span><span class="n">range</span><span class="o">[</span><span class="s1">&#39;start&#39;</span><span class="o">]</span><span class="si">}</span><span class="s2">:</span><span class="si">#{</span><span class="n">range</span><span class="o">[</span><span class="s1">&#39;end&#39;</span><span class="o">]</span><span class="si">}</span><span class="s2">)&quot;</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">compute</span><span class="p">(</span><span class="n">range</span><span class="p">)</span>
+    <span class="vi">@offerings</span> <span class="o">-=</span> <span class="mi">1</span> <span class="c1"># delay ourselves according to the number of task being done</span>
+
+    <span class="n">job_done</span> <span class="o">=</span> <span class="p">{</span>
+     <span class="ss">:id</span>      <span class="o">=&gt;</span> <span class="n">job_id</span><span class="p">,</span>
+     <span class="ss">:results</span> <span class="o">=&gt;</span> <span class="n">results</span>
+    <span class="p">}</span>
+    <span class="no">NATS</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s2">&quot;pride-prejudice.responses&quot;</span><span class="p">,</span> <span class="n">job_done</span><span class="o">.</span><span class="n">to_json</span><span class="p">)</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</pre></div>
+<h3>Output</h3>
+<p>Once the run is done the output would look something similar to this:</p>
+<div class="highlight"><pre>nats-server         -- started with pid 15660
+aggregator          -- Waiting 5 seconds to get resources for the job...
+aggregator          -- [DISCOVERED]      :: {&quot;id&quot;=&gt;&quot;251adacb-0605-4e96-8904-9fd5f239fce2&quot;}
+aggregator          -- [AVAILABLE NODES] :: 1
+aggregator          -- [DISCOVERED]      :: {&quot;id&quot;=&gt;&quot;a97518f9-2c10-4362-9800-5ec8e57651b9&quot;}
+aggregator          -- [AVAILABLE NODES] :: 2
+aggregator          -- [DISCOVERED]      :: {&quot;id&quot;=&gt;&quot;4ce45026-3cba-4209-a17b-e27e425366c0&quot;}
+aggregator          -- [AVAILABLE NODES] :: 3
+aggregator          -- Total lines to split: 13426
+aggregator          -- Chunk size per node: 4475
+aggregator          -- [REQUEST]   :: Job #1 needs to be done. Anyone can help? Range is (0:4475)
+aggregator          -- [HOPING]    :: 0 -- 4475 to be done by 4ce45026-3cba-4209-a17b-e27e425366c0.
+frequency-counter:1 -- [OK]        :: Start to work on (0:4475)
+aggregator          -- [DONE]      :: Job 1 is done.
+aggregator          -- TOP counted words so far
+aggregator          -- mr  -  395
+aggregator          -- elizabeth  -  202
+aggregator          -- very  -  198
+aggregator          -- bingley  -  181
+aggregator          -- darcy  -  162
+aggregator          -- bennet  -  160
+aggregator          -- miss  -  142
+aggregator          -- such  -  131
+aggregator          -- much  -  130
+aggregator          -- mrs  -  121
+aggregator          -- jane  -  105
+aggregator          -- more  -  102
+aggregator          -- collins  -  95
+aggregator          -- one  -  95
+aggregator          -- though  -  77
+aggregator          -- think  -  74
+aggregator          -- being  -  73
+aggregator          -- know  -  72
+aggregator          -- never  -  71
+aggregator          -- lady  -  70
+aggregator          -- well  -  69
+aggregator          -- good  -  67
+aggregator          -- man  -  65
+aggregator          -- soon  -  64
+aggregator          -- before  -  63
+aggregator          -- [REQUEST]   :: Job #2 needs to be done. Anyone can help? Range is (4476:8951)
+aggregator          -- [HOPING]    :: 4476 -- 8951 to be done by 251adacb-0605-4e96-8904-9fd5f239fce2.
+frequency-counter:3 -- [OK]        :: Start to work on (4476:8951)
+aggregator          -- [DONE]      :: Job 2 is done.
+aggregator          -- TOP counted words so far
+aggregator          -- mr  -  630
+aggregator          -- elizabeth  -  437
+aggregator          -- very  -  378
+aggregator          -- darcy  -  327
+aggregator          -- such  -  251
+aggregator          -- bingley  -  245
+aggregator          -- much  -  243
+aggregator          -- miss  -  240
+aggregator          -- mrs  -  239
+aggregator          -- more  -  218
+aggregator          -- bennet  -  206
+aggregator          -- one  -  187
+aggregator          -- jane  -  185
+aggregator          -- herself  -  173
+aggregator          -- collins  -  167
+aggregator          -- think  -  152
+aggregator          -- lady  -  149
+aggregator          -- before  -  146
+aggregator          -- though  -  143
+aggregator          -- well  -  141
+aggregator          -- never  -  140
+aggregator          -- sister  -  139
+aggregator          -- little  -  136
+aggregator          -- soon  -  133
+aggregator          -- know  -  133
+aggregator          -- [REQUEST]   :: Job #3 needs to be done. Anyone can help? Range is (8952:13426)
+aggregator          -- [HOPING]    :: 8952 -- 13426 to be done by 251adacb-0605-4e96-8904-9fd5f239fce2.
+frequency-counter:3 -- [OK]        :: Start to work on (8952:13426)
+aggregator          -- [DONE]      :: Job 3 is done.
+aggregator          -- TOP counted words so far
+aggregator          -- mr  -  786
+aggregator          -- elizabeth  -  635
+aggregator          -- very  -  488
+aggregator          -- darcy  -  418
+aggregator          -- such  -  395
+aggregator          -- mrs  -  343
+aggregator          -- much  -  329
+aggregator          -- more  -  327
+aggregator          -- bennet  -  323
+aggregator          -- bingley  -  306
+aggregator          -- jane  -  295
+aggregator          -- miss  -  283
+aggregator          -- one  -  275
+aggregator          -- know  -  239
+aggregator          -- before  -  229
+aggregator          -- herself  -  227
+aggregator          -- though  -  226
+aggregator          -- well  -  224
+aggregator          -- never  -  220
+aggregator          -- sister  -  218
+aggregator          -- soon  -  216
+aggregator          -- think  -  211
+aggregator          -- now  -  209
+aggregator          -- time  -  203
+aggregator          -- good  -  201
+</pre></div>
+<h3>Further work</h3>
+<ul>
+  <li>Extend this example so that it becomes resilient to fault tolerance,
+    and see how does defending against this impact the style.</li>
+  <li>Dispatch to other nodes with using a different client.</li>
+</ul>
+
+
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
       <a href="/posts/2014/10/11/transducers-in-ruby/">
         Term Frequency with Transducers gem in Ruby
       </a>
@@ -373,146 +681,6 @@
     </ul>
   </li>
 </ul>
-
-
-
-  </div>
-  
-  <div class="post">
-    <h1 class="post-title">
-      <a href="/posts/2014/06/04/org-converge-post/">
-        About Org Converge
-      </a>
-    </h1>
-
-    <span class="post-date">04 Jun 2014</span>
-
-    
-<p>In a past release from Org Ruby, I added the functionality to be able
-  to turn off exporting the results attached to a code block. For
-  example, here only the actual code would make it to the export:</p>
-<div class="highlight"><pre>#+begin_src sh :results code
-echo &#39;hello&#39;
-#+end_src
-
-#+RESULTS:
-#+BEGIN_SRC sh
-hello
-#+END_SRC
-</pre></div>
-<p>Doing this involved adding support to parse the header arguments from
-  a code block, so I decided to start playing with the idea of
-  implementing tangling code blocks:</p>
-<div class="highlight"><pre>#+begin_src sh :tangle /etc/component.yml
-port: 4000
-#+end_src
-</pre></div>
-<p>This is just a subset of the functionality provided by the powerful
-  Org Babel mode, and still very basic since it does not
-  support <code>#+MACROS</code> for example, which would make feature more
-  convenient.</p>
-<p>After doing this, and since this is all Ruby, I imagined that since
-  there is good interop with other reliable Ruby tools, it would be
-  interesting to reopen foreman for actually running the blocks.</p>
-<p>All this functionality is wrapped into a gem named <a href="https://github.com/wallyqs/org-converge">org-converge</a>,
-  named that way in the sense that all reproducible runs should
-  converge into a state.</p>
-<p>In the future, I hope to have more Chef/Puppet/Ansible
-  like features, like <a href="https://github.com/wallyqs/org-converge/commit/5393c76127c7a38bc071c14dbd54de9b8665f343">idempotency</a>:</p>
-<h3>Idempotency example via <code>:if</code> and <code>:unless</code> switches</h3>
-<p>The way this work is by linking 2 different code blocks,
-  so that one can define whether the second one should be executed.</p>
-<p>In order to achieve this, for now the blocks need to be defined sequentially
-  and use the exit status to check whether it should be run or not.</p>
-<div class="highlight"><pre>#+name: install-package
-#+begin_src sh
-echo &quot;brew install something...&quot;
-echo &quot;package is installed&quot; &gt; installed
-#+end_src
-
-#+name: package-already-installed
-#+begin_src sh
-if [[ -e installed ]]; then
-  echo &quot;Already installed&quot;
-  exit 0
-else
-  echo &quot;Needs install&quot;
-  exit 1
-fi
-#+end_src
-
-#+name: install-package-once-again
-#+begin_src sh :unless package-already-installed
-echo &quot;Installing the package once again...&quot;
-echo &quot;not run&quot; &gt;&gt; installed
-#+end_src
-
-#+name: do-everything-even-if-package-installed
-#+begin_src sh :if package-already-installed
-echo &quot;Doing this even if installed already...&quot; 
-echo &quot;eof&quot; &gt;&gt; installed
-#+end_src
-</pre></div>
-<p>Now when we run it the first time, we would get the following output:</p>
-<div class="highlight"><pre>gem install org-converge
-
-org-converge idempotent-run.org
-
-<span class="o">[</span>2014-11-28T13:18:13 -0500<span class="o">]</span> package-already-installed -- Needs install
-<span class="o">[</span>2014-11-28T13:18:13 -0500<span class="o">]</span> package-already-installed -- started with pid 47963
-<span class="o">[</span>2014-11-28T13:18:13 -0500<span class="o">]</span> package-already-installed -- exited with code 1
-<span class="o">[</span>2014-11-28T13:18:13 -0500<span class="o">]</span> install-package -- started with pid 47967
-<span class="o">[</span>2014-11-28T13:18:13 -0500<span class="o">]</span> install-package -- Installing the package...
-<span class="o">[</span>2014-11-28T13:18:13 -0500<span class="o">]</span> install-package -- exited with code 0
-</pre></div>
-<p>&#8230;but if we run it again, we would get the following:</p>
-<div class="highlight"><pre>org-converge idempotent-run.org
-
-<span class="o">[</span>2014-11-28T13:19:07 -0500<span class="o">]</span> package-already-installed -- started with pid 48474
-<span class="o">[</span>2014-11-28T13:19:07 -0500<span class="o">]</span> package-already-installed -- Already installed
-<span class="o">[</span>2014-11-28T13:19:07 -0500<span class="o">]</span> package-already-installed -- exited with code 0
-<span class="o">[</span>2014-11-28T13:19:07 -0500<span class="o">]</span> install-package -- Skipped since :unless clause matches check from <span class="s1">&#39;package-already-installed&#39;</span>
-<span class="o">[</span>2014-11-28T13:19:07 -0500<span class="o">]</span> Run has completed successfully.
-</pre></div>
-<h3>Multiprocess run usage</h3>
-<p>I also have been using lately for doing multi process running,
-  and I have found it pretty comfortable for when practicing
-  literate programming with Org Babel.</p>
-<p>An example, the following 3 scripts should be run in parallel
-  with all output being flushed to the screen.</p>
-<div class="highlight"><pre>- Count some numbers with bash
-
-#+name: bash_counter
-#+begin_src sh :shebang #!/bin/bash
-
-for i in `seq 1 5`; do 
-  echo &quot;Writing! $i&quot;
-  echo &quot;hello $i from bash&quot;
-  sleep $(($RANDOM % 5))
-done
-
-#+end_src
-
-- Count some numbers with ruby
-
-#+name: ruby_counter
-#+begin_src ruby :shebang #!/usr/bin/ruby
-$stdout.sync = true
-
-10.times do |n|
-  puts &quot;And now writing! #{n}&quot;
-  puts &quot;Hello from Ruby&quot;
-  sleep 0.5
-end
-#+end_src
-
-- Print some numbers with python
-
-#+name: python_counter
-#+begin_src python :shebang #!/usr/bin/python
-for i in range(0, 20):
-  print &quot;From Python&quot;
-</pre></div>
 
 
 

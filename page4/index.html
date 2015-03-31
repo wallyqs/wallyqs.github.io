@@ -105,6 +105,146 @@
   
   <div class="post">
     <h1 class="post-title">
+      <a href="/posts/2014/06/04/org-converge-post/">
+        About Org Converge
+      </a>
+    </h1>
+
+    <span class="post-date">04 Jun 2014</span>
+
+    
+<p>In a past release from Org Ruby, I added the functionality to be able
+  to turn off exporting the results attached to a code block. For
+  example, here only the actual code would make it to the export:</p>
+<div class="highlight"><pre>#+begin_src sh :results code
+echo &#39;hello&#39;
+#+end_src
+
+#+RESULTS:
+#+BEGIN_SRC sh
+hello
+#+END_SRC
+</pre></div>
+<p>Doing this involved adding support to parse the header arguments from
+  a code block, so I decided to start playing with the idea of
+  implementing tangling code blocks:</p>
+<div class="highlight"><pre>#+begin_src sh :tangle /etc/component.yml
+port: 4000
+#+end_src
+</pre></div>
+<p>This is just a subset of the functionality provided by the powerful
+  Org Babel mode, and still very basic since it does not
+  support <code>#+MACROS</code> for example, which would make feature more
+  convenient.</p>
+<p>After doing this, and since this is all Ruby, I imagined that since
+  there is good interop with other reliable Ruby tools, it would be
+  interesting to reopen foreman for actually running the blocks.</p>
+<p>All this functionality is wrapped into a gem named <a href="https://github.com/wallyqs/org-converge">org-converge</a>,
+  named that way in the sense that all reproducible runs should
+  converge into a state.</p>
+<p>In the future, I hope to have more Chef/Puppet/Ansible
+  like features, like <a href="https://github.com/wallyqs/org-converge/commit/5393c76127c7a38bc071c14dbd54de9b8665f343">idempotency</a>:</p>
+<h3>Idempotency example via <code>:if</code> and <code>:unless</code> switches</h3>
+<p>The way this work is by linking 2 different code blocks,
+  so that one can define whether the second one should be executed.</p>
+<p>In order to achieve this, for now the blocks need to be defined sequentially
+  and use the exit status to check whether it should be run or not.</p>
+<div class="highlight"><pre>#+name: install-package
+#+begin_src sh
+echo &quot;brew install something...&quot;
+echo &quot;package is installed&quot; &gt; installed
+#+end_src
+
+#+name: package-already-installed
+#+begin_src sh
+if [[ -e installed ]]; then
+  echo &quot;Already installed&quot;
+  exit 0
+else
+  echo &quot;Needs install&quot;
+  exit 1
+fi
+#+end_src
+
+#+name: install-package-once-again
+#+begin_src sh :unless package-already-installed
+echo &quot;Installing the package once again...&quot;
+echo &quot;not run&quot; &gt;&gt; installed
+#+end_src
+
+#+name: do-everything-even-if-package-installed
+#+begin_src sh :if package-already-installed
+echo &quot;Doing this even if installed already...&quot; 
+echo &quot;eof&quot; &gt;&gt; installed
+#+end_src
+</pre></div>
+<p>Now when we run it the first time, we would get the following output:</p>
+<div class="highlight"><pre>gem install org-converge
+
+org-converge idempotent-run.org
+
+<span class="o">[</span>2014-11-28T13:18:13 -0500<span class="o">]</span> package-already-installed -- Needs install
+<span class="o">[</span>2014-11-28T13:18:13 -0500<span class="o">]</span> package-already-installed -- started with pid 47963
+<span class="o">[</span>2014-11-28T13:18:13 -0500<span class="o">]</span> package-already-installed -- exited with code 1
+<span class="o">[</span>2014-11-28T13:18:13 -0500<span class="o">]</span> install-package -- started with pid 47967
+<span class="o">[</span>2014-11-28T13:18:13 -0500<span class="o">]</span> install-package -- Installing the package...
+<span class="o">[</span>2014-11-28T13:18:13 -0500<span class="o">]</span> install-package -- exited with code 0
+</pre></div>
+<p>&#8230;but if we run it again, we would get the following:</p>
+<div class="highlight"><pre>org-converge idempotent-run.org
+
+<span class="o">[</span>2014-11-28T13:19:07 -0500<span class="o">]</span> package-already-installed -- started with pid 48474
+<span class="o">[</span>2014-11-28T13:19:07 -0500<span class="o">]</span> package-already-installed -- Already installed
+<span class="o">[</span>2014-11-28T13:19:07 -0500<span class="o">]</span> package-already-installed -- exited with code 0
+<span class="o">[</span>2014-11-28T13:19:07 -0500<span class="o">]</span> install-package -- Skipped since :unless clause matches check from <span class="s1">&#39;package-already-installed&#39;</span>
+<span class="o">[</span>2014-11-28T13:19:07 -0500<span class="o">]</span> Run has completed successfully.
+</pre></div>
+<h3>Multiprocess run usage</h3>
+<p>I also have been using lately for doing multi process running,
+  and I have found it pretty comfortable for when practicing
+  literate programming with Org Babel.</p>
+<p>An example, the following 3 scripts should be run in parallel
+  with all output being flushed to the screen.</p>
+<div class="highlight"><pre>- Count some numbers with bash
+
+#+name: bash_counter
+#+begin_src sh :shebang #!/bin/bash
+
+for i in `seq 1 5`; do 
+  echo &quot;Writing! $i&quot;
+  echo &quot;hello $i from bash&quot;
+  sleep $(($RANDOM % 5))
+done
+
+#+end_src
+
+- Count some numbers with ruby
+
+#+name: ruby_counter
+#+begin_src ruby :shebang #!/usr/bin/ruby
+$stdout.sync = true
+
+10.times do |n|
+  puts &quot;And now writing! #{n}&quot;
+  puts &quot;Hello from Ruby&quot;
+  sleep 0.5
+end
+#+end_src
+
+- Print some numbers with python
+
+#+name: python_counter
+#+begin_src python :shebang #!/usr/bin/python
+for i in range(0, 20):
+  print &quot;From Python&quot;
+</pre></div>
+
+
+
+  </div>
+  
+  <div class="post">
+    <h1 class="post-title">
       <a href="/posts/2013/12/06/jekyll-without-yaml/">
         Replacing Jekyll YAML headers with Org mode buffer settings
       </a>

@@ -4,13 +4,333 @@
  <title>Literate Infrastructure</title>
  <link href="/atom.xml" rel="self"/>
  <link href="/"/>
- <updated>2015-02-27T10:39:06+09:00</updated>
+ <updated>2015-03-31T18:47:34+09:00</updated>
  <id></id>
  <author>
    <name>Waldemar Quevedo</name>
    <email></email>
  </author>
 
+ 
+ <entry>
+   <title>Variations around the execution of code blocks</title>
+   <link href="/2015/03/31/variations-code-blocks-execution/"/>
+   <updated>2015-03-31T00:00:00+09:00</updated>
+   <id>/2015/03/31/variations-code-blocks-execution</id>
+   <content type="html">
+&lt;p&gt;The following is an enumeration of the approach taken
+  by systems or tools which in the end result in the execution of a code block
+  by means of some configuration format, dsl, http request, cli tool, etc&amp;#8230;&lt;/p&gt;
+&lt;p&gt;I decided to narrow down the list to the following for now:&lt;/p&gt;
+&lt;dl&gt;
+  &lt;dt&gt;Kubernetes&lt;/dt&gt;&lt;dd&gt;The container orchestration system from Google based on what they have learned around that area&lt;/dd&gt;
+  &lt;dt&gt;Marathon&lt;/dt&gt;&lt;dd&gt;Mesos framework for schedule long running jobs&lt;/dd&gt;
+&lt;/dl&gt;
+&lt;dl&gt;
+  &lt;dt&gt;Chef&lt;/dt&gt;&lt;dd&gt;Configuration management tool&lt;/dd&gt;
+  &lt;dt&gt;Puppet&lt;/dt&gt;&lt;dd&gt;Configuration management tool&lt;/dd&gt;
+  &lt;dt&gt;Cloud Init&lt;/dt&gt;&lt;dd&gt;Configuration&lt;/dd&gt;
+  &lt;dt&gt;Packer&lt;/dt&gt;&lt;dd&gt;&amp;#8220;Packer is a tool for creating identical machine images for multiple platforms from a single source configuration&amp;#8221;&lt;/dd&gt;
+  &lt;dt&gt;Terraform&lt;/dt&gt;&lt;dd&gt;Tool from Hashicorp to have reproducible infrastructure setups&lt;/dd&gt;
+&lt;/dl&gt;
+&lt;h3&gt;Kubernetes&lt;/h3&gt;
+&lt;ul&gt;
+  &lt;li&gt;Docs:
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;https://github.com/GoogleCloudPlatform/kubernetes/blob/master/examples/update-demo/nautilus-rc.yaml&quot;&gt;https://github.com/GoogleCloudPlatform/kubernetes/blob/master/examples/update-demo/nautilus-rc.yaml&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;In the case of Kubernetes, the execution is driven via a YAML file.&lt;/p&gt;
+&lt;p&gt;A couple of examples below:&lt;/p&gt;
+&lt;h4&gt;Example: An Nginx service&lt;/h4&gt;
+&lt;ul&gt;
+  &lt;li&gt;Explicitly say it is a &lt;code&gt;Service&lt;/code&gt;&lt;/li&gt;
+  &lt;li&gt;Describe the ports it will use&lt;/li&gt;
+  &lt;li&gt;Set a constraint about where to run the service&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;l-Scalar-Plain&quot;&gt;kind&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;Service&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;apiVersion&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;v1beta1&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;nginx-example&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# the port that this service should serve on&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;port&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;8000&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# just like the selector in the replication controller,&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# but this time it identifies the set of pods to load balance&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# traffic to.&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;selector&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;l-Scalar-Plain&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;nginx&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# the container on each pod to connect to, can be a name&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# (e.g. &amp;#39;www&amp;#39;) or a number (e.g. 80)&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;containerPort&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;80&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Not very clear what it is running, but it seems that
+  an internal &lt;code&gt;containerport&lt;/code&gt; will be exposed as the port 8000
+  and that it will only be running in nodes tagged to be running &lt;code&gt;nginx&lt;/code&gt; workloads.&lt;/p&gt;
+&lt;p&gt;The full example is &lt;a href=&quot;https://github.com/GoogleCloudPlatform/kubernetes/commit/f1b55c04e2936fafb3c89d29dc474bb5b08f3673&quot;&gt;here&lt;/a&gt;.&lt;/p&gt;
+&lt;h4&gt;Example: A workload with a Healthcheck&lt;/h4&gt;
+&lt;p&gt;Here we have a container that has a &lt;code&gt;livenessProbe&lt;/code&gt;,
+  which can be done by either a command or a http request.
+  The code block which&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;l-Scalar-Plain&quot;&gt;apiVersion&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;v1beta1&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;desiredState&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;l-Scalar-Plain&quot;&gt;manifest&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;l-Scalar-Plain&quot;&gt;containers&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;image&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;busybox&lt;/span&gt;
+        &lt;span class=&quot;l-Scalar-Plain&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;liveness&lt;/span&gt;
+        &lt;span class=&quot;l-Scalar-Plain&quot;&gt;livenessProbe&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+          &lt;span class=&quot;l-Scalar-Plain&quot;&gt;exec&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+            &lt;span class=&quot;l-Scalar-Plain&quot;&gt;command&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+              &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;cat&amp;quot;&lt;/span&gt;
+              &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;/tmp/health&amp;quot;&lt;/span&gt;
+          &lt;span class=&quot;l-Scalar-Plain&quot;&gt;initialDelaySeconds&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;15&lt;/span&gt;
+        &lt;span class=&quot;l-Scalar-Plain&quot;&gt;command&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+          &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;/bin/sh&amp;quot;&lt;/span&gt;
+          &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;-c&amp;quot;&lt;/span&gt;
+          &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;echo&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;ok&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;/tmp/health;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;sleep&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;10;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;echo&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;fail&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;/tmp/health;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;sleep&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;600&amp;quot;&lt;/span&gt;
+    &lt;span class=&quot;l-Scalar-Plain&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;liveness-exec&lt;/span&gt;
+    &lt;span class=&quot;l-Scalar-Plain&quot;&gt;version&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;v1beta1&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;liveness-exec&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;kind&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;Pod&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;labels&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;l-Scalar-Plain&quot;&gt;test&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;liveness&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h3&gt;Marathon&lt;/h3&gt;
+&lt;ul&gt;
+  &lt;li&gt;Docs:
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;https://github.com/mesosphere/marathon&quot;&gt;https://github.com/mesosphere/marathon&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;In Marathon, scheduling of workloads is done via &lt;code&gt;JSON&lt;/code&gt; payloads done to an HTTP API.&lt;/p&gt;
+&lt;p&gt;Here is &lt;a href=&quot;https://github.com/mesosphere/marathon/blob/master/examples/bridge.json&quot;&gt;an example&lt;/a&gt; of starting a couple of code blocks,
+  one which does a healthcheck and another one which is the job itself.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;s2&quot;&gt;&amp;quot;id&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;bridged-webapp&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;s2&quot;&gt;&amp;quot;cmd&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;python3 -m http.server 8080&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;s2&quot;&gt;&amp;quot;cpus&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mf&quot;&gt;0.25&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;s2&quot;&gt;&amp;quot;mem&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mf&quot;&gt;64.0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;s2&quot;&gt;&amp;quot;instances&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;s2&quot;&gt;&amp;quot;container&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;s2&quot;&gt;&amp;quot;type&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;DOCKER&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;s2&quot;&gt;&amp;quot;docker&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;image&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;python:3&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;network&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;BRIDGE&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;portMappings&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;containerPort&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;8080&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;hostPort&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;servicePort&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;9000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;protocol&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;tcp&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;containerPort&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;161&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;hostPort&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;protocol&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;udp&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+  &lt;span class=&quot;s2&quot;&gt;&amp;quot;healthChecks&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;protocol&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;HTTP&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;portIndex&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;path&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;/&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;gracePeriodSeconds&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;intervalSeconds&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;20&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;maxConsecutiveFailures&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;protocol&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;COMMAND&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;command&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;value&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;curl -f -X GET http://$HOST:$PORT&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;gracePeriodSeconds&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;intervalSeconds&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;20&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;maxConsecutiveFailures&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+  &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Via the JSON configuration we are able to say transparently modify the execution of the code block and express
+  that it should be done using a runtime which has &lt;code&gt;python:3&lt;/code&gt; and a certain number of ports open.&lt;/p&gt;
+&lt;p&gt;For the healthcheck code block, it is defined the path and one liner that should be executed
+  to consider that the other job is healthy or not.  It is also expressed that after 3 failures
+  something would happen, though not expressed explicitly in the configuration.&lt;/p&gt;
+&lt;h3&gt;Chef&lt;/h3&gt;
+&lt;ul&gt;
+  &lt;li&gt;Docs:
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;https://docs.chef.io/resource_execute.html&quot;&gt;https://docs.chef.io/resource_execute.html&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;https://docs.chef.io/resource_bash.html&quot;&gt;https://docs.chef.io/resource_bash.html&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Chef has some &lt;i&gt;resources&lt;/i&gt; which help in the execution of code blocks.
+  The configuration is driven by Ruby, which allows to not only having to rely&lt;/p&gt;
+&lt;p&gt;The following is based on the example found &lt;a href=&quot;https://docs.chef.io/resource_execute.html&quot;&gt;here&lt;/a&gt;.  We have 2 code blocks
+  in this case.  The first one creates a change in the server and the second one
+  checks whether that code block has been executed in the past already,
+  in order to make the resource &lt;i&gt;idempotent&lt;/i&gt;.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;sx&quot;&gt;%w{rover fido bubbers}&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;each&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pet_name&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;execute&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;feed_pet_&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pet_name&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;command&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;echo &amp;#39;Feeding: &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pet_name&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;#39;; touch &amp;#39;/tmp/&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pet_name&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;#39;&amp;quot;&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;# not_if { ::File.exists?(&amp;quot;/tmp/#{pet_name}&amp;quot;)}&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;not_if&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;cat /tmp/&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pet_name&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt; | grep Feeding&amp;quot;&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h3&gt;Puppet&lt;/h3&gt;
+&lt;ul&gt;
+  &lt;li&gt;Docs:
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;https://docs.puppetlabs.com/references/latest/type.html#exec&quot;&gt;https://docs.puppetlabs.com/references/latest/type.html#exec&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Puppet also tries to achieve idempotent runs of the code blocks.
+  According to the docs:&lt;/p&gt;
+&lt;blockquote&gt;
+  &lt;p&gt;There are three main ways for an exec to be idempotent:&lt;/p&gt;
+  &lt;p&gt;The command itself is already idempotent. (For example, &lt;code&gt;apt-get update&lt;/code&gt;.)
+    The exec has an &lt;code&gt;onlyif&lt;/code&gt;, &lt;code&gt;unless&lt;/code&gt;, or &lt;code&gt;creates attribute&lt;/code&gt;, which prevents Puppet from running the command unless some condition is met.
+    The exec has &lt;code&gt;refreshonly =&amp;gt; true&lt;/code&gt;, which only allows Puppet to run the command when some other resource is changed.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Here the execution is driven via a specialized DSL (though Ruby inspired?)
+  in order to make things declarative.&lt;/p&gt;
+&lt;p&gt;An example of its usage:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;vg&quot;&gt;$my_file_arg&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;/tmp/myarg.txt&amp;#39;&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;file&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;vg&quot;&gt;$my_file_arg&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;content&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;Hello now&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;nb&quot;&gt;exec&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;Use $my_file_arg&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;nb&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;vg&quot;&gt;$my_file_arg&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;command&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;/bin/sed -i s/Hello/Bye/g $my_file_arg&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Here we have 2 types of code blocks:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;One expressing the contents of a file&lt;/li&gt;
+  &lt;li&gt;Another expressing the execution of a sed command&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;Cloud config and Cloud Init&lt;/h3&gt;
+&lt;ul&gt;
+  &lt;li&gt;Docs:
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;http://cloudinit.readthedocs.org/en/latest/topics/format.html#cloud-config-data&quot;&gt;http://cloudinit.readthedocs.org/en/latest/topics/format.html#cloud-config-data&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;https://coreos.com/docs/cluster-management/setup/cloudinit-cloud-config/&quot;&gt;https://coreos.com/docs/cluster-management/setup/cloudinit-cloud-config/&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;http://cloudinit.readthedocs.org/en/latest/topics/examples.html#yaml-examples&quot;&gt;http://cloudinit.readthedocs.org/en/latest/topics/examples.html#yaml-examples&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Cloud config is an interesting case.  Its execution is leveraged via &lt;i&gt;Convention Over Configuration&lt;/i&gt; approach
+  where anything under a certain path will be executed on the node.&lt;/p&gt;
+&lt;p&gt;The execution in this case is driven by &lt;code&gt;YAML&lt;/code&gt; as in Kubernetes.&lt;/p&gt;
+&lt;p&gt;Here is an example of using &lt;code&gt;runcmd&lt;/code&gt; (example taken from &lt;a href=&quot;http://cloudinit.readthedocs.org/en/latest/topics/examples.html#yaml-examples&quot;&gt;here&lt;/a&gt;)&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;c1&quot;&gt;#cloud-config&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# run commands&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# default: none&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# runcmd contains a list of either lists or a string&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# each item will be executed in order at rc.local like level with&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# output to the console&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# - if the item is a list, the items will be properly executed as if&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;#   passed to execve(3) (with the first arg as the command).&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# - if the item is a string, it will be simply written to the file and&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;#   will be interpreted by &amp;#39;sh&amp;#39;&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;#&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# Note, that the list has to be proper yaml, so you have to escape&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# any characters yaml would eat (&amp;#39;:&amp;#39; can be problematic)&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;runcmd&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+ &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;[&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;ls&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;-l&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;]&lt;/span&gt;
+ &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;[&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;sh&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;-xc&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;echo&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;$(date)&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;#39;:&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;hello&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;world!&amp;#39;&amp;quot;&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;]&lt;/span&gt;
+ &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;[&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;sh&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;-c&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;echo &amp;quot;=========hello world&amp;#39;=========&amp;quot;&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;]&lt;/span&gt;
+ &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;ls -l /root&lt;/span&gt;
+ &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;[&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;wget&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;http://slashdot.org&amp;quot;&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;-O&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;/tmp/index.html&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;]&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h3&gt;Packer&lt;/h3&gt;
+&lt;ul&gt;
+  &lt;li&gt;Documentation:
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;https://www.packer.io/docs/command-line/build.html&quot;&gt;https://www.packer.io/docs/command-line/build.html&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;https://www.packer.io/docs/provisioners/shell.html&quot;&gt;https://www.packer.io/docs/provisioners/shell.html&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Packer counts with a &lt;code&gt;shell provisioner&lt;/code&gt;. A &lt;i&gt;provisioner&lt;/i&gt; is a common theme in the tooling from Hashicorp.
+  The description from the website notes:&lt;/p&gt;
+&lt;blockquote&gt;
+  &lt;p&gt;The shell Packer provisioner provisions machines built by Packer using
+    shell scripts. Shell provisioning is the easiest way to get software
+    installed and configured on a machine.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;As an example, we can have &lt;code&gt;JSON&lt;/code&gt; express what we want to do with the execution of the code block&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;s2&quot;&gt;&amp;quot;type&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;shell&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+  &lt;span class=&quot;s2&quot;&gt;&amp;quot;inline&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;echo foo&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;The execution of the remote resource then, is driven by the &lt;code&gt;JSON&lt;/code&gt; format.
+  Here is a more &lt;a href=&quot;http://blog.endpoint.com/2014/03/provisioning-development-environment_14.html&quot;&gt;complex example&lt;/a&gt; I could find, one that invokes &lt;code&gt;Ansible&lt;/code&gt;.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;provisioners&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;s2&quot;&gt;&amp;quot;type&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;shell&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;s2&quot;&gt;&amp;quot;inline&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;mkdir .ssh&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;echo &amp;#39;{{user `public_key`}}&amp;#39; &amp;gt;&amp;gt; .ssh/authorized_keys&amp;quot;&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;s2&quot;&gt;&amp;quot;type&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;shell&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;s2&quot;&gt;&amp;quot;execute_command&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;echo &amp;#39;{{user `ssh_pass`}}&amp;#39; | {{ .Vars }} sudo -E -S sh &amp;#39;{{ .Path }}&amp;#39;&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;s2&quot;&gt;&amp;quot;inline&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;add-apt-repository ppa:rquillo/ansible&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;apt-get update&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;apt-get install -y ansible&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;echo &amp;#39;%sudo    ALL=(ALL)  NOPASSWD:ALL&amp;#39; &amp;gt;&amp;gt; /etc/sudoers&amp;quot;&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;s2&quot;&gt;&amp;quot;type&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;ansible-local&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;s2&quot;&gt;&amp;quot;playbook_file&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;site.yml&amp;quot;&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Here the provisioners are chained sequentially.
+  One notable example is that we are now defining another sub code block named &lt;code&gt;execute_command&lt;/code&gt;
+  which is prepended to the execution of the original code block.&lt;/p&gt;
+&lt;blockquote&gt;
+  &lt;p&gt;To many new users, the execute_command is puzzling. However, it provides an important function: customization of how the command is executed. The most common use case for this is dealing with sudo password prompts.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3&gt;Terraform&lt;/h3&gt;
+&lt;ul&gt;
+  &lt;li&gt;Docs:
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;https://www.terraform.io/docs/provisioners/remote-exec.html&quot;&gt;https://www.terraform.io/docs/provisioners/remote-exec.html&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Terraform is an interesting case since it recognizes the limitations
+  of using JSON and YAML to drive the execution of a provisioning run.&lt;/p&gt;
+&lt;p&gt;The following is an example of applying pupper, also taken from the docs.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;# Run puppet and join our Consul cluster
+resource &amp;quot;aws_instance&amp;quot; &amp;quot;web&amp;quot; {
+    ...
+    provisioner &amp;quot;remote-exec&amp;quot; {
+        inline = [
+        &amp;quot;puppet apply&amp;quot;,
+        &amp;quot;consul join ${aws_instance.web.private_ip}&amp;quot;
+        ]
+    }
+}
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Here we are expressing that there is going to be a computing resource
+  in AWS, and then when the resource is ready, the code block would be executed
+  in that environment.&lt;/p&gt;
+&lt;h3&gt;Conclusions&lt;/h3&gt;
+&lt;p&gt;Again, what I found interesting of all of these systems and tooling,
+  is that they are variations around the same idea: wrap some configuration
+  around the execution of a code block to transparently add some behavior
+  to its execution.&lt;/p&gt;
+&lt;p&gt;Note: There are some technologies that I want to cover as well
+  so I will be updating this post in the near future&amp;#8230;&lt;/p&gt;
+&lt;p&gt;If you think I&amp;#8217;m onto something you can follow me on &lt;a href=&quot;https://twitter.com/wallyqs&quot;&gt;Twitter&lt;/a&gt;.&lt;/p&gt;
+
+
+</content>
+ </entry>
  
  <entry>
    <title>Talked at the Tokyo Mesos Meetup #1</title>
