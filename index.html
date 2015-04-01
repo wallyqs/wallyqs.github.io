@@ -114,19 +114,32 @@
 
     
 <p>The following is an enumeration of the approach taken
-  by systems or tools which in the end result in the execution of a code block
+  by some systems or tools which in the end result in the execution of a code block
   by means of some configuration format, dsl, http request, cli tool, etc&#8230;</p>
-<p>I decided to narrow down the list to the following for now:</p>
+<p>I decided to narrow down to those in the list below,
+  and will be updating this post to cover them all eventually.</p>
 <table>
-  <tr><td>Domain</td><td></td></tr>
+  <tr><td>Domain</td><td>Name</td></tr>
   <tr><td></td><td></td></tr>
-  <tr><td>Configuration Management</td><td>Chef, Puppet</td></tr>
-  <tr><td>Infrastructure</td><td>Cloud Init, Packer, Terraform</td></tr>
-  <tr><td>Workloads scheduling</td><td>Kubernetes, Marathon</td></tr>
+  <tr><td>Configuration Management</td><td>Chef, Puppet, Ansible</td></tr>
+  <tr><td>Infrastructure</td><td>Packer, Terraform, Cloud Init, NixOps</td></tr>
+  <tr><td>Isolation</td><td>Vagrant, Docker</td></tr>
+  <tr><td>Workloads scheduling</td><td>Kubernetes, Marathon, Aurora, Heroku style, Fleet, Apcera Continuum</td></tr>
+  <tr><td>Continuous Integration</td><td>Jenkins, Drone.io, Travis, Wercker</td></tr>
+  <tr><td>Build tools, Task Runners</td><td>Make, Rake, Maven, Grunt, Gulp, Bazel</td></tr>
+  <tr><td>SSH based deploy tools</td><td>Capistrano, Fabric, Mina</td></tr>
+  <tr><td></td><td></td></tr>
 </table>
 <h1>Configuration Management</h1>
+<p>The purpose of these set of technologies is to make changes into a
+  server like installing packages, creating users, or creating
+  configuration files.  A common theme in these tooling is that they
+  should be <i>idempotent</i>, meaning that each one of the commands will
+  have a check to verify whether the execution has been done already or
+  not, and abort if it has.</p>
 <h2>Chef</h2>
 <ul>
+  <li>Uses: A Ruby DSL</li>
   <li>Docs:
     <ul>
       <li><a href="https://docs.chef.io/resource_execute.html">https://docs.chef.io/resource_execute.html</a></li>
@@ -150,6 +163,7 @@
 </pre></div>
 <h2>Puppet</h2>
 <ul>
+  <li>Uses: A special DSL</li>
   <li>Docs:
     <ul>
       <li><a href="https://docs.puppetlabs.com/references/latest/type.html#exec">https://docs.puppetlabs.com/references/latest/type.html#exec</a></li>
@@ -183,44 +197,51 @@
   <li>One expressing the contents of a file</li>
   <li>Another expressing the execution of a sed command</li>
 </ul>
-<h1>Infrastructure</h1>
-<h2>Cloud Config and Cloud Init</h2>
+<h2>Ansible</h2>
 <ul>
+  <li>Uses: YAML</li>
   <li>Docs:
     <ul>
-      <li><a href="http://cloudinit.readthedocs.org/en/latest/topics/format.html#cloud-config-data">http://cloudinit.readthedocs.org/en/latest/topics/format.html#cloud-config-data</a></li>
-      <li><a href="https://coreos.com/docs/cluster-management/setup/cloudinit-cloud-config/">https://coreos.com/docs/cluster-management/setup/cloudinit-cloud-config/</a></li>
-      <li><a href="http://cloudinit.readthedocs.org/en/latest/topics/examples.html#yaml-examples">http://cloudinit.readthedocs.org/en/latest/topics/examples.html#yaml-examples</a></li>
+      <li><a href="http://docs.ansible.com/shell_module.html">http://docs.ansible.com/shell_module.html</a></li>
     </ul>
   </li>
 </ul>
-<p>Cloud config is an interesting case.  Its execution is leveraged via <i>Convention Over Configuration</i> approach
-  where anything under a certain path will be executed on the node.</p>
-<p>The execution in this case is driven by <code>YAML</code> as in Kubernetes.</p>
-<p>Here is an example of using <code>runcmd</code> (example taken from <a href="http://cloudinit.readthedocs.org/en/latest/topics/examples.html#yaml-examples">here</a>)</p>
-<div class="highlight"><pre><span class="c1">#cloud-config</span>
+<p>Ansible uses <code>YAML</code> for its configuration.</p>
+<p>Example from the docs</p>
+<div class="highlight"><pre><span class="c1"># Execute the command in remote shell; stdout goes to the specified</span>
+<span class="c1"># file on the remote.</span>
+<span class="p-Indicator">-</span> <span class="l-Scalar-Plain">shell</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">somescript.sh &gt;&gt; somelog.txt</span>
 
-<span class="c1"># run commands</span>
-<span class="c1"># default: none</span>
-<span class="c1"># runcmd contains a list of either lists or a string</span>
-<span class="c1"># each item will be executed in order at rc.local like level with</span>
-<span class="c1"># output to the console</span>
-<span class="c1"># - if the item is a list, the items will be properly executed as if</span>
-<span class="c1">#   passed to execve(3) (with the first arg as the command).</span>
-<span class="c1"># - if the item is a string, it will be simply written to the file and</span>
-<span class="c1">#   will be interpreted by &#39;sh&#39;</span>
-<span class="c1">#</span>
-<span class="c1"># Note, that the list has to be proper yaml, so you have to escape</span>
-<span class="c1"># any characters yaml would eat (&#39;:&#39; can be problematic)</span>
-<span class="l-Scalar-Plain">runcmd</span><span class="p-Indicator">:</span>
- <span class="p-Indicator">-</span> <span class="p-Indicator">[</span> <span class="nv">ls</span><span class="p-Indicator">,</span> <span class="nv">-l</span><span class="p-Indicator">,</span> <span class="nv">/</span> <span class="p-Indicator">]</span>
- <span class="p-Indicator">-</span> <span class="p-Indicator">[</span> <span class="nv">sh</span><span class="p-Indicator">,</span> <span class="nv">-xc</span><span class="p-Indicator">,</span> <span class="s">&quot;echo</span><span class="nv"> </span><span class="s">$(date)</span><span class="nv"> </span><span class="s">&#39;:</span><span class="nv"> </span><span class="s">hello</span><span class="nv"> </span><span class="s">world!&#39;&quot;</span> <span class="p-Indicator">]</span>
- <span class="p-Indicator">-</span> <span class="p-Indicator">[</span> <span class="nv">sh</span><span class="p-Indicator">,</span> <span class="nv">-c</span><span class="p-Indicator">,</span> <span class="nv">echo &quot;=========hello world&#39;=========&quot;</span> <span class="p-Indicator">]</span>
- <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">ls -l /root</span>
- <span class="p-Indicator">-</span> <span class="p-Indicator">[</span> <span class="nv">wget</span><span class="p-Indicator">,</span> <span class="s">&quot;http://slashdot.org&quot;</span><span class="p-Indicator">,</span> <span class="nv">-O</span><span class="p-Indicator">,</span> <span class="nv">/tmp/index.html</span> <span class="p-Indicator">]</span>
+<span class="c1"># Change the working directory to somedir/ before executing the command.</span>
+<span class="p-Indicator">-</span> <span class="l-Scalar-Plain">shell</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">somescript.sh &gt;&gt; somelog.txt chdir=somedir/</span>
+
+<span class="c1"># You can also use the &#39;args&#39; form to provide the options. This command</span>
+<span class="c1"># will change the working directory to somedir/ and will only run when</span>
+<span class="c1"># somedir/somelog.txt doesn&#39;t exist.</span>
+<span class="p-Indicator">-</span> <span class="l-Scalar-Plain">shell</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">somescript.sh &gt;&gt; somelog.txt</span>
+  <span class="l-Scalar-Plain">args</span><span class="p-Indicator">:</span>
+    <span class="l-Scalar-Plain">chdir</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">somedir/</span>
+    <span class="l-Scalar-Plain">creates</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">somelog.txt</span>
 </pre></div>
+<p>Here each one of the code blocks are executed by using the <code>shell</code>
+  configuration directive and then its execution is modified by setting
+  options like <code>creates</code> which will trigger an idempotency check and
+  abort the execution of the command if the file already exists.</p>
+<h1>Infrastructure</h1>
+<p>We live in the cloud days (TODO: find better phrase to open),
+  meaning that there are increasing number of possibilities which
+  streamline the acquisition of computing resources.  Though this also
+  means that the number of layers has increased as well and thus
+  new types of configuration and declarative approaches need to be find
+  to <i>orchestrate</i> what we want to do with those resources.</p>
+<p>Some use cases are like making calls to a cloud api like AWS, Google
+  Compute Engine, to get resources and chain the result to the
+  execution of a code block which furthers configures what we want to do
+  with the resource, or yet again persisting those changes back to
+  create a new type of resource (a new container or instance type for example.)</p>
 <h2>Packer</h2>
 <ul>
+  <li>Uses: JSON</li>
   <li>Documentation:
     <ul>
       <li><a href="https://www.packer.io/docs/command-line/build.html">https://www.packer.io/docs/command-line/build.html</a></li>
@@ -228,8 +249,8 @@
     </ul>
   </li>
 </ul>
-<p>Packer counts with a <code>shell provisioner</code>. A <i>provisioner</i> is a common theme in the tooling from Hashicorp.
-  The description from the website notes:</p>
+<p>Packer counts with a <code>shell provisioner</code>.</p>
+<p>The description from the website notes:</p>
 <blockquote>
   <p>The shell Packer provisioner provisions machines built by Packer using
     shell scripts. Shell provisioning is the easiest way to get software
@@ -275,6 +296,7 @@
 </blockquote>
 <h2>Terraform</h2>
 <ul>
+  <li>Uses: The special Terraform format</li>
   <li>Docs:
     <ul>
       <li><a href="https://www.terraform.io/docs/provisioners/remote-exec.html">https://www.terraform.io/docs/provisioners/remote-exec.html</a></li>
@@ -298,9 +320,115 @@ resource &quot;aws_instance&quot; &quot;web&quot; {
 <p>Here we are expressing that there is going to be a computing resource
   in AWS, and then when the resource is ready, the code block would be executed
   in that environment.</p>
+<h2>Cloud Config and Cloud Init</h2>
+<ul>
+  <li>Uses: YAML</li>
+  <li>Docs:
+    <ul>
+      <li><a href="http://cloudinit.readthedocs.org/en/latest/topics/format.html#cloud-config-data">http://cloudinit.readthedocs.org/en/latest/topics/format.html#cloud-config-data</a></li>
+      <li><a href="https://coreos.com/docs/cluster-management/setup/cloudinit-cloud-config/">https://coreos.com/docs/cluster-management/setup/cloudinit-cloud-config/</a></li>
+      <li><a href="http://cloudinit.readthedocs.org/en/latest/topics/examples.html#yaml-examples">http://cloudinit.readthedocs.org/en/latest/topics/examples.html#yaml-examples</a></li>
+    </ul>
+  </li>
+</ul>
+<p>Cloud config is an interesting case.  Its execution is leveraged via <i>Convention Over Configuration</i> approach
+  where anything under a certain path will be executed on the node.</p>
+<p>The execution in this case is driven by <code>YAML</code> as in Kubernetes.</p>
+<p>Here is an example of using <code>runcmd</code> (example taken from <a href="http://cloudinit.readthedocs.org/en/latest/topics/examples.html#yaml-examples">here</a>)</p>
+<div class="highlight"><pre><span class="c1">#cloud-config</span>
+
+<span class="c1"># run commands</span>
+<span class="c1"># default: none</span>
+<span class="c1"># runcmd contains a list of either lists or a string</span>
+<span class="c1"># each item will be executed in order at rc.local like level with</span>
+<span class="c1"># output to the console</span>
+<span class="c1"># - if the item is a list, the items will be properly executed as if</span>
+<span class="c1">#   passed to execve(3) (with the first arg as the command).</span>
+<span class="c1"># - if the item is a string, it will be simply written to the file and</span>
+<span class="c1">#   will be interpreted by &#39;sh&#39;</span>
+<span class="c1">#</span>
+<span class="c1"># Note, that the list has to be proper yaml, so you have to escape</span>
+<span class="c1"># any characters yaml would eat (&#39;:&#39; can be problematic)</span>
+<span class="l-Scalar-Plain">runcmd</span><span class="p-Indicator">:</span>
+ <span class="p-Indicator">-</span> <span class="p-Indicator">[</span> <span class="nv">ls</span><span class="p-Indicator">,</span> <span class="nv">-l</span><span class="p-Indicator">,</span> <span class="nv">/</span> <span class="p-Indicator">]</span>
+ <span class="p-Indicator">-</span> <span class="p-Indicator">[</span> <span class="nv">sh</span><span class="p-Indicator">,</span> <span class="nv">-xc</span><span class="p-Indicator">,</span> <span class="s">&quot;echo</span><span class="nv"> </span><span class="s">$(date)</span><span class="nv"> </span><span class="s">&#39;:</span><span class="nv"> </span><span class="s">hello</span><span class="nv"> </span><span class="s">world!&#39;&quot;</span> <span class="p-Indicator">]</span>
+ <span class="p-Indicator">-</span> <span class="p-Indicator">[</span> <span class="nv">sh</span><span class="p-Indicator">,</span> <span class="nv">-c</span><span class="p-Indicator">,</span> <span class="nv">echo &quot;=========hello world&#39;=========&quot;</span> <span class="p-Indicator">]</span>
+ <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">ls -l /root</span>
+ <span class="p-Indicator">-</span> <span class="p-Indicator">[</span> <span class="nv">wget</span><span class="p-Indicator">,</span> <span class="s">&quot;http://slashdot.org&quot;</span><span class="p-Indicator">,</span> <span class="nv">-O</span><span class="p-Indicator">,</span> <span class="nv">/tmp/index.html</span> <span class="p-Indicator">]</span>
+</pre></div>
+<h2>NixOps</h2>
+<ul>
+  <li>Uses: Nix configuration format</li>
+  <li>Docs:
+    <ul>
+      <li>Site: <a href="http://nixos.org/nixops/">http://nixos.org/nixops/</a></li>
+      <li>Manual: <a href="http://nixos.org/nixops/manual/">http://nixos.org/nixops/manual/</a></li>
+      <li>There is a paper!
+        <a href="http://nixos.org/~eelco/pubs/charon-releng2013-final.pdf">http://nixos.org/~eelco/pubs/charon-releng2013-final.pdf</a></li>
+    </ul>
+  </li>
+</ul>
+<p>NixOps is a super interesting solution! Here is the description that
+  can be found in the site:</p>
+<blockquote>
+  <p>NixOps is a tool for deploying NixOS machines in a network or
+    cloud. It takes as input a declarative specification of a set of
+    &#8220;logical&#8221; machines and then performs any necessary steps actions to
+    realise that specification: instantiate cloud machines, build and
+    download dependencies, stop and start services, and so on. NixOps has
+    several nice properties:</p>
+</blockquote>
+<p><a href="https://github.com/NixOS/nixops/blob/master/examples/mediawiki.nix">Here</a> is an example of using it to setup Mediawiki and below is an
+  edited version of it.  We can find that there is an <code>installPhase</code>
+  block, as well as an <code>script</code> whcih is used to prepare the postgres database.</p>
+<div class="highlight"><pre>  # !!! Cut&amp;paste, extremely ugly.
+  # Unpack Mediawiki and put the config file in its root directory.
+  mediawikiRoot = pkgs.stdenv.mkDerivation rec {
+    name= &quot;mediawiki-1.15.5&quot;;
+
+    src = pkgs.fetchurl {
+      url = &quot;http://download.wikimedia.org/mediawiki/1.15/${name}.tar.gz&quot;;
+      sha256 = &quot;1d8afbdh3lsg54b69mnh6a47psb3lg978xpp277qs08yz15cjf7q&quot;;
+    };
+
+    buildPhase = &quot;true&quot;;
+
+    installPhase =
+      &#39;&#39;
+        mkdir -p $out
+        cp -r * $out
+      &#39;&#39;;
+  };
+
+  ...
+
+  jobs.init_mediawiki_db =
+    { task = true;
+      startOn = &quot;started postgresql&quot;;
+      script =
+        &#39;&#39;
+          mkdir -p /var/lib/psql-schemas
+          if ! [ -e /var/lib/psql-schemas/mediawiki-created ]; then
+              ${pkgs.postgresql}/bin/createuser --no-superuser --no-createdb --no-createrole mediawiki
+              ${pkgs.postgresql}/bin/createdb mediawiki -O mediawiki
+              ( echo &#39;CREATE LANGUAGE plpgsql;&#39;
+                cat ${mediawikiRoot}/maintenance/postgres/tables.sql
+                echo &#39;CREATE TEXT SEARCH CONFIGURATION public.default ( COPY = pg_catalog.english );&#39;
+                echo COMMIT
+              ) | ${pkgs.postgresql}/bin/psql -U mediawiki mediawiki
+              touch /var/lib/psql-schemas/mediawiki-created
+          fi
+        &#39;&#39;;
+    };
+  
+ ...
+
+};
+</pre></div>
 <h1>Workloads scheduling</h1>
 <h2>Kubernetes</h2>
 <ul>
+  <li>Uses: JSON</li>
   <li>Docs:
     <ul>
       <li><a href="https://github.com/GoogleCloudPlatform/kubernetes/blob/master/examples/update-demo/nautilus-rc.yaml">https://github.com/GoogleCloudPlatform/kubernetes/blob/master/examples/update-demo/nautilus-rc.yaml</a></li>
@@ -367,6 +495,7 @@ resource &quot;aws_instance&quot; &quot;web&quot; {
   break apart and fit into an array structure by using YAML lists.</p>
 <h2>Marathon</h2>
 <ul>
+  <li>Uses: JSON</li>
   <li>Docs:
     <ul>
       <li><a href="https://github.com/mesosphere/marathon">https://github.com/mesosphere/marathon</a></li>
@@ -418,6 +547,42 @@ resource &quot;aws_instance&quot; &quot;web&quot; {
 <p>For the healthcheck code block, it is defined the path and one liner that should be executed
   to consider that the other job is healthy or not.  It is also expressed that after 3 failures
   something would happen, though not expressed explicitly in the configuration.</p>
+<h2>Heroku</h2>
+<ul>
+  <li>Uses: Procfiles and Buildpacks</li>
+  <li>Docs:
+    <ul>
+      <li><a href="https://devcenter.heroku.com/articles/procfile">https://devcenter.heroku.com/articles/procfile</a></li>
+      <li><a href="https://devcenter.heroku.com/articles/buildpacks">https://devcenter.heroku.com/articles/buildpacks</a></li>
+    </ul>
+  </li>
+</ul>
+<p>Actually is no longer just a hosting option, but a set of practices
+  which inspired other technologies like Flynn, Deis.io, Dokku and Cloudfoundry.</p>
+<p>In case of Flynn, the code block execution is done via <code>Procfiles</code> (<a href="https://flynn.io/docs">link</a>).</p>
+<p>A Procfile based application modifies the execution of a code block by
+  prepending a tag to the start command. For example:</p>
+<div class="highlight"><pre><span class="nv">$ </span>cat Procfile
+web: node web.js
+</pre></div>
+<p>In order to modify the environment of where that command would be run,
+  <a href="https://devcenter.heroku.com/articles/buildpacks">buildpacks</a> are used.  This is done by calling 3 possible other code
+  blocks: detect, compile and release (<a href="https://devcenter.heroku.com/articles/buildpack-api">docs</a>).</p>
+<ul>
+  <li><code>detect</code> sends to stdout the type of application</li>
+  <li><code>compile</code> makes changes to the environment which will persisted
+    for code blocks which will be run in the same environment later on.</li>
+  <li><code>release</code> communicates YAML back to the scheduler for later reuse
+    For example, from the Clojure <a href="https://github.com/heroku/heroku-buildpack-clojure/blob/master/bin/release">buildpack</a>:
+<div class="highlight"><pre><span class="l-Scalar-Plain">cat &lt;&lt;EOF</span>
+<span class="nn">---</span>
+<span class="l-Scalar-Plain">config_vars</span><span class="p-Indicator">:</span>
+<span class="l-Scalar-Plain">default_process_types</span><span class="p-Indicator">:</span>
+  <span class="l-Scalar-Plain">web</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">lein trampoline run</span>
+<span class="l-Scalar-Plain">EOF</span>
+</pre></div>
+  </li>
+</ul>
 <h2>Thoughts</h2>
 <p>Again, what I found interesting of all of these systems and tooling,
   is that they are variations around the same idea: wrap some configuration

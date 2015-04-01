@@ -19,19 +19,32 @@
    <id>/posts/2015/03/31/variations-code-blocks-execution</id>
    <content type="html">
 &lt;p&gt;The following is an enumeration of the approach taken
-  by systems or tools which in the end result in the execution of a code block
+  by some systems or tools which in the end result in the execution of a code block
   by means of some configuration format, dsl, http request, cli tool, etc&amp;#8230;&lt;/p&gt;
-&lt;p&gt;I decided to narrow down the list to the following for now:&lt;/p&gt;
+&lt;p&gt;I decided to narrow down to those in the list below,
+  and will be updating this post to cover them all eventually.&lt;/p&gt;
 &lt;table&gt;
-  &lt;tr&gt;&lt;td&gt;Domain&lt;/td&gt;&lt;td&gt;&lt;/td&gt;&lt;/tr&gt;
+  &lt;tr&gt;&lt;td&gt;Domain&lt;/td&gt;&lt;td&gt;Name&lt;/td&gt;&lt;/tr&gt;
   &lt;tr&gt;&lt;td&gt;&lt;/td&gt;&lt;td&gt;&lt;/td&gt;&lt;/tr&gt;
-  &lt;tr&gt;&lt;td&gt;Configuration Management&lt;/td&gt;&lt;td&gt;Chef, Puppet&lt;/td&gt;&lt;/tr&gt;
-  &lt;tr&gt;&lt;td&gt;Infrastructure&lt;/td&gt;&lt;td&gt;Cloud Init, Packer, Terraform&lt;/td&gt;&lt;/tr&gt;
-  &lt;tr&gt;&lt;td&gt;Workloads scheduling&lt;/td&gt;&lt;td&gt;Kubernetes, Marathon&lt;/td&gt;&lt;/tr&gt;
+  &lt;tr&gt;&lt;td&gt;Configuration Management&lt;/td&gt;&lt;td&gt;Chef, Puppet, Ansible&lt;/td&gt;&lt;/tr&gt;
+  &lt;tr&gt;&lt;td&gt;Infrastructure&lt;/td&gt;&lt;td&gt;Packer, Terraform, Cloud Init, NixOps&lt;/td&gt;&lt;/tr&gt;
+  &lt;tr&gt;&lt;td&gt;Isolation&lt;/td&gt;&lt;td&gt;Vagrant, Docker&lt;/td&gt;&lt;/tr&gt;
+  &lt;tr&gt;&lt;td&gt;Workloads scheduling&lt;/td&gt;&lt;td&gt;Kubernetes, Marathon, Aurora, Heroku style, Fleet, Apcera Continuum&lt;/td&gt;&lt;/tr&gt;
+  &lt;tr&gt;&lt;td&gt;Continuous Integration&lt;/td&gt;&lt;td&gt;Jenkins, Drone.io, Travis, Wercker&lt;/td&gt;&lt;/tr&gt;
+  &lt;tr&gt;&lt;td&gt;Build tools, Task Runners&lt;/td&gt;&lt;td&gt;Make, Rake, Maven, Grunt, Gulp, Bazel&lt;/td&gt;&lt;/tr&gt;
+  &lt;tr&gt;&lt;td&gt;SSH based deploy tools&lt;/td&gt;&lt;td&gt;Capistrano, Fabric, Mina&lt;/td&gt;&lt;/tr&gt;
+  &lt;tr&gt;&lt;td&gt;&lt;/td&gt;&lt;td&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;/table&gt;
 &lt;h1&gt;Configuration Management&lt;/h1&gt;
+&lt;p&gt;The purpose of these set of technologies is to make changes into a
+  server like installing packages, creating users, or creating
+  configuration files.  A common theme in these tooling is that they
+  should be &lt;i&gt;idempotent&lt;/i&gt;, meaning that each one of the commands will
+  have a check to verify whether the execution has been done already or
+  not, and abort if it has.&lt;/p&gt;
 &lt;h2&gt;Chef&lt;/h2&gt;
 &lt;ul&gt;
+  &lt;li&gt;Uses: A Ruby DSL&lt;/li&gt;
   &lt;li&gt;Docs:
     &lt;ul&gt;
       &lt;li&gt;&lt;a href=&quot;https://docs.chef.io/resource_execute.html&quot;&gt;https://docs.chef.io/resource_execute.html&lt;/a&gt;&lt;/li&gt;
@@ -55,6 +68,7 @@
 &lt;/pre&gt;&lt;/div&gt;
 &lt;h2&gt;Puppet&lt;/h2&gt;
 &lt;ul&gt;
+  &lt;li&gt;Uses: A special DSL&lt;/li&gt;
   &lt;li&gt;Docs:
     &lt;ul&gt;
       &lt;li&gt;&lt;a href=&quot;https://docs.puppetlabs.com/references/latest/type.html#exec&quot;&gt;https://docs.puppetlabs.com/references/latest/type.html#exec&lt;/a&gt;&lt;/li&gt;
@@ -88,44 +102,51 @@
   &lt;li&gt;One expressing the contents of a file&lt;/li&gt;
   &lt;li&gt;Another expressing the execution of a sed command&lt;/li&gt;
 &lt;/ul&gt;
-&lt;h1&gt;Infrastructure&lt;/h1&gt;
-&lt;h2&gt;Cloud Config and Cloud Init&lt;/h2&gt;
+&lt;h2&gt;Ansible&lt;/h2&gt;
 &lt;ul&gt;
+  &lt;li&gt;Uses: YAML&lt;/li&gt;
   &lt;li&gt;Docs:
     &lt;ul&gt;
-      &lt;li&gt;&lt;a href=&quot;http://cloudinit.readthedocs.org/en/latest/topics/format.html#cloud-config-data&quot;&gt;http://cloudinit.readthedocs.org/en/latest/topics/format.html#cloud-config-data&lt;/a&gt;&lt;/li&gt;
-      &lt;li&gt;&lt;a href=&quot;https://coreos.com/docs/cluster-management/setup/cloudinit-cloud-config/&quot;&gt;https://coreos.com/docs/cluster-management/setup/cloudinit-cloud-config/&lt;/a&gt;&lt;/li&gt;
-      &lt;li&gt;&lt;a href=&quot;http://cloudinit.readthedocs.org/en/latest/topics/examples.html#yaml-examples&quot;&gt;http://cloudinit.readthedocs.org/en/latest/topics/examples.html#yaml-examples&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;http://docs.ansible.com/shell_module.html&quot;&gt;http://docs.ansible.com/shell_module.html&lt;/a&gt;&lt;/li&gt;
     &lt;/ul&gt;
   &lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;Cloud config is an interesting case.  Its execution is leveraged via &lt;i&gt;Convention Over Configuration&lt;/i&gt; approach
-  where anything under a certain path will be executed on the node.&lt;/p&gt;
-&lt;p&gt;The execution in this case is driven by &lt;code&gt;YAML&lt;/code&gt; as in Kubernetes.&lt;/p&gt;
-&lt;p&gt;Here is an example of using &lt;code&gt;runcmd&lt;/code&gt; (example taken from &lt;a href=&quot;http://cloudinit.readthedocs.org/en/latest/topics/examples.html#yaml-examples&quot;&gt;here&lt;/a&gt;)&lt;/p&gt;
-&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;c1&quot;&gt;#cloud-config&lt;/span&gt;
+&lt;p&gt;Ansible uses &lt;code&gt;YAML&lt;/code&gt; for its configuration.&lt;/p&gt;
+&lt;p&gt;Example from the docs&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;c1&quot;&gt;# Execute the command in remote shell; stdout goes to the specified&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# file on the remote.&lt;/span&gt;
+&lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;shell&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;somescript.sh &amp;gt;&amp;gt; somelog.txt&lt;/span&gt;
 
-&lt;span class=&quot;c1&quot;&gt;# run commands&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;# default: none&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;# runcmd contains a list of either lists or a string&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;# each item will be executed in order at rc.local like level with&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;# output to the console&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;# - if the item is a list, the items will be properly executed as if&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;#   passed to execve(3) (with the first arg as the command).&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;# - if the item is a string, it will be simply written to the file and&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;#   will be interpreted by &amp;#39;sh&amp;#39;&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;#&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;# Note, that the list has to be proper yaml, so you have to escape&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;# any characters yaml would eat (&amp;#39;:&amp;#39; can be problematic)&lt;/span&gt;
-&lt;span class=&quot;l-Scalar-Plain&quot;&gt;runcmd&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
- &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;[&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;ls&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;-l&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;]&lt;/span&gt;
- &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;[&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;sh&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;-xc&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;echo&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;$(date)&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;#39;:&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;hello&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;world!&amp;#39;&amp;quot;&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;]&lt;/span&gt;
- &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;[&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;sh&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;-c&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;echo &amp;quot;=========hello world&amp;#39;=========&amp;quot;&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;]&lt;/span&gt;
- &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;ls -l /root&lt;/span&gt;
- &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;[&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;wget&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;http://slashdot.org&amp;quot;&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;-O&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;/tmp/index.html&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;]&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# Change the working directory to somedir/ before executing the command.&lt;/span&gt;
+&lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;shell&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;somescript.sh &amp;gt;&amp;gt; somelog.txt chdir=somedir/&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# You can also use the &amp;#39;args&amp;#39; form to provide the options. This command&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# will change the working directory to somedir/ and will only run when&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# somedir/somelog.txt doesn&amp;#39;t exist.&lt;/span&gt;
+&lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;shell&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;somescript.sh &amp;gt;&amp;gt; somelog.txt&lt;/span&gt;
+  &lt;span class=&quot;l-Scalar-Plain&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;l-Scalar-Plain&quot;&gt;chdir&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;somedir/&lt;/span&gt;
+    &lt;span class=&quot;l-Scalar-Plain&quot;&gt;creates&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;somelog.txt&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Here each one of the code blocks are executed by using the &lt;code&gt;shell&lt;/code&gt;
+  configuration directive and then its execution is modified by setting
+  options like &lt;code&gt;creates&lt;/code&gt; which will trigger an idempotency check and
+  abort the execution of the command if the file already exists.&lt;/p&gt;
+&lt;h1&gt;Infrastructure&lt;/h1&gt;
+&lt;p&gt;We live in the cloud days (TODO: find better phrase to open),
+  meaning that there are increasing number of possibilities which
+  streamline the acquisition of computing resources.  Though this also
+  means that the number of layers has increased as well and thus
+  new types of configuration and declarative approaches need to be find
+  to &lt;i&gt;orchestrate&lt;/i&gt; what we want to do with those resources.&lt;/p&gt;
+&lt;p&gt;Some use cases are like making calls to a cloud api like AWS, Google
+  Compute Engine, to get resources and chain the result to the
+  execution of a code block which furthers configures what we want to do
+  with the resource, or yet again persisting those changes back to
+  create a new type of resource (a new container or instance type for example.)&lt;/p&gt;
 &lt;h2&gt;Packer&lt;/h2&gt;
 &lt;ul&gt;
+  &lt;li&gt;Uses: JSON&lt;/li&gt;
   &lt;li&gt;Documentation:
     &lt;ul&gt;
       &lt;li&gt;&lt;a href=&quot;https://www.packer.io/docs/command-line/build.html&quot;&gt;https://www.packer.io/docs/command-line/build.html&lt;/a&gt;&lt;/li&gt;
@@ -133,8 +154,8 @@
     &lt;/ul&gt;
   &lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;Packer counts with a &lt;code&gt;shell provisioner&lt;/code&gt;. A &lt;i&gt;provisioner&lt;/i&gt; is a common theme in the tooling from Hashicorp.
-  The description from the website notes:&lt;/p&gt;
+&lt;p&gt;Packer counts with a &lt;code&gt;shell provisioner&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;The description from the website notes:&lt;/p&gt;
 &lt;blockquote&gt;
   &lt;p&gt;The shell Packer provisioner provisions machines built by Packer using
     shell scripts. Shell provisioning is the easiest way to get software
@@ -180,6 +201,7 @@
 &lt;/blockquote&gt;
 &lt;h2&gt;Terraform&lt;/h2&gt;
 &lt;ul&gt;
+  &lt;li&gt;Uses: The special Terraform format&lt;/li&gt;
   &lt;li&gt;Docs:
     &lt;ul&gt;
       &lt;li&gt;&lt;a href=&quot;https://www.terraform.io/docs/provisioners/remote-exec.html&quot;&gt;https://www.terraform.io/docs/provisioners/remote-exec.html&lt;/a&gt;&lt;/li&gt;
@@ -203,9 +225,115 @@ resource &amp;quot;aws_instance&amp;quot; &amp;quot;web&amp;quot; {
 &lt;p&gt;Here we are expressing that there is going to be a computing resource
   in AWS, and then when the resource is ready, the code block would be executed
   in that environment.&lt;/p&gt;
+&lt;h2&gt;Cloud Config and Cloud Init&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Uses: YAML&lt;/li&gt;
+  &lt;li&gt;Docs:
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;http://cloudinit.readthedocs.org/en/latest/topics/format.html#cloud-config-data&quot;&gt;http://cloudinit.readthedocs.org/en/latest/topics/format.html#cloud-config-data&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;https://coreos.com/docs/cluster-management/setup/cloudinit-cloud-config/&quot;&gt;https://coreos.com/docs/cluster-management/setup/cloudinit-cloud-config/&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;http://cloudinit.readthedocs.org/en/latest/topics/examples.html#yaml-examples&quot;&gt;http://cloudinit.readthedocs.org/en/latest/topics/examples.html#yaml-examples&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Cloud config is an interesting case.  Its execution is leveraged via &lt;i&gt;Convention Over Configuration&lt;/i&gt; approach
+  where anything under a certain path will be executed on the node.&lt;/p&gt;
+&lt;p&gt;The execution in this case is driven by &lt;code&gt;YAML&lt;/code&gt; as in Kubernetes.&lt;/p&gt;
+&lt;p&gt;Here is an example of using &lt;code&gt;runcmd&lt;/code&gt; (example taken from &lt;a href=&quot;http://cloudinit.readthedocs.org/en/latest/topics/examples.html#yaml-examples&quot;&gt;here&lt;/a&gt;)&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;c1&quot;&gt;#cloud-config&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# run commands&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# default: none&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# runcmd contains a list of either lists or a string&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# each item will be executed in order at rc.local like level with&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# output to the console&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# - if the item is a list, the items will be properly executed as if&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;#   passed to execve(3) (with the first arg as the command).&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# - if the item is a string, it will be simply written to the file and&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;#   will be interpreted by &amp;#39;sh&amp;#39;&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;#&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# Note, that the list has to be proper yaml, so you have to escape&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# any characters yaml would eat (&amp;#39;:&amp;#39; can be problematic)&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;runcmd&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+ &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;[&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;ls&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;-l&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;]&lt;/span&gt;
+ &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;[&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;sh&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;-xc&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;echo&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;$(date)&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;#39;:&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;hello&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;world!&amp;#39;&amp;quot;&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;]&lt;/span&gt;
+ &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;[&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;sh&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;-c&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;echo &amp;quot;=========hello world&amp;#39;=========&amp;quot;&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;]&lt;/span&gt;
+ &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;ls -l /root&lt;/span&gt;
+ &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;[&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;wget&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;http://slashdot.org&amp;quot;&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;-O&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;/tmp/index.html&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;]&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h2&gt;NixOps&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Uses: Nix configuration format&lt;/li&gt;
+  &lt;li&gt;Docs:
+    &lt;ul&gt;
+      &lt;li&gt;Site: &lt;a href=&quot;http://nixos.org/nixops/&quot;&gt;http://nixos.org/nixops/&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;Manual: &lt;a href=&quot;http://nixos.org/nixops/manual/&quot;&gt;http://nixos.org/nixops/manual/&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;There is a paper!
+        &lt;a href=&quot;http://nixos.org/~eelco/pubs/charon-releng2013-final.pdf&quot;&gt;http://nixos.org/~eelco/pubs/charon-releng2013-final.pdf&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;NixOps is a super interesting solution! Here is the description that
+  can be found in the site:&lt;/p&gt;
+&lt;blockquote&gt;
+  &lt;p&gt;NixOps is a tool for deploying NixOS machines in a network or
+    cloud. It takes as input a declarative specification of a set of
+    &amp;#8220;logical&amp;#8221; machines and then performs any necessary steps actions to
+    realise that specification: instantiate cloud machines, build and
+    download dependencies, stop and start services, and so on. NixOps has
+    several nice properties:&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/NixOS/nixops/blob/master/examples/mediawiki.nix&quot;&gt;Here&lt;/a&gt; is an example of using it to setup Mediawiki and below is an
+  edited version of it.  We can find that there is an &lt;code&gt;installPhase&lt;/code&gt;
+  block, as well as an &lt;code&gt;script&lt;/code&gt; whcih is used to prepare the postgres database.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;  # !!! Cut&amp;amp;paste, extremely ugly.
+  # Unpack Mediawiki and put the config file in its root directory.
+  mediawikiRoot = pkgs.stdenv.mkDerivation rec {
+    name= &amp;quot;mediawiki-1.15.5&amp;quot;;
+
+    src = pkgs.fetchurl {
+      url = &amp;quot;http://download.wikimedia.org/mediawiki/1.15/${name}.tar.gz&amp;quot;;
+      sha256 = &amp;quot;1d8afbdh3lsg54b69mnh6a47psb3lg978xpp277qs08yz15cjf7q&amp;quot;;
+    };
+
+    buildPhase = &amp;quot;true&amp;quot;;
+
+    installPhase =
+      &amp;#39;&amp;#39;
+        mkdir -p $out
+        cp -r * $out
+      &amp;#39;&amp;#39;;
+  };
+
+  ...
+
+  jobs.init_mediawiki_db =
+    { task = true;
+      startOn = &amp;quot;started postgresql&amp;quot;;
+      script =
+        &amp;#39;&amp;#39;
+          mkdir -p /var/lib/psql-schemas
+          if ! [ -e /var/lib/psql-schemas/mediawiki-created ]; then
+              ${pkgs.postgresql}/bin/createuser --no-superuser --no-createdb --no-createrole mediawiki
+              ${pkgs.postgresql}/bin/createdb mediawiki -O mediawiki
+              ( echo &amp;#39;CREATE LANGUAGE plpgsql;&amp;#39;
+                cat ${mediawikiRoot}/maintenance/postgres/tables.sql
+                echo &amp;#39;CREATE TEXT SEARCH CONFIGURATION public.default ( COPY = pg_catalog.english );&amp;#39;
+                echo COMMIT
+              ) | ${pkgs.postgresql}/bin/psql -U mediawiki mediawiki
+              touch /var/lib/psql-schemas/mediawiki-created
+          fi
+        &amp;#39;&amp;#39;;
+    };
+  
+ ...
+
+};
+&lt;/pre&gt;&lt;/div&gt;
 &lt;h1&gt;Workloads scheduling&lt;/h1&gt;
 &lt;h2&gt;Kubernetes&lt;/h2&gt;
 &lt;ul&gt;
+  &lt;li&gt;Uses: JSON&lt;/li&gt;
   &lt;li&gt;Docs:
     &lt;ul&gt;
       &lt;li&gt;&lt;a href=&quot;https://github.com/GoogleCloudPlatform/kubernetes/blob/master/examples/update-demo/nautilus-rc.yaml&quot;&gt;https://github.com/GoogleCloudPlatform/kubernetes/blob/master/examples/update-demo/nautilus-rc.yaml&lt;/a&gt;&lt;/li&gt;
@@ -272,6 +400,7 @@ resource &amp;quot;aws_instance&amp;quot; &amp;quot;web&amp;quot; {
   break apart and fit into an array structure by using YAML lists.&lt;/p&gt;
 &lt;h2&gt;Marathon&lt;/h2&gt;
 &lt;ul&gt;
+  &lt;li&gt;Uses: JSON&lt;/li&gt;
   &lt;li&gt;Docs:
     &lt;ul&gt;
       &lt;li&gt;&lt;a href=&quot;https://github.com/mesosphere/marathon&quot;&gt;https://github.com/mesosphere/marathon&lt;/a&gt;&lt;/li&gt;
@@ -323,6 +452,42 @@ resource &amp;quot;aws_instance&amp;quot; &amp;quot;web&amp;quot; {
 &lt;p&gt;For the healthcheck code block, it is defined the path and one liner that should be executed
   to consider that the other job is healthy or not.  It is also expressed that after 3 failures
   something would happen, though not expressed explicitly in the configuration.&lt;/p&gt;
+&lt;h2&gt;Heroku&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Uses: Procfiles and Buildpacks&lt;/li&gt;
+  &lt;li&gt;Docs:
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;https://devcenter.heroku.com/articles/procfile&quot;&gt;https://devcenter.heroku.com/articles/procfile&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;https://devcenter.heroku.com/articles/buildpacks&quot;&gt;https://devcenter.heroku.com/articles/buildpacks&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Actually is no longer just a hosting option, but a set of practices
+  which inspired other technologies like Flynn, Deis.io, Dokku and Cloudfoundry.&lt;/p&gt;
+&lt;p&gt;In case of Flynn, the code block execution is done via &lt;code&gt;Procfiles&lt;/code&gt; (&lt;a href=&quot;https://flynn.io/docs&quot;&gt;link&lt;/a&gt;).&lt;/p&gt;
+&lt;p&gt;A Procfile based application modifies the execution of a code block by
+  prepending a tag to the start command. For example:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;cat Procfile
+web: node web.js
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;In order to modify the environment of where that command would be run,
+  &lt;a href=&quot;https://devcenter.heroku.com/articles/buildpacks&quot;&gt;buildpacks&lt;/a&gt; are used.  This is done by calling 3 possible other code
+  blocks: detect, compile and release (&lt;a href=&quot;https://devcenter.heroku.com/articles/buildpack-api&quot;&gt;docs&lt;/a&gt;).&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;code&gt;detect&lt;/code&gt; sends to stdout the type of application&lt;/li&gt;
+  &lt;li&gt;&lt;code&gt;compile&lt;/code&gt; makes changes to the environment which will persisted
+    for code blocks which will be run in the same environment later on.&lt;/li&gt;
+  &lt;li&gt;&lt;code&gt;release&lt;/code&gt; communicates YAML back to the scheduler for later reuse
+    For example, from the Clojure &lt;a href=&quot;https://github.com/heroku/heroku-buildpack-clojure/blob/master/bin/release&quot;&gt;buildpack&lt;/a&gt;:
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;l-Scalar-Plain&quot;&gt;cat &amp;lt;&amp;lt;EOF&lt;/span&gt;
+&lt;span class=&quot;nn&quot;&gt;---&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;config_vars&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;default_process_types&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;l-Scalar-Plain&quot;&gt;web&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;lein trampoline run&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;EOF&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
 &lt;h2&gt;Thoughts&lt;/h2&gt;
 &lt;p&gt;Again, what I found interesting of all of these systems and tooling,
   is that they are variations around the same idea: wrap some configuration
