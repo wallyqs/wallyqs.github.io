@@ -113,10 +113,25 @@
     <span class="post-date">31 Mar 2015</span>
 
     
-<p>The following is an enumeration of the approach taken
-  by some systems or tools which in the end result in the execution of a code block
-  by means of some configuration format, dsl, http request, cli tool, etc&#8230;</p>
-<p>I decided to narrow down to those in the list below,
+<p>I recently read <a href="http://www.brainpickings.org/2011/12/22/umberto-eco-on-lists/">the following quote</a> from Umberto Eco:</p>
+<blockquote>
+  <p>The list is the origin of culture. It’s part of the history of art and
+    literature. What does culture want? To make infinity
+    comprehensible. It also wants to create order — not always, but
+    often. And how, as a human being, does one face infinity? How does one
+    attempt to grasp the incomprehensible? Through lists, through
+    catalogs, through collections in museums and through encyclopedias and
+    dictionaries.</p>
+</blockquote>
+<p>Inspired by it, I decided to try to make one about around
+  a topic that I care about a lot: how to specify how to run something.</p>
+<p>The following is then, an enumeration of some systems or tools which
+  in the end result in the execution of a <i>code block</i>
+  by means of some configuration format, dsl, http request, cli tool,
+  etc&#8230;</p>
+<p>I&#8217;ll use the term <i>code block</i> to imply that the code snippet is being
+  defined outside of the runtime where it is intended to be run.</p>
+<p>Also I decided to narrow down to those in the list below,
   and will be updating this post to cover them all eventually.</p>
 <table>
   <tr><td>Domain</td><td>Name</td></tr>
@@ -126,7 +141,7 @@
   <tr><td>Isolation</td><td>Vagrant, Docker</td></tr>
   <tr><td>Workloads scheduling</td><td>Kubernetes, Marathon, Aurora, Heroku style, Fleet, Apcera Continuum</td></tr>
   <tr><td>Continuous Integration</td><td>Jenkins, Drone.io, Travis, Wercker</td></tr>
-  <tr><td>Build tools, Task Runners</td><td>Make, Rake, Maven, Grunt, Gulp, Bazel</td></tr>
+  <tr><td>Build tools, Task Runners</td><td>Make, Rake, Maven, Grunt, Gulp, Bazel, Pants</td></tr>
   <tr><td>SSH based deploy tools</td><td>Capistrano, Fabric, Mina</td></tr>
   <tr><td></td><td></td></tr>
 </table>
@@ -228,10 +243,9 @@
   options like <code>creates</code> which will trigger an idempotency check and
   abort the execution of the command if the file already exists.</p>
 <h1>Infrastructure</h1>
-<p>We live in the cloud days (TODO: find better phrase to open),
-  meaning that there are increasing number of possibilities which
-  streamline the acquisition of computing resources.  Though this also
-  means that the number of layers has increased as well and thus
+<p>These days there are increasing number of possibilities
+  of Cloud APIs which streamline the acquisition of computing resources.
+  Though this also means that the number of layers has increased as well and thus
   new types of configuration and declarative approaches need to be find
   to <i>orchestrate</i> what we want to do with those resources.</p>
 <p>Some use cases are like making calls to a cloud api like AWS, Google
@@ -425,7 +439,71 @@ resource &quot;aws_instance&quot; &quot;web&quot; {
 
 };
 </pre></div>
+<h1>Isolation</h1>
+<p>(Note: Not sure if isolation would be right word for these.)</p>
+<p>What these do is automate the creation of another environment
+  within another local environment by using virtualization or container technologies.</p>
+<h2>Vagrant</h2>
+<ul>
+  <li>Uses: A Ruby DSL (Vagrantfile)</li>
+  <li>Docs:
+    <ul>
+      <li><a href="https://docs.vagrantup.com/v2/provisioning/basic_usage.html">https://docs.vagrantup.com/v2/provisioning/basic_usage.html</a></li>
+      <li><a href="https://docs.vagrantup.com/v2/push">https://docs.vagrantup.com/v2/push</a></li>
+    </ul>
+  </li>
+</ul>
+<p>Vagrant is a very popular tool which helps in the creation of local
+  virtual environments.</p>
+<p>Vagrant uses a <i>Vagrantfile</i> to specify the configuration and
+  execution of code blocks within the created resource:</p>
+<div class="highlight"><pre><span class="no">Vagrant</span><span class="o">.</span><span class="n">configure</span><span class="p">(</span><span class="s2">&quot;2&quot;</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">config</span><span class="o">|</span>
+  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="s2">&quot;shell&quot;</span><span class="p">,</span> <span class="ss">run</span><span class="p">:</span> <span class="s2">&quot;always&quot;</span> <span class="k">do</span> <span class="o">|</span><span class="n">s</span><span class="o">|</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">inline</span> <span class="o">=</span> <span class="s2">&quot;echo hello&quot;</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</pre></div>
+<p>There is also a related <code>push</code> option, which can be used to code
+  blocks locally:</p>
+<div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">push</span><span class="o">.</span><span class="n">define</span> <span class="s2">&quot;local-exec&quot;</span> <span class="k">do</span> <span class="o">|</span><span class="n">push</span><span class="o">|</span>
+  <span class="n">push</span><span class="o">.</span><span class="n">inline</span> <span class="o">=</span> <span class="o">&lt;&lt;-</span><span class="no">SCRIPT</span>
+<span class="sh">    scp . /var/www/website</span>
+<span class="no">  SCRIPT</span>
+<span class="k">end</span>
+</pre></div>
+<h2>Docker</h2>
+<ul>
+  <li>Uses: The Dockerfile format</li>
+  <li>Docs:
+    <ul>
+      <li><a href="https://docs.docker.com/reference/builder/">https://docs.docker.com/reference/builder/</a></li>
+    </ul>
+  </li>
+</ul>
+<p>Docker uses its own basic configuration format.  Maybe due to the
+  nature of Docker layers, it emphasizes running one liners via its
+  <code>RUN</code> directive:</p>
+<div class="highlight"><pre># Comment
+RUN echo &#39;we are running some # of cool things&#39;
+</pre></div>
+<p>But in the end, what will continue to run is what is defined in its
+  <code>ENTRYPOINT</code>:</p>
+<div class="highlight"><pre>FROM debian:stable
+RUN apt-get update &amp;&amp; apt-get install -y --force-yes apache2
+EXPOSE 80 443
+VOLUME [&quot;/var/www&quot;, &quot;/var/log/apache2&quot;, &quot;/etc/apache2&quot;]
+ENTRYPOINT [&quot;/usr/sbin/apache2ctl&quot;, &quot;-D&quot;, &quot;FOREGROUND&quot;]
+</pre></div>
+<p>We can see that along with the execution of the code block, it is also being defined
+  the folders and port mapping that are required to execute the code block.</p>
 <h1>Workloads scheduling</h1>
+<p>Once having defined the infrastructure that is is desired, maybe by building upon
+  the technologies in the list above, it is possible to
+  create <a href="http://apprenda.com/blog/paas-wont-become-feature-iaas-unnatural/">another abstraction</a> around the computing resources so that
+  those running a workload can focus on how something should be executed
+  rather than than detailing how to prepare the necessary infrastructure
+  so that the workload runs.  These tools are usually referred to as
+  PaaS systems or some of them with more simple features are just considered <i>Schedulers</i>.</p>
 <h2>Kubernetes</h2>
 <ul>
   <li>Uses: JSON</li>
@@ -547,6 +625,85 @@ resource &quot;aws_instance&quot; &quot;web&quot; {
 <p>For the healthcheck code block, it is defined the path and one liner that should be executed
   to consider that the other job is healthy or not.  It is also expressed that after 3 failures
   something would happen, though not expressed explicitly in the configuration.</p>
+<h2>Aurora</h2>
+<ul>
+  <li>Uses: A sophisticated DSL in Python (according to the description in the <a href="https://github.com/apache/aurora/blob/14e7b84f4303968029c3803e9b096908f3499d57/README.md">readme</a>)</li>
+  <li>Docs: <a href="https://github.com/apache/aurora">https://github.com/apache/aurora</a></li>
+</ul>
+<p>Aurora is another Mesos based scheduler to execute code blocks.</p>
+<p>An <a href="https://github.com/apache/aurora/blob/14e7b84f4303968029c3803e9b096908f3499d57/docs/tutorial.md">example</a> from the docs is below.</p>
+<div class="highlight"><pre><span class="n">pkg_path</span> <span class="o">=</span> <span class="s">&#39;/vagrant/hello_world.py&#39;</span>
+
+<span class="c"># we use a trick here to make the configuration change with</span>
+<span class="c"># the contents of the file, for simplicity.  in a normal setting, packages would be</span>
+<span class="c"># versioned, and the version number would be changed in the configuration.</span>
+<span class="kn">import</span> <span class="nn">hashlib</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">pkg_path</span><span class="p">,</span> <span class="s">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+  <span class="n">pkg_checksum</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">md5</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+
+<span class="c"># copy hello_world.py into the local sandbox</span>
+<span class="n">install</span> <span class="o">=</span> <span class="n">Process</span><span class="p">(</span>
+  <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;fetch_package&#39;</span><span class="p">,</span>
+  <span class="n">cmdline</span> <span class="o">=</span> <span class="s">&#39;cp </span><span class="si">%s</span><span class="s"> . &amp;&amp; echo </span><span class="si">%s</span><span class="s"> &amp;&amp; chmod +x hello_world.py&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">pkg_path</span><span class="p">,</span> <span class="n">pkg_checksum</span><span class="p">))</span>
+
+<span class="c"># run the script</span>
+<span class="n">hello_world</span> <span class="o">=</span> <span class="n">Process</span><span class="p">(</span>
+  <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;hello_world&#39;</span><span class="p">,</span>
+  <span class="n">cmdline</span> <span class="o">=</span> <span class="s">&#39;python hello_world.py&#39;</span><span class="p">)</span>
+
+<span class="c"># describe the task</span>
+<span class="n">hello_world_task</span> <span class="o">=</span> <span class="n">SequentialTask</span><span class="p">(</span>
+  <span class="n">processes</span> <span class="o">=</span> <span class="p">[</span><span class="n">install</span><span class="p">,</span> <span class="n">hello_world</span><span class="p">],</span>
+  <span class="n">resources</span> <span class="o">=</span> <span class="n">Resources</span><span class="p">(</span><span class="n">cpu</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">ram</span> <span class="o">=</span> <span class="mi">1</span><span class="o">*</span><span class="n">MB</span><span class="p">,</span> <span class="n">disk</span><span class="o">=</span><span class="mi">8</span><span class="o">*</span><span class="n">MB</span><span class="p">))</span>
+
+<span class="n">jobs</span> <span class="o">=</span> <span class="p">[</span>
+  <span class="n">Service</span><span class="p">(</span><span class="n">cluster</span> <span class="o">=</span> <span class="s">&#39;devcluster&#39;</span><span class="p">,</span>
+          <span class="n">environment</span> <span class="o">=</span> <span class="s">&#39;devel&#39;</span><span class="p">,</span>
+          <span class="n">role</span> <span class="o">=</span> <span class="s">&#39;www-data&#39;</span><span class="p">,</span>
+          <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;hello_world&#39;</span><span class="p">,</span>
+          <span class="n">task</span> <span class="o">=</span> <span class="n">hello_world_task</span><span class="p">)</span>
+<span class="p">]</span>
+</pre></div>
+<p>The Aurora documentation <a href="https://github.com/apache/aurora/blob/14e7b84f4303968029c3803e9b096908f3499d57/docs/tutorial.md#whats-going-on-in-that-configuration-file">has a helpful section</a> regarding about what is
+  being defined in the example:</p>
+<blockquote>
+  <p><b>What&#8217;s Going On In That Configuration File?</b></p>
+  <p>More than you might think.</p>
+  <p>From a &#8220;big picture&#8221; viewpoint, it first defines two Processes. Then it defines a Task that runs the two Processes in the order specified in the Task definition, as well as specifying what computational and memory resources are available for them. Finally, it defines a Job that will schedule the Task on available and suitable machines. This Job is the sole member of a list of Jobs; you can specify more than one Job in a config file.</p>
+  <p>At the Process level, it specifies how to get your code into the local sandbox in which it will run. It then specifies how the code is actually run once the second Process starts.</p>
+</blockquote>
+<h2>Fleet</h2>
+<ul>
+  <li>Uses: Same style as <code>Systemd</code></li>
+  <li>Docs:
+    <ul>
+      <li><a href="https://github.com/coreos/fleet">https://github.com/coreos/fleet</a></li>
+      <li><a href="https://coreos.com/docs/launching-containers/launching/launching-containers-fleet/">https://coreos.com/docs/launching-containers/launching/launching-containers-fleet/</a></li>
+    </ul>
+  </li>
+</ul>
+<p>The CoreOS guide has a <a href="https://coreos.com/docs/launching-containers/launching/launching-containers-fleet/">good example</a> of how to modify how to run a
+  container on it:</p>
+<div class="highlight"><pre><span class="o">[</span>Unit<span class="o">]</span>
+<span class="nv">Description</span><span class="o">=</span>My Apache Frontend
+<span class="nv">After</span><span class="o">=</span>docker.service
+<span class="nv">Requires</span><span class="o">=</span>docker.service
+
+<span class="o">[</span>Service<span class="o">]</span>
+<span class="nv">TimeoutStartSec</span><span class="o">=</span>0
+<span class="nv">ExecStartPre</span><span class="o">=</span>-/usr/bin/docker <span class="nb">kill </span>apache1
+<span class="nv">ExecStartPre</span><span class="o">=</span>-/usr/bin/docker rm apache1
+<span class="nv">ExecStartPre</span><span class="o">=</span>/usr/bin/docker pull coreos/apache
+<span class="nv">ExecStart</span><span class="o">=</span>/usr/bin/docker run -rm --name apache1 -p 80:80 coreos/apache /usr/sbin/apache2ctl -D FOREGROUND
+<span class="nv">ExecStop</span><span class="o">=</span>/usr/bin/docker stop apache1
+
+<span class="o">[</span>X-Fleet<span class="o">]</span>
+<span class="nv">Conflicts</span><span class="o">=</span>apache@*.service
+</pre></div>
+<p>By using <code>ExecStartPre</code>, the lines from a code block will accumulate
+  and executed before running the container which has an Apache service.
+  It is also specified that such code block should not be run in the
+  same machine by using the <code>Conflicts</code> option (more options <a href="https://coreos.com/docs/launching-containers/launching/fleet-unit-files/">here</a>).</p>
 <h2>Heroku</h2>
 <ul>
   <li>Uses: Procfiles and Buildpacks</li>
@@ -583,14 +740,98 @@ web: node web.js
 </pre></div>
   </li>
 </ul>
-<h2>Thoughts</h2>
+<h2>Atlas</h2>
+<ul>
+  <li>Uses: JSON
+    <ul>
+      <li><a href="https://atlas.hashicorp.com/features/develop">https://atlas.hashicorp.com/features/develop</a></li>
+      <li><a href="https://atlas.hashicorp.com/help/getting-started/package-services-with-artifacts">https://atlas.hashicorp.com/help/getting-started/package-services-with-artifacts</a></li>
+    </ul>
+  </li>
+</ul>
+<p>Atlas is a gestalt of all the products from Hashicorp which
+  in the end runs a workload on a specified infrastructure.</p>
+<p>Below is an example of how something is run (taken from the docs
+  <a href="https://atlas.hashicorp.com/help/getting-started/package-services-with-artifacts">here</a>).</p>
+<div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;builders&quot;</span><span class="o">:</span> <span class="p">[{</span>
+        <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;amazon-ebs&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;access_key&quot;</span><span class="o">:</span> <span class="s2">&quot;ACCESS_KEY_HERE&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;secret_key&quot;</span><span class="o">:</span> <span class="s2">&quot;SECRET_KEY_HERE&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;region&quot;</span><span class="o">:</span> <span class="s2">&quot;us-east-1&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;source_ami&quot;</span><span class="o">:</span> <span class="s2">&quot;ami-de0d9eb7&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;instance_type&quot;</span><span class="o">:</span> <span class="s2">&quot;t1.micro&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;ssh_username&quot;</span><span class="o">:</span> <span class="s2">&quot;ubuntu&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;ami_name&quot;</span><span class="o">:</span> <span class="s2">&quot;atlas-example {{timestamp}}&quot;</span>
+    <span class="p">}],</span>
+    <span class="s2">&quot;push&quot;</span><span class="o">:</span> <span class="p">{</span>
+      <span class="s2">&quot;name&quot;</span><span class="o">:</span> <span class="s2">&quot;&lt;username&gt;/example-build-configuration&quot;</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;provisioners&quot;</span><span class="o">:</span> <span class="p">[</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;shell&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;inline&quot;</span><span class="o">:</span> <span class="p">[</span>
+            <span class="s2">&quot;sleep 30&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;sudo apt-get update&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;sudo apt-get install apache2 -y&quot;</span>
+        <span class="p">]</span>
+    <span class="p">}],</span>
+    <span class="s2">&quot;post-processors&quot;</span><span class="o">:</span> <span class="p">[</span>
+      <span class="p">{</span>
+        <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;atlas&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;artifact&quot;</span><span class="o">:</span> <span class="s2">&quot;&lt;username&gt;/example-artifact&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;artifact_type&quot;</span><span class="o">:</span> <span class="s2">&quot;aws.ami&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;metadata&quot;</span><span class="o">:</span> <span class="p">{</span>
+          <span class="s2">&quot;created_at&quot;</span><span class="o">:</span> <span class="s2">&quot;{{timestamp}}&quot;</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+<h2>Cron</h2>
+<ul>
+  <li>Uses: Cron configuration format</li>
+</ul>
+<p>Just for completeness, the classic cron syntax. From <a href="http://en.wikipedia.org/wiki/Cron">Wikipedia</a>:</p>
+<blockquote>
+  <p>The following specifies that the Apache error log clears at one minute
+    past midnight (00:01) of every day of the month, or every day of the
+    week, assuming that the default shell for the cron user is Bourne
+    shell compliant:</p>
+  <pre class="example">
+1 0 * * *  printf &gt; /var/log/apache/error_log
+  </pre>
+</blockquote>
+<h2>Conclusions</h2>
 <p>Again, what I found interesting of all of these systems and tooling,
   is that they are variations around the same idea: wrap some configuration
   around the execution of a code block to transparently add some behavior
   to its execution.</p>
-<p>Note: There are some technologies that I want to cover as well
-  so I will be updating this post in the near future&#8230;</p>
-<p>If you think I&#8217;m onto something you can follow me on <a href="https://twitter.com/wallyqs">Twitter</a>.</p>
+<p>It is impressive that there are so many different takes on this issue.
+  even though that in essence what is happening is more or less the same.</p>
+<p>As an alternative, see for example what is being done in the
+  <a href="https://github.com/aphyr/jepsen/blob/master/jepsen/etcd/src/jepsen/system/etcd.clj#L81">Jepsen tests</a>, where there are no code blocks and they have been
+  assimilated into the code itself.</p>
+<div class="highlight"><pre><span class="p">(</span><span class="kd">defn </span><span class="nv">db</span> <span class="p">[]</span>
+  <span class="p">(</span><span class="k">let </span><span class="p">[</span><span class="nv">running</span> <span class="p">(</span><span class="nf">atom</span> <span class="nv">nil</span><span class="p">)]</span> <span class="c1">; A map of nodes to whether they&#39;re running</span>
+    <span class="p">(</span><span class="nf">reify</span> <span class="nv">db/DB</span>
+      <span class="p">(</span><span class="nf">setup!</span> <span class="p">[</span><span class="nv">this</span> <span class="nb">test </span><span class="nv">node</span><span class="p">]</span>
+        <span class="c1">; You&#39;ll need debian testing for this, cuz etcd relies on go 1.2</span>
+        <span class="p">(</span><span class="nf">debian/install</span> <span class="p">[</span><span class="ss">:golang</span> <span class="ss">:git-core</span><span class="p">])</span>
+
+        <span class="p">(</span><span class="nf">c/su</span>
+          <span class="p">(</span><span class="nf">c/cd</span> <span class="s">&quot;/opt&quot;</span>
+                <span class="p">(</span><span class="nb">when-not </span><span class="p">(</span><span class="nf">cu/file?</span> <span class="s">&quot;etcd&quot;</span><span class="p">)</span>
+                  <span class="p">(</span><span class="nf">info</span> <span class="nb">node </span><span class="s">&quot;cloning etcd&quot;</span><span class="p">)</span>
+                  <span class="p">(</span><span class="nf">c/exec</span> <span class="ss">:git</span> <span class="ss">:clone</span> <span class="s">&quot;https://github.com/coreos/etcd&quot;</span><span class="p">)))</span>
+
+          <span class="p">(</span><span class="nf">c/cd</span> <span class="s">&quot;/opt/etcd&quot;</span>
+                <span class="p">(</span><span class="nb">when-not </span><span class="p">(</span><span class="nf">cu/file?</span> <span class="s">&quot;bin/etcd&quot;</span><span class="p">)</span>
+                  <span class="p">(</span><span class="nf">info</span> <span class="nb">node </span><span class="s">&quot;building etcd&quot;</span><span class="p">)</span>
+                  <span class="p">(</span><span class="nf">c/exec</span> <span class="p">(</span><span class="nf">c/lit</span> <span class="s">&quot;./build&quot;</span><span class="p">))))</span>
+</pre></div>
+<h1>EOF</h1>
+<hr />
 
 
 
