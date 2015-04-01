@@ -22,28 +22,14 @@
   by systems or tools which in the end result in the execution of a code block
   by means of some configuration format, dsl, http request, cli tool, etc&amp;#8230;&lt;/p&gt;
 &lt;p&gt;I decided to narrow down the list to the following for now:&lt;/p&gt;
-&lt;ul&gt;
-  &lt;li&gt;Configuration management tools
-    &lt;dl&gt;
-      &lt;dt&gt;Chef&lt;/dt&gt;&lt;dd&gt;Configuration management tool&lt;/dd&gt;
-      &lt;dt&gt;Puppet&lt;/dt&gt;&lt;dd&gt;Configuration management tool&lt;/dd&gt;
-      &lt;dt&gt;Cloud Init&lt;/dt&gt;&lt;dd&gt;For configuration too..&lt;/dd&gt;
-    &lt;/dl&gt;
-  &lt;/li&gt;
-  &lt;li&gt;Infrastructure
-    &lt;dl&gt;
-      &lt;dt&gt;Packer&lt;/dt&gt;&lt;dd&gt;&amp;#8220;Packer is a tool for creating identical machine images for multiple platforms from a single source configuration&amp;#8221;&lt;/dd&gt;
-      &lt;dt&gt;Terraform&lt;/dt&gt;&lt;dd&gt;Tool from Hashicorp to have reproducible infrastructure setups&lt;/dd&gt;
-    &lt;/dl&gt;
-  &lt;/li&gt;
-  &lt;li&gt;Workloads scheduling
-    &lt;dl&gt;
-      &lt;dt&gt;Kubernetes&lt;/dt&gt;&lt;dd&gt;The container orchestration system from Google based on what they have learned around that area&lt;/dd&gt;
-      &lt;dt&gt;Marathon&lt;/dt&gt;&lt;dd&gt;Mesos framework for schedule long running jobs&lt;/dd&gt;
-    &lt;/dl&gt;
-  &lt;/li&gt;
-&lt;/ul&gt;
-&lt;h1&gt;Configuration&lt;/h1&gt;
+&lt;table&gt;
+  &lt;tr&gt;&lt;td&gt;Domain&lt;/td&gt;&lt;td&gt;&lt;/td&gt;&lt;/tr&gt;
+  &lt;tr&gt;&lt;td&gt;&lt;/td&gt;&lt;td&gt;&lt;/td&gt;&lt;/tr&gt;
+  &lt;tr&gt;&lt;td&gt;Configuration Management&lt;/td&gt;&lt;td&gt;Chef, Puppet&lt;/td&gt;&lt;/tr&gt;
+  &lt;tr&gt;&lt;td&gt;Infrastructure&lt;/td&gt;&lt;td&gt;Cloud Init, Packer, Terraform&lt;/td&gt;&lt;/tr&gt;
+  &lt;tr&gt;&lt;td&gt;Workloads scheduling&lt;/td&gt;&lt;td&gt;Kubernetes, Marathon&lt;/td&gt;&lt;/tr&gt;
+&lt;/table&gt;
+&lt;h1&gt;Configuration Management&lt;/h1&gt;
 &lt;h2&gt;Chef&lt;/h2&gt;
 &lt;ul&gt;
   &lt;li&gt;Docs:
@@ -103,7 +89,7 @@
   &lt;li&gt;Another expressing the execution of a sed command&lt;/li&gt;
 &lt;/ul&gt;
 &lt;h1&gt;Infrastructure&lt;/h1&gt;
-&lt;h2&gt;Cloud config and Cloud Init&lt;/h2&gt;
+&lt;h2&gt;Cloud Config and Cloud Init&lt;/h2&gt;
 &lt;ul&gt;
   &lt;li&gt;Docs:
     &lt;ul&gt;
@@ -202,7 +188,7 @@
 &lt;/ul&gt;
 &lt;p&gt;Terraform is an interesting case since it recognizes the limitations
   of using JSON and YAML to drive the execution of a provisioning run.&lt;/p&gt;
-&lt;p&gt;The following is an example of applying pupper, also taken from the docs.&lt;/p&gt;
+&lt;p&gt;The following is an example of applying puppet, also taken from the docs.&lt;/p&gt;
 &lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;# Run puppet and join our Consul cluster
 resource &amp;quot;aws_instance&amp;quot; &amp;quot;web&amp;quot; {
     ...
@@ -254,8 +240,10 @@ resource &amp;quot;aws_instance&amp;quot; &amp;quot;web&amp;quot; {
 &lt;p&gt;The full example is &lt;a href=&quot;https://github.com/GoogleCloudPlatform/kubernetes/commit/f1b55c04e2936fafb3c89d29dc474bb5b08f3673&quot;&gt;here&lt;/a&gt;.&lt;/p&gt;
 &lt;h4&gt;Example: A workload with a Healthcheck&lt;/h4&gt;
 &lt;p&gt;Here we have a container that has a &lt;code&gt;livenessProbe&lt;/code&gt;,
-  which can be done by either a command or a http request.
-  The code block which&lt;/p&gt;
+  which can be done by either a command or a http request.&lt;/p&gt;
+&lt;p&gt;There are 2 code blocks: the &lt;code&gt;liveness-exec&lt;/code&gt; which is going to be
+  periodically writing &lt;code&gt;ok&lt;/code&gt; into &lt;code&gt;/tmp/health&lt;/code&gt; and its liveness probe,
+  which is another code block that will be checking &lt;code&gt;cat /tmp/health&lt;/code&gt;&lt;/p&gt;
 &lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;l-Scalar-Plain&quot;&gt;apiVersion&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;v1beta1&lt;/span&gt;
 &lt;span class=&quot;l-Scalar-Plain&quot;&gt;desiredState&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
   &lt;span class=&quot;l-Scalar-Plain&quot;&gt;manifest&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
@@ -279,6 +267,9 @@ resource &amp;quot;aws_instance&amp;quot; &amp;quot;web&amp;quot; {
 &lt;span class=&quot;l-Scalar-Plain&quot;&gt;labels&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
   &lt;span class=&quot;l-Scalar-Plain&quot;&gt;test&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;liveness&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;We can see some of the limitations already in deciding to use &lt;code&gt;YAML&lt;/code&gt;
+  for this since it looks unnatural that now a command has to be
+  break apart and fit into an array structure by using YAML lists.&lt;/p&gt;
 &lt;h2&gt;Marathon&lt;/h2&gt;
 &lt;ul&gt;
   &lt;li&gt;Docs:
