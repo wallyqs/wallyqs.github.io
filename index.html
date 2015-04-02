@@ -113,7 +113,8 @@
     <span class="post-date">31 Mar 2015</span>
 
     
-<p>I recently read <a href="http://www.brainpickings.org/2011/12/22/umberto-eco-on-lists/">the following quote</a> from Umberto Eco:</p>
+<p>(or <i>A list of things that run things</i>. Also, this post is a bit long&#8230;)</p>
+<p>I recently stumbled upon <a href="http://www.brainpickings.org/2011/12/22/umberto-eco-on-lists/">the following quote</a> from Umberto Eco:</p>
 <blockquote>
   <p>The list is the origin of culture. It’s part of the history of art and
     literature. What does culture want? To make infinity
@@ -124,11 +125,10 @@
     dictionaries.</p>
 </blockquote>
 <p>Inspired by it, I decided to try to make one about around
-  a topic that I care about a lot: how to specify how to run something.</p>
+  a topic that I care about a lot: <i>how to specify how to run something</i>.</p>
 <p>The following is then, an enumeration of some systems or tools which
   in the end result in the execution of a <i>code block</i>
-  by means of some configuration format, dsl, http request, cli tool,
-  etc&#8230;</p>
+  by means of some configuration format, DSL, HTTP requests, CLI tool, etc&#8230;</p>
 <p>I&#8217;ll use the term <i>code block</i> to imply that the code snippet is being
   defined outside of the runtime where it is intended to be run.</p>
 <p>Also I decided to narrow down to those in the list below,
@@ -136,13 +136,13 @@
 <table>
   <tr><td>Domain</td><td>Name</td></tr>
   <tr><td></td><td></td></tr>
-  <tr><td>Configuration Management</td><td>Chef, Puppet, Ansible</td></tr>
-  <tr><td>Infrastructure</td><td>Packer, Terraform, Cloud Init, NixOps</td></tr>
-  <tr><td>Isolation</td><td>Vagrant, Docker</td></tr>
-  <tr><td>Workloads scheduling</td><td>Kubernetes, Marathon, Aurora, Heroku style, Fleet, Apcera Continuum</td></tr>
-  <tr><td>Continuous Integration</td><td>Jenkins, Drone.io, Travis, Wercker</td></tr>
-  <tr><td>Build tools, Task Runners</td><td>Make, Rake, Maven, Grunt, Gulp, Bazel, Pants</td></tr>
-  <tr><td>SSH based deploy tools</td><td>Capistrano, Fabric, Mina</td></tr>
+  <tr><td><b>Configuration Management</b></td><td>Chef, Puppet, Ansible</td></tr>
+  <tr><td><b>Infrastructure</b></td><td>Packer, Terraform, Cloud Init, NixOps</td></tr>
+  <tr><td><b>Isolation</b></td><td>Vagrant, Docker</td></tr>
+  <tr><td><b>Workloads scheduling</b></td><td>Kubernetes, Marathon, Aurora, Heroku style, Fleet, Apcera Continuum</td></tr>
+  <tr><td><b>Continuous Integration</b></td><td>Jenkins, Drone.io, Travis, Wercker</td></tr>
+  <tr><td><b>Build tools, Task Runners</b></td><td>Make, Rake, Ant, Maven, Grunt, Gulp, Pants, Bazel, Gradle</td></tr>
+  <tr><td><b>SSH based deploy tools</b></td><td>Capistrano, Mina, Fabric</td></tr>
   <tr><td></td><td></td></tr>
 </table>
 <h1>Configuration Management</h1>
@@ -242,6 +242,7 @@
   configuration directive and then its execution is modified by setting
   options like <code>creates</code> which will trigger an idempotency check and
   abort the execution of the command if the file already exists.</p>
+<h1>● ● ●</h1>
 <h1>Infrastructure</h1>
 <p>These days there are increasing number of possibilities
   of Cloud APIs which streamline the acquisition of computing resources.
@@ -439,6 +440,7 @@ resource &quot;aws_instance&quot; &quot;web&quot; {
 
 };
 </pre></div>
+<h1>● ● ●</h1>
 <h1>Isolation</h1>
 <p>(Note: Not sure if isolation would be right word for these.)</p>
 <p>What these do is automate the creation of another environment
@@ -496,6 +498,208 @@ ENTRYPOINT [&quot;/usr/sbin/apache2ctl&quot;, &quot;-D&quot;, &quot;FOREGROUND&q
 </pre></div>
 <p>We can see that along with the execution of the code block, it is also being defined
   the folders and port mapping that are required to execute the code block.</p>
+<h1>● ● ●</h1>
+<h1>Build tools and Task runners</h1>
+<p>These have the common functionality of chaining together
+  the execution of code blocks into steps, dependencies or
+  prerequisities.</p>
+<p>Some of them also have notions of <i>idempotency</i> as the configuration management tooling.
+  The classic example of these tools I believe it would be <code>make</code>.</p>
+<h2>Make</h2>
+<ul>
+  <li>Uses: the <i>Makefile</i> format</li>
+  <li>Docs:
+    <ul>
+      <li>Wikipedia entry: <a href="http://en.wikipedia.org/wiki/Makefile">http://en.wikipedia.org/wiki/Makefile</a></li>
+    </ul>
+  </li>
+</ul>
+<p>Borrowing the example of Wikipedia as well:</p>
+<blockquote>
+  <p>Here is a simple makefile that describes the way an executable file
+    called edit depends on four object files which, in turn, depend on
+    four C source and two header files.</p>
+</blockquote>
+<div class="highlight"><pre><span class="l-Scalar-Plain">edit</span> <span class="p-Indicator">:</span> <span class="l-Scalar-Plain">main.o kbd.o command.o display.o</span> 
+    <span class="l-Scalar-Plain">cc -o edit main.o kbd.o command.o display.o</span>
+ 
+<span class="l-Scalar-Plain">main.o</span> <span class="p-Indicator">:</span> <span class="l-Scalar-Plain">main.c defs.h</span>
+    <span class="l-Scalar-Plain">cc -c main.c</span>
+<span class="l-Scalar-Plain">kbd.o</span> <span class="p-Indicator">:</span> <span class="l-Scalar-Plain">kbd.c defs.h command.h</span>
+    <span class="l-Scalar-Plain">cc -c kbd.c</span>
+<span class="l-Scalar-Plain">command.o</span> <span class="p-Indicator">:</span> <span class="l-Scalar-Plain">command.c defs.h command.h</span>
+    <span class="l-Scalar-Plain">cc -c command.c</span>
+<span class="l-Scalar-Plain">display.o</span> <span class="p-Indicator">:</span> <span class="l-Scalar-Plain">display.c defs.h</span>
+    <span class="l-Scalar-Plain">cc -c display.c</span>
+ 
+<span class="l-Scalar-Plain">clean</span> <span class="p-Indicator">:</span>
+     <span class="l-Scalar-Plain">rm edit main.o kbd.o command.o display.o</span>
+</pre></div>
+<p>We invoke a code block using <code>make clean</code>, which will trigger the
+  execution of the <code>clean</code> code block.  On the other hand,</p>
+<h2>Rake</h2>
+<ul>
+  <li>Uses: a Ruby DSL</li>
+  <li>Docs:
+    <ul>
+      <li><a href="https://github.com/ruby/rake">https://github.com/ruby/rake</a></li>
+      <li><a href="http://ruby-doc.org/core-1.9.3/doc/rake/rakefile_rdoc.html">http://ruby-doc.org/core-1.9.3/doc/rake/rakefile_rdoc.html</a></li>
+    </ul>
+  </li>
+</ul>
+<p>From its description:</p>
+<blockquote>
+  <p>Rake is a Make-like program implemented in Ruby. Tasks and dependencies are specified in standard Ruby syntax.</p>
+</blockquote>
+<p>A simple example from the docs:</p>
+<blockquote>
+  <p>The following file task creates a executable program (named prog)
+    given two object files name a.o and b.o.
+    The tasks for creating a.o and b.o are not shown.</p>
+</blockquote>
+<div class="highlight"><pre><span class="n">file</span> <span class="s2">&quot;prog&quot;</span> <span class="o">=&gt;</span> <span class="o">[</span><span class="s2">&quot;a.o&quot;</span><span class="p">,</span> <span class="s2">&quot;b.o&quot;</span><span class="o">]</span> <span class="k">do</span> <span class="o">|</span><span class="n">t</span><span class="o">|</span>
+  <span class="n">sh</span> <span class="s2">&quot;cc -o </span><span class="si">#{</span><span class="n">t</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> </span><span class="si">#{</span><span class="n">t</span><span class="o">.</span><span class="n">prerequisites</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="k">end</span>
+</pre></div>
+<p>It is also possible to run the tasks in <a href="http://devblog.avdi.org/2014/04/29/rake-part-7-multitask/">parallel</a>:</p>
+<div class="highlight"><pre><span class="n">multitask</span> <span class="ss">:highlight</span> <span class="o">=&gt;</span> <span class="no">FileList</span><span class="o">[</span><span class="s2">&quot;listings/*&quot;</span><span class="o">]</span>
+
+<span class="n">rule</span> <span class="s2">&quot;.html&quot;</span> <span class="o">=&gt;</span> <span class="o">-&gt;</span><span class="p">(</span><span class="n">f</span><span class="p">){</span> <span class="no">FileList</span><span class="o">[</span><span class="n">f</span><span class="o">.</span><span class="n">ext</span><span class="p">(</span><span class="s2">&quot;.*&quot;</span><span class="p">)</span><span class="o">].</span><span class="n">first</span> <span class="p">}</span> <span class="k">do</span> <span class="o">|</span><span class="n">t</span><span class="o">|</span>
+  <span class="n">sh</span> <span class="s2">&quot;pygmentize -o </span><span class="si">#{</span><span class="n">t</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> </span><span class="si">#{</span><span class="n">t</span><span class="o">.</span><span class="n">source</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="k">end</span>
+</pre></div>
+<h2>Ant</h2>
+<ul>
+  <li>Uses: XML</li>
+  <li>Docs:
+    <ul>
+      <li><a href="https://ant.apache.org/manual/using.html">https://ant.apache.org/manual/using.html</a></li>
+      <li><a href="http://en.wikipedia.org/wiki/Apache_Ant">http://en.wikipedia.org/wiki/Apache_Ant</a></li>
+      <li><a href="https://ant.apache.org/manual/Tasks/exec.html">https://ant.apache.org/manual/Tasks/exec.html</a></li>
+    </ul>
+  </li>
+</ul>
+<p>According to Wikipedia:</p>
+<blockquote>
+  <p>One of the primary aims of Ant was to solve Make&#8217;s portability problems.</p>
+</blockquote>
+<p>Below is an example from the wikipedia entry:</p>
+<div class="highlight"><pre><span class="cp">&lt;?xml version=&quot;1.0&quot;?&gt;</span>
+<span class="nt">&lt;project</span> <span class="na">name=</span><span class="s">&quot;Hello&quot;</span> <span class="na">default=</span><span class="s">&quot;compile&quot;</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;target</span> <span class="na">name=</span><span class="s">&quot;clean&quot;</span> <span class="na">description=</span><span class="s">&quot;remove intermediate files&quot;</span><span class="nt">&gt;</span>
+        <span class="nt">&lt;delete</span> <span class="na">dir=</span><span class="s">&quot;classes&quot;</span><span class="nt">/&gt;</span>
+    <span class="nt">&lt;/target&gt;</span>
+    <span class="nt">&lt;target</span> <span class="na">name=</span><span class="s">&quot;clobber&quot;</span> <span class="na">depends=</span><span class="s">&quot;clean&quot;</span> <span class="na">description=</span><span class="s">&quot;remove all artifact files&quot;</span><span class="nt">&gt;</span>
+        <span class="nt">&lt;delete</span> <span class="na">file=</span><span class="s">&quot;hello.jar&quot;</span><span class="nt">/&gt;</span>
+    <span class="nt">&lt;/target&gt;</span>
+    <span class="nt">&lt;target</span> <span class="na">name=</span><span class="s">&quot;compile&quot;</span> <span class="na">description=</span><span class="s">&quot;compile the Java source code to class files&quot;</span><span class="nt">&gt;</span>
+        <span class="nt">&lt;mkdir</span> <span class="na">dir=</span><span class="s">&quot;classes&quot;</span><span class="nt">/&gt;</span>
+        <span class="nt">&lt;javac</span> <span class="na">srcdir=</span><span class="s">&quot;.&quot;</span> <span class="na">destdir=</span><span class="s">&quot;classes&quot;</span><span class="nt">/&gt;</span>
+    <span class="nt">&lt;/target&gt;</span>
+    <span class="nt">&lt;target</span> <span class="na">name=</span><span class="s">&quot;jar&quot;</span> <span class="na">depends=</span><span class="s">&quot;compile&quot;</span> <span class="na">description=</span><span class="s">&quot;create a Jar file for the application&quot;</span><span class="nt">&gt;</span>
+        <span class="nt">&lt;jar</span> <span class="na">destfile=</span><span class="s">&quot;hello.jar&quot;</span><span class="nt">&gt;</span>
+            <span class="nt">&lt;fileset</span> <span class="na">dir=</span><span class="s">&quot;classes&quot;</span> <span class="na">includes=</span><span class="s">&quot;**/*.class&quot;</span><span class="nt">/&gt;</span>
+            <span class="nt">&lt;manifest&gt;</span>
+                <span class="nt">&lt;attribute</span> <span class="na">name=</span><span class="s">&quot;Main-Class&quot;</span> <span class="na">value=</span><span class="s">&quot;HelloProgram&quot;</span><span class="nt">/&gt;</span>
+            <span class="nt">&lt;/manifest&gt;</span>
+        <span class="nt">&lt;/jar&gt;</span>
+    <span class="nt">&lt;/target&gt;</span>
+<span class="nt">&lt;/project&gt;</span>
+</pre></div>
+<p>Among the XML, we can see the tasks are chained together via <code>depends</code>.</p>
+<p>To execute a script, there is an <code>exec</code> task, where each one of the
+  arguments to the command line are defined via an ordered list of <code>arg</code> tags:</p>
+<div class="highlight"><pre><span class="nt">&lt;target</span> <span class="na">name=</span><span class="s">&quot;help&quot;</span><span class="nt">&gt;</span>
+  <span class="nt">&lt;exec</span> <span class="na">executable=</span><span class="s">&quot;cmd&quot;</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;arg</span> <span class="na">value=</span><span class="s">&quot;/c&quot;</span><span class="nt">/&gt;</span>
+    <span class="nt">&lt;arg</span> <span class="na">value=</span><span class="s">&quot;ant.bat&quot;</span><span class="nt">/&gt;</span>
+    <span class="nt">&lt;arg</span> <span class="na">value=</span><span class="s">&quot;-p&quot;</span><span class="nt">/&gt;</span>
+  <span class="nt">&lt;/exec&gt;</span>
+<span class="nt">&lt;/target&gt;</span>
+</pre></div>
+<h2>Maven</h2>
+<ul>
+  <li>Uses: XML</li>
+  <li>Docs:
+    <ul>
+      <li><a href="https://maven.apache.org/guides/mini/guide-using-ant.html">https://maven.apache.org/guides/mini/guide-using-ant.html</a></li>
+    </ul>
+  </li>
+</ul>
+<p>Similar to Ant, an exec block in XML can be used:</p>
+<div class="highlight"><pre><span class="nt">&lt;project&gt;</span>
+  ...
+  <span class="nt">&lt;build&gt;</span>
+    <span class="nt">&lt;plugins&gt;</span>
+      <span class="nt">&lt;plugin&gt;</span>
+        ...
+        <span class="nt">&lt;executions&gt;</span>
+          <span class="nt">&lt;execution&gt;</span>
+	    ...
+            <span class="nt">&lt;configuration&gt;</span>
+              <span class="nt">&lt;tasks&gt;</span>
+                <span class="nt">&lt;exec</span>
+                  <span class="na">dir=</span><span class="s">&quot;${project.basedir}&quot;</span>
+                  <span class="na">executable=</span><span class="s">&quot;${project.basedir}/src/main/sh/do-something.sh&quot;</span>
+                  <span class="na">failonerror=</span><span class="s">&quot;true&quot;</span><span class="nt">&gt;</span>
+                  <span class="nt">&lt;arg</span> <span class="na">line=</span><span class="s">&quot;arg1 arg2 arg3 arg4&quot;</span> <span class="nt">/&gt;</span>
+                <span class="nt">&lt;/exec&gt;</span>
+              <span class="nt">&lt;/tasks&gt;</span>
+            <span class="nt">&lt;/configuration&gt;</span>
+	    ...
+          <span class="nt">&lt;/execution&gt;</span>
+        <span class="nt">&lt;/executions&gt;</span>
+      <span class="nt">&lt;/plugin&gt;</span>
+    <span class="nt">&lt;/plugins&gt;</span>
+  <span class="nt">&lt;/build&gt;</span>
+<span class="nt">&lt;/project&gt;</span>
+</pre></div>
+<h1>● ● ●</h1>
+<h1>Continuous Integration</h1>
+<p>CI tools help in automating the creation of build artifacts
+  and running of tests from a project.  In a sense, one could say
+  that they are also <i>schedulers</i> as well, though specialized in the
+  domain of running tests and creating steps which result in a release (batches).</p>
+<h2>Jenkins</h2>
+<ul>
+  <li>Uses: HTML textareas or XML.</li>
+  <li>Docs:
+    <ul>
+      <li><a href="https://wiki.jenkins-ci.org/display/JENKINS/Home">https://wiki.jenkins-ci.org/display/JENKINS/Home</a></li>
+    </ul>
+  </li>
+</ul>
+<p>Jenkins is an established open source CI solution with a large number
+  of plugins, very extensible.</p>
+<p>Although most of its usage would be through HTML forms,
+  there is a way to schedule Jenkins jobs via XML.
+  Meaning that it is XML, the environment will be a little bit more
+  unnatural than in other solutions since the code will have to be
+  escaped for example so that it includes entities which make it conform
+  valid XML.</p>
+<h2>Travis</h2>
+<ul>
+  <li>Uses: YAML</li>
+  <li>Docs:
+    <ul>
+      <li><a href="http://docs.travis-ci.com/user/build-configuration/">http://docs.travis-ci.com/user/build-configuration/</a></li>
+      <li><a href="http://docs.travis-ci.com/user/customizing-the-build/">http://docs.travis-ci.com/user/customizing-the-build/</a></li>
+    </ul>
+  </li>
+</ul>
+<p>Travis is a great CI as a service solution, (which is also open source).</p>
+<p>Configuration is done via a local <code>.travis.yml</code> file which is located
+  at the root of a repository directory.  In the example of the docs below,
+  we have 2 code blocks, one that defines a list of <code>install</code> steps
+  which provision an environment so that the <code>script</code> code block is
+  executed successfully.</p>
+<div class="highlight"><pre><span class="l-Scalar-Plain">install</span><span class="p-Indicator">:</span>
+  <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">bundle install --path vendor/bundle</span>
+  <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">npm install</span>
+
+<span class="l-Scalar-Plain">script</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">bundle exec thor build</span>
+</pre></div>
+<h1>● ● ●</h1>
 <h1>Workloads scheduling</h1>
 <p>Once having defined the infrastructure that is is desired, maybe by building upon
   the technologies in the list above, it is possible to
@@ -787,6 +991,88 @@ web: node web.js
       <span class="p">}</span>
     <span class="p">]</span>
 <span class="p">}</span>
+</pre></div>
+<h2>Apcera Continuum</h2>
+<ul>
+  <li>Uses: Same configuration format as <code>gnatsd</code></li>
+  <li>Docs:
+    <ul>
+      <li><a href="http://docs.apcera.com/introduction/introducing-continuum/">http://docs.apcera.com/introduction/introducing-continuum/</a></li>
+    </ul>
+  </li>
+</ul>
+<p>Continuum is easily one of my favorite platforms today.  It is very
+  futuristic and waaaay ahead of anything else that exists today.</p>
+<p>Not only is it possible to specify directives to modify how
+  something is run, it is possible to script the interactions
+  from the platform itself!</p>
+<p>To define what is being executed or packaged (<a href="https://github.com/apcera/continuum-package-scripts/blob/master/runtimes/go-1.3.conf">example</a>),
+  a <code>build</code> blocks are used:</p>
+<div class="highlight"><pre>environment { &quot;PATH&quot;:    &quot;/opt/apcera/go1.3.linux-amd64/bin:$PATH&quot;,
+              &quot;GOROOT&quot;:  &quot;/opt/apcera/go1.3.linux-amd64&quot;,
+              &quot;GOPATH&quot;:  &quot;/opt/apcera/go&quot; }
+
+build (
+      export GOPATH=/opt/apcera/go
+      (
+            sudo mkdir -p $GOPATH
+            sudo chown -R `id -u` $GOPATH
+            cd $GOPATH
+            mkdir -p src bin pkg
+      )
+      export INSTALLPATH=/opt/apcera/go1.3.linux-amd64
+      tar -zxf go1.3.linux-amd64.tar.gz
+      sudo mkdir -p ${INSTALLPATH}
+      sudo cp -a go/. ${INSTALLPATH}
+
+      # Install godeps
+      export PATH=$INSTALLPATH/bin:$PATH
+      export GOROOT=$INSTALLPATH
+      go get github.com/apcera/godep
+)
+</pre></div>
+<p>And for the execution of a code block, options like <code>start_cmd</code>
+  and <code>resources</code> <a href="https://github.com/apcera/continuum-sample-apps/blob/master/example-ruby-manifest/services.conf">are used</a>.</p>
+<div class="highlight"><pre><span class="c1"># The command to start the app. If unset the stager will</span>
+<span class="c1"># attempt to auto detect the start command based on the</span>
+<span class="c1"># app framework used.</span>
+<span class="l-Scalar-Plain">start_cmd</span><span class="p-Indicator">:</span> <span class="s">&quot;bundle</span><span class="nv"> </span><span class="s">exec</span><span class="nv"> </span><span class="s">rackup</span><span class="nv"> </span><span class="s">config.ru</span><span class="nv"> </span><span class="s">-p</span><span class="nv"> </span><span class="s">$PORT&quot;</span>
+
+<span class="c1"># Resources allocated to the job.</span>
+<span class="l-Scalar-Plain">resources {</span>
+  <span class="l-Scalar-Plain"># CPU allocated to the job. Calculated in ms/s.</span>
+  <span class="l-Scalar-Plain"># Default</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">0, uncapped</span>
+  <span class="l-Scalar-Plain">cpu</span><span class="p-Indicator">:</span> <span class="s">&quot;0&quot;</span>
+
+  <span class="c1"># Disk space to allow for the application.</span>
+  <span class="c1"># Default: 1024MB</span>
+  <span class="l-Scalar-Plain">disk_space</span><span class="p-Indicator">:</span> <span class="s">&quot;768MB&quot;</span>
+
+  <span class="c1"># Memory the job can use.</span>
+  <span class="c1"># Default: 256MB</span>
+  <span class="l-Scalar-Plain">memory</span><span class="p-Indicator">:</span> <span class="s">&quot;256MB&quot;</span>
+
+  <span class="c1"># Network bandwidth allocated to the job.</span>
+  <span class="c1"># Default: 5Mbps</span>
+  <span class="l-Scalar-Plain">network_bandwidth</span><span class="p-Indicator">:</span> <span class="s">&quot;10Mbps&quot;</span>
+<span class="err">}</span>
+</pre></div>
+<p>Also interesting is that the platform makes it possible to parameterize
+  files providing info about how the file is being run.</p>
+<p>In the example below, <code>uuid</code> and <code>name</code> is information that comes
+  directly from the platform.</p>
+<div class="highlight"><pre>  <span class="c1"># Link: https://github.com/apcera/continuum-sample-apps/blob/master/example-ruby-manifest/app.rb#L18</span>
+  <span class="n">get</span> <span class="s2">&quot;/template&quot;</span> <span class="k">do</span>
+    <span class="s2">&quot;scalars:&lt;br /&gt;</span>
+<span class="s2">uuid: {{uuid}}&lt;br /&gt;</span>
+<span class="s2">name: {{name}}&lt;br /&gt;</span>
+<span class="s2">num_instances: {{num_instances}}&lt;br /&gt;</span>
+<span class="s2">cpu: {{cpu}}&lt;br /&gt;</span>
+<span class="s2">memory: {{memory}}&lt;br /&gt;</span>
+<span class="s2">disk: {{disk}}&lt;br /&gt;</span>
+<span class="s2">...*edited*...</span>
+<span class="s2">&quot;</span>
+  <span class="k">end</span>
 </pre></div>
 <h2>Cron</h2>
 <ul>

@@ -18,7 +18,8 @@
    <updated>2015-03-31T00:00:00+09:00</updated>
    <id>/posts/2015/03/31/variations-code-blocks-execution</id>
    <content type="html">
-&lt;p&gt;I recently read &lt;a href=&quot;http://www.brainpickings.org/2011/12/22/umberto-eco-on-lists/&quot;&gt;the following quote&lt;/a&gt; from Umberto Eco:&lt;/p&gt;
+&lt;p&gt;(or &lt;i&gt;A list of things that run things&lt;/i&gt;. Also, this post is a bit long&amp;#8230;)&lt;/p&gt;
+&lt;p&gt;I recently stumbled upon &lt;a href=&quot;http://www.brainpickings.org/2011/12/22/umberto-eco-on-lists/&quot;&gt;the following quote&lt;/a&gt; from Umberto Eco:&lt;/p&gt;
 &lt;blockquote&gt;
   &lt;p&gt;The list is the origin of culture. It’s part of the history of art and
     literature. What does culture want? To make infinity
@@ -29,11 +30,10 @@
     dictionaries.&lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;p&gt;Inspired by it, I decided to try to make one about around
-  a topic that I care about a lot: how to specify how to run something.&lt;/p&gt;
+  a topic that I care about a lot: &lt;i&gt;how to specify how to run something&lt;/i&gt;.&lt;/p&gt;
 &lt;p&gt;The following is then, an enumeration of some systems or tools which
   in the end result in the execution of a &lt;i&gt;code block&lt;/i&gt;
-  by means of some configuration format, dsl, http request, cli tool,
-  etc&amp;#8230;&lt;/p&gt;
+  by means of some configuration format, DSL, HTTP requests, CLI tool, etc&amp;#8230;&lt;/p&gt;
 &lt;p&gt;I&amp;#8217;ll use the term &lt;i&gt;code block&lt;/i&gt; to imply that the code snippet is being
   defined outside of the runtime where it is intended to be run.&lt;/p&gt;
 &lt;p&gt;Also I decided to narrow down to those in the list below,
@@ -41,13 +41,13 @@
 &lt;table&gt;
   &lt;tr&gt;&lt;td&gt;Domain&lt;/td&gt;&lt;td&gt;Name&lt;/td&gt;&lt;/tr&gt;
   &lt;tr&gt;&lt;td&gt;&lt;/td&gt;&lt;td&gt;&lt;/td&gt;&lt;/tr&gt;
-  &lt;tr&gt;&lt;td&gt;Configuration Management&lt;/td&gt;&lt;td&gt;Chef, Puppet, Ansible&lt;/td&gt;&lt;/tr&gt;
-  &lt;tr&gt;&lt;td&gt;Infrastructure&lt;/td&gt;&lt;td&gt;Packer, Terraform, Cloud Init, NixOps&lt;/td&gt;&lt;/tr&gt;
-  &lt;tr&gt;&lt;td&gt;Isolation&lt;/td&gt;&lt;td&gt;Vagrant, Docker&lt;/td&gt;&lt;/tr&gt;
-  &lt;tr&gt;&lt;td&gt;Workloads scheduling&lt;/td&gt;&lt;td&gt;Kubernetes, Marathon, Aurora, Heroku style, Fleet, Apcera Continuum&lt;/td&gt;&lt;/tr&gt;
-  &lt;tr&gt;&lt;td&gt;Continuous Integration&lt;/td&gt;&lt;td&gt;Jenkins, Drone.io, Travis, Wercker&lt;/td&gt;&lt;/tr&gt;
-  &lt;tr&gt;&lt;td&gt;Build tools, Task Runners&lt;/td&gt;&lt;td&gt;Make, Rake, Maven, Grunt, Gulp, Bazel, Pants&lt;/td&gt;&lt;/tr&gt;
-  &lt;tr&gt;&lt;td&gt;SSH based deploy tools&lt;/td&gt;&lt;td&gt;Capistrano, Fabric, Mina&lt;/td&gt;&lt;/tr&gt;
+  &lt;tr&gt;&lt;td&gt;&lt;b&gt;Configuration Management&lt;/b&gt;&lt;/td&gt;&lt;td&gt;Chef, Puppet, Ansible&lt;/td&gt;&lt;/tr&gt;
+  &lt;tr&gt;&lt;td&gt;&lt;b&gt;Infrastructure&lt;/b&gt;&lt;/td&gt;&lt;td&gt;Packer, Terraform, Cloud Init, NixOps&lt;/td&gt;&lt;/tr&gt;
+  &lt;tr&gt;&lt;td&gt;&lt;b&gt;Isolation&lt;/b&gt;&lt;/td&gt;&lt;td&gt;Vagrant, Docker&lt;/td&gt;&lt;/tr&gt;
+  &lt;tr&gt;&lt;td&gt;&lt;b&gt;Workloads scheduling&lt;/b&gt;&lt;/td&gt;&lt;td&gt;Kubernetes, Marathon, Aurora, Heroku style, Fleet, Apcera Continuum&lt;/td&gt;&lt;/tr&gt;
+  &lt;tr&gt;&lt;td&gt;&lt;b&gt;Continuous Integration&lt;/b&gt;&lt;/td&gt;&lt;td&gt;Jenkins, Drone.io, Travis, Wercker&lt;/td&gt;&lt;/tr&gt;
+  &lt;tr&gt;&lt;td&gt;&lt;b&gt;Build tools, Task Runners&lt;/b&gt;&lt;/td&gt;&lt;td&gt;Make, Rake, Ant, Maven, Grunt, Gulp, Pants, Bazel, Gradle&lt;/td&gt;&lt;/tr&gt;
+  &lt;tr&gt;&lt;td&gt;&lt;b&gt;SSH based deploy tools&lt;/b&gt;&lt;/td&gt;&lt;td&gt;Capistrano, Mina, Fabric&lt;/td&gt;&lt;/tr&gt;
   &lt;tr&gt;&lt;td&gt;&lt;/td&gt;&lt;td&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;/table&gt;
 &lt;h1&gt;Configuration Management&lt;/h1&gt;
@@ -147,6 +147,7 @@
   configuration directive and then its execution is modified by setting
   options like &lt;code&gt;creates&lt;/code&gt; which will trigger an idempotency check and
   abort the execution of the command if the file already exists.&lt;/p&gt;
+&lt;h1&gt;● ● ●&lt;/h1&gt;
 &lt;h1&gt;Infrastructure&lt;/h1&gt;
 &lt;p&gt;These days there are increasing number of possibilities
   of Cloud APIs which streamline the acquisition of computing resources.
@@ -344,6 +345,7 @@ resource &amp;quot;aws_instance&amp;quot; &amp;quot;web&amp;quot; {
 
 };
 &lt;/pre&gt;&lt;/div&gt;
+&lt;h1&gt;● ● ●&lt;/h1&gt;
 &lt;h1&gt;Isolation&lt;/h1&gt;
 &lt;p&gt;(Note: Not sure if isolation would be right word for these.)&lt;/p&gt;
 &lt;p&gt;What these do is automate the creation of another environment
@@ -401,6 +403,208 @@ ENTRYPOINT [&amp;quot;/usr/sbin/apache2ctl&amp;quot;, &amp;quot;-D&amp;quot;, &a
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;We can see that along with the execution of the code block, it is also being defined
   the folders and port mapping that are required to execute the code block.&lt;/p&gt;
+&lt;h1&gt;● ● ●&lt;/h1&gt;
+&lt;h1&gt;Build tools and Task runners&lt;/h1&gt;
+&lt;p&gt;These have the common functionality of chaining together
+  the execution of code blocks into steps, dependencies or
+  prerequisities.&lt;/p&gt;
+&lt;p&gt;Some of them also have notions of &lt;i&gt;idempotency&lt;/i&gt; as the configuration management tooling.
+  The classic example of these tools I believe it would be &lt;code&gt;make&lt;/code&gt;.&lt;/p&gt;
+&lt;h2&gt;Make&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Uses: the &lt;i&gt;Makefile&lt;/i&gt; format&lt;/li&gt;
+  &lt;li&gt;Docs:
+    &lt;ul&gt;
+      &lt;li&gt;Wikipedia entry: &lt;a href=&quot;http://en.wikipedia.org/wiki/Makefile&quot;&gt;http://en.wikipedia.org/wiki/Makefile&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Borrowing the example of Wikipedia as well:&lt;/p&gt;
+&lt;blockquote&gt;
+  &lt;p&gt;Here is a simple makefile that describes the way an executable file
+    called edit depends on four object files which, in turn, depend on
+    four C source and two header files.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;l-Scalar-Plain&quot;&gt;edit&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;main.o kbd.o command.o display.o&lt;/span&gt; 
+    &lt;span class=&quot;l-Scalar-Plain&quot;&gt;cc -o edit main.o kbd.o command.o display.o&lt;/span&gt;
+ 
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;main.o&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;main.c defs.h&lt;/span&gt;
+    &lt;span class=&quot;l-Scalar-Plain&quot;&gt;cc -c main.c&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;kbd.o&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;kbd.c defs.h command.h&lt;/span&gt;
+    &lt;span class=&quot;l-Scalar-Plain&quot;&gt;cc -c kbd.c&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;command.o&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;command.c defs.h command.h&lt;/span&gt;
+    &lt;span class=&quot;l-Scalar-Plain&quot;&gt;cc -c command.c&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;display.o&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;display.c defs.h&lt;/span&gt;
+    &lt;span class=&quot;l-Scalar-Plain&quot;&gt;cc -c display.c&lt;/span&gt;
+ 
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;clean&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+     &lt;span class=&quot;l-Scalar-Plain&quot;&gt;rm edit main.o kbd.o command.o display.o&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;We invoke a code block using &lt;code&gt;make clean&lt;/code&gt;, which will trigger the
+  execution of the &lt;code&gt;clean&lt;/code&gt; code block.  On the other hand,&lt;/p&gt;
+&lt;h2&gt;Rake&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Uses: a Ruby DSL&lt;/li&gt;
+  &lt;li&gt;Docs:
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;https://github.com/ruby/rake&quot;&gt;https://github.com/ruby/rake&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;http://ruby-doc.org/core-1.9.3/doc/rake/rakefile_rdoc.html&quot;&gt;http://ruby-doc.org/core-1.9.3/doc/rake/rakefile_rdoc.html&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;From its description:&lt;/p&gt;
+&lt;blockquote&gt;
+  &lt;p&gt;Rake is a Make-like program implemented in Ruby. Tasks and dependencies are specified in standard Ruby syntax.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;A simple example from the docs:&lt;/p&gt;
+&lt;blockquote&gt;
+  &lt;p&gt;The following file task creates a executable program (named prog)
+    given two object files name a.o and b.o.
+    The tasks for creating a.o and b.o are not shown.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;n&quot;&gt;file&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;prog&amp;quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;a.o&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;b.o&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;sh&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;cc -o &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt; &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;prerequisites&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;join&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39; &amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;It is also possible to run the tasks in &lt;a href=&quot;http://devblog.avdi.org/2014/04/29/rake-part-7-multitask/&quot;&gt;parallel&lt;/a&gt;:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;n&quot;&gt;multitask&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:highlight&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;FileList&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;listings/*&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;rule&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;.html&amp;quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;){&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;FileList&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ext&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;.*&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;first&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;sh&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;pygmentize -o &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt; &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;source&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h2&gt;Ant&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Uses: XML&lt;/li&gt;
+  &lt;li&gt;Docs:
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;https://ant.apache.org/manual/using.html&quot;&gt;https://ant.apache.org/manual/using.html&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;http://en.wikipedia.org/wiki/Apache_Ant&quot;&gt;http://en.wikipedia.org/wiki/Apache_Ant&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;https://ant.apache.org/manual/Tasks/exec.html&quot;&gt;https://ant.apache.org/manual/Tasks/exec.html&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;According to Wikipedia:&lt;/p&gt;
+&lt;blockquote&gt;
+  &lt;p&gt;One of the primary aims of Ant was to solve Make&amp;#8217;s portability problems.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Below is an example from the wikipedia entry:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;cp&quot;&gt;&amp;lt;?xml version=&amp;quot;1.0&amp;quot;?&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;project&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;name=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;Hello&amp;quot;&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;default=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;compile&amp;quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;target&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;name=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;clean&amp;quot;&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;description=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;remove intermediate files&amp;quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;delete&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;dir=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;classes&amp;quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;/&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;/target&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;target&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;name=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;clobber&amp;quot;&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;depends=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;clean&amp;quot;&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;description=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;remove all artifact files&amp;quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;delete&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;file=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;hello.jar&amp;quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;/&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;/target&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;target&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;name=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;compile&amp;quot;&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;description=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;compile the Java source code to class files&amp;quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;mkdir&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;dir=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;classes&amp;quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;/&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;javac&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;srcdir=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;.&amp;quot;&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;destdir=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;classes&amp;quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;/&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;/target&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;target&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;name=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;jar&amp;quot;&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;depends=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;compile&amp;quot;&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;description=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;create a Jar file for the application&amp;quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;jar&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;destfile=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;hello.jar&amp;quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;fileset&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;dir=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;classes&amp;quot;&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;includes=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;**/*.class&amp;quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;/&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;manifest&amp;gt;&lt;/span&gt;
+                &lt;span class=&quot;nt&quot;&gt;&amp;lt;attribute&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;name=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;Main-Class&amp;quot;&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;value=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;HelloProgram&amp;quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;/&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;/manifest&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;/jar&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;/target&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/project&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Among the XML, we can see the tasks are chained together via &lt;code&gt;depends&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;To execute a script, there is an &lt;code&gt;exec&lt;/code&gt; task, where each one of the
+  arguments to the command line are defined via an ordered list of &lt;code&gt;arg&lt;/code&gt; tags:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;nt&quot;&gt;&amp;lt;target&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;name=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;help&amp;quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;
+  &lt;span class=&quot;nt&quot;&gt;&amp;lt;exec&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;executable=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;cmd&amp;quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;arg&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;value=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;/c&amp;quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;/&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;arg&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;value=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;ant.bat&amp;quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;/&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;arg&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;value=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;-p&amp;quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;/&amp;gt;&lt;/span&gt;
+  &lt;span class=&quot;nt&quot;&gt;&amp;lt;/exec&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/target&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h2&gt;Maven&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Uses: XML&lt;/li&gt;
+  &lt;li&gt;Docs:
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;https://maven.apache.org/guides/mini/guide-using-ant.html&quot;&gt;https://maven.apache.org/guides/mini/guide-using-ant.html&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Similar to Ant, an exec block in XML can be used:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;nt&quot;&gt;&amp;lt;project&amp;gt;&lt;/span&gt;
+  ...
+  &lt;span class=&quot;nt&quot;&gt;&amp;lt;build&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;plugins&amp;gt;&lt;/span&gt;
+      &lt;span class=&quot;nt&quot;&gt;&amp;lt;plugin&amp;gt;&lt;/span&gt;
+        ...
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;executions&amp;gt;&lt;/span&gt;
+          &lt;span class=&quot;nt&quot;&gt;&amp;lt;execution&amp;gt;&lt;/span&gt;
+	    ...
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;configuration&amp;gt;&lt;/span&gt;
+              &lt;span class=&quot;nt&quot;&gt;&amp;lt;tasks&amp;gt;&lt;/span&gt;
+                &lt;span class=&quot;nt&quot;&gt;&amp;lt;exec&lt;/span&gt;
+                  &lt;span class=&quot;na&quot;&gt;dir=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;${project.basedir}&amp;quot;&lt;/span&gt;
+                  &lt;span class=&quot;na&quot;&gt;executable=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;${project.basedir}/src/main/sh/do-something.sh&amp;quot;&lt;/span&gt;
+                  &lt;span class=&quot;na&quot;&gt;failonerror=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;true&amp;quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;
+                  &lt;span class=&quot;nt&quot;&gt;&amp;lt;arg&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;line=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;arg1 arg2 arg3 arg4&amp;quot;&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;/&amp;gt;&lt;/span&gt;
+                &lt;span class=&quot;nt&quot;&gt;&amp;lt;/exec&amp;gt;&lt;/span&gt;
+              &lt;span class=&quot;nt&quot;&gt;&amp;lt;/tasks&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;/configuration&amp;gt;&lt;/span&gt;
+	    ...
+          &lt;span class=&quot;nt&quot;&gt;&amp;lt;/execution&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;/executions&amp;gt;&lt;/span&gt;
+      &lt;span class=&quot;nt&quot;&gt;&amp;lt;/plugin&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;/plugins&amp;gt;&lt;/span&gt;
+  &lt;span class=&quot;nt&quot;&gt;&amp;lt;/build&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/project&amp;gt;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h1&gt;● ● ●&lt;/h1&gt;
+&lt;h1&gt;Continuous Integration&lt;/h1&gt;
+&lt;p&gt;CI tools help in automating the creation of build artifacts
+  and running of tests from a project.  In a sense, one could say
+  that they are also &lt;i&gt;schedulers&lt;/i&gt; as well, though specialized in the
+  domain of running tests and creating steps which result in a release (batches).&lt;/p&gt;
+&lt;h2&gt;Jenkins&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Uses: HTML textareas or XML.&lt;/li&gt;
+  &lt;li&gt;Docs:
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;https://wiki.jenkins-ci.org/display/JENKINS/Home&quot;&gt;https://wiki.jenkins-ci.org/display/JENKINS/Home&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Jenkins is an established open source CI solution with a large number
+  of plugins, very extensible.&lt;/p&gt;
+&lt;p&gt;Although most of its usage would be through HTML forms,
+  there is a way to schedule Jenkins jobs via XML.
+  Meaning that it is XML, the environment will be a little bit more
+  unnatural than in other solutions since the code will have to be
+  escaped for example so that it includes entities which make it conform
+  valid XML.&lt;/p&gt;
+&lt;h2&gt;Travis&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Uses: YAML&lt;/li&gt;
+  &lt;li&gt;Docs:
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;http://docs.travis-ci.com/user/build-configuration/&quot;&gt;http://docs.travis-ci.com/user/build-configuration/&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;http://docs.travis-ci.com/user/customizing-the-build/&quot;&gt;http://docs.travis-ci.com/user/customizing-the-build/&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Travis is a great CI as a service solution, (which is also open source).&lt;/p&gt;
+&lt;p&gt;Configuration is done via a local &lt;code&gt;.travis.yml&lt;/code&gt; file which is located
+  at the root of a repository directory.  In the example of the docs below,
+  we have 2 code blocks, one that defines a list of &lt;code&gt;install&lt;/code&gt; steps
+  which provision an environment so that the &lt;code&gt;script&lt;/code&gt; code block is
+  executed successfully.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;l-Scalar-Plain&quot;&gt;install&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;bundle install --path vendor/bundle&lt;/span&gt;
+  &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;npm install&lt;/span&gt;
+
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;script&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;bundle exec thor build&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h1&gt;● ● ●&lt;/h1&gt;
 &lt;h1&gt;Workloads scheduling&lt;/h1&gt;
 &lt;p&gt;Once having defined the infrastructure that is is desired, maybe by building upon
   the technologies in the list above, it is possible to
@@ -692,6 +896,88 @@ web: node web.js
       &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
     &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
 &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h2&gt;Apcera Continuum&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Uses: Same configuration format as &lt;code&gt;gnatsd&lt;/code&gt;&lt;/li&gt;
+  &lt;li&gt;Docs:
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;http://docs.apcera.com/introduction/introducing-continuum/&quot;&gt;http://docs.apcera.com/introduction/introducing-continuum/&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Continuum is easily one of my favorite platforms today.  It is very
+  futuristic and waaaay ahead of anything else that exists today.&lt;/p&gt;
+&lt;p&gt;Not only is it possible to specify directives to modify how
+  something is run, it is possible to script the interactions
+  from the platform itself!&lt;/p&gt;
+&lt;p&gt;To define what is being executed or packaged (&lt;a href=&quot;https://github.com/apcera/continuum-package-scripts/blob/master/runtimes/go-1.3.conf&quot;&gt;example&lt;/a&gt;),
+  a &lt;code&gt;build&lt;/code&gt; blocks are used:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;environment { &amp;quot;PATH&amp;quot;:    &amp;quot;/opt/apcera/go1.3.linux-amd64/bin:$PATH&amp;quot;,
+              &amp;quot;GOROOT&amp;quot;:  &amp;quot;/opt/apcera/go1.3.linux-amd64&amp;quot;,
+              &amp;quot;GOPATH&amp;quot;:  &amp;quot;/opt/apcera/go&amp;quot; }
+
+build (
+      export GOPATH=/opt/apcera/go
+      (
+            sudo mkdir -p $GOPATH
+            sudo chown -R `id -u` $GOPATH
+            cd $GOPATH
+            mkdir -p src bin pkg
+      )
+      export INSTALLPATH=/opt/apcera/go1.3.linux-amd64
+      tar -zxf go1.3.linux-amd64.tar.gz
+      sudo mkdir -p ${INSTALLPATH}
+      sudo cp -a go/. ${INSTALLPATH}
+
+      # Install godeps
+      export PATH=$INSTALLPATH/bin:$PATH
+      export GOROOT=$INSTALLPATH
+      go get github.com/apcera/godep
+)
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;And for the execution of a code block, options like &lt;code&gt;start_cmd&lt;/code&gt;
+  and &lt;code&gt;resources&lt;/code&gt; &lt;a href=&quot;https://github.com/apcera/continuum-sample-apps/blob/master/example-ruby-manifest/services.conf&quot;&gt;are used&lt;/a&gt;.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;c1&quot;&gt;# The command to start the app. If unset the stager will&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# attempt to auto detect the start command based on the&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# app framework used.&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;start_cmd&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;bundle&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;exec&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;rackup&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;config.ru&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;-p&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;$PORT&amp;quot;&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# Resources allocated to the job.&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;resources {&lt;/span&gt;
+  &lt;span class=&quot;l-Scalar-Plain&quot;&gt;# CPU allocated to the job. Calculated in ms/s.&lt;/span&gt;
+  &lt;span class=&quot;l-Scalar-Plain&quot;&gt;# Default&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;0, uncapped&lt;/span&gt;
+  &lt;span class=&quot;l-Scalar-Plain&quot;&gt;cpu&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;0&amp;quot;&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;# Disk space to allow for the application.&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;# Default: 1024MB&lt;/span&gt;
+  &lt;span class=&quot;l-Scalar-Plain&quot;&gt;disk_space&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;768MB&amp;quot;&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;# Memory the job can use.&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;# Default: 256MB&lt;/span&gt;
+  &lt;span class=&quot;l-Scalar-Plain&quot;&gt;memory&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;256MB&amp;quot;&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;# Network bandwidth allocated to the job.&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;# Default: 5Mbps&lt;/span&gt;
+  &lt;span class=&quot;l-Scalar-Plain&quot;&gt;network_bandwidth&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;10Mbps&amp;quot;&lt;/span&gt;
+&lt;span class=&quot;err&quot;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Also interesting is that the platform makes it possible to parameterize
+  files providing info about how the file is being run.&lt;/p&gt;
+&lt;p&gt;In the example below, &lt;code&gt;uuid&lt;/code&gt; and &lt;code&gt;name&lt;/code&gt; is information that comes
+  directly from the platform.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;  &lt;span class=&quot;c1&quot;&gt;# Link: https://github.com/apcera/continuum-sample-apps/blob/master/example-ruby-manifest/app.rb#L18&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;get&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;/template&amp;quot;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;s2&quot;&gt;&amp;quot;scalars:&amp;lt;br /&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;s2&quot;&gt;uuid: {{uuid}}&amp;lt;br /&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;s2&quot;&gt;name: {{name}}&amp;lt;br /&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;s2&quot;&gt;num_instances: {{num_instances}}&amp;lt;br /&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;s2&quot;&gt;cpu: {{cpu}}&amp;lt;br /&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;s2&quot;&gt;memory: {{memory}}&amp;lt;br /&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;s2&quot;&gt;disk: {{disk}}&amp;lt;br /&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;s2&quot;&gt;...*edited*...&lt;/span&gt;
+&lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 &lt;h2&gt;Cron&lt;/h2&gt;
 &lt;ul&gt;
