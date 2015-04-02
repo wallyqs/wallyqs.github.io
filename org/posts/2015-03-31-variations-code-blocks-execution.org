@@ -1,0 +1,1133 @@
+# -*- mode: org; mode: auto-fill -*-
+#+TITLE: Variations around the execution of code blocks
+#+startup: showeverything
+#+category: posts
+#+layout: post
+
+I recently read [[http://www.brainpickings.org/2011/12/22/umberto-eco-on-lists/][the following quote]] from Umberto Eco:
+
+#+BEGIN_QUOTE
+The list is the origin of culture. It’s part of the history of art and
+literature. What does culture want? To make infinity
+comprehensible. It also wants to create order — not always, but
+often. And how, as a human being, does one face infinity? How does one
+attempt to grasp the incomprehensible? Through lists, through
+catalogs, through collections in museums and through encyclopedias and
+dictionaries.
+#+END_QUOTE
+
+Inspired by it, I decided to try to make one about around
+a topic that I care about a lot: how to specify how to run something.
+
+The following is then, an enumeration of some systems or tools which 
+in the end result in the execution of a /code block/
+by means of some configuration format, DSL, HTTP requests, CLI tool, etc...
+
+I'll use the term /code block/ to imply that the code snippet is being
+defined outside of the runtime where it is intended to be run.
+
+Also I decided to narrow down to those in the list below,
+and will be updating this post to cover them all eventually.
+
+| Domain                      | Name                                                                |
+|                             |                                                                     |
+| *Configuration Management*  | Chef, Puppet, Ansible                                               |
+| *Infrastructure*            | Packer, Terraform, Cloud Init, NixOps                               |
+| *Isolation*                 | Vagrant, Docker                                                     |
+| *Workloads scheduling*      | Kubernetes, Marathon, Aurora, Heroku style, Fleet, Apcera Continuum |
+| *Continuous Integration*    | Jenkins, Drone.io, Travis, Wercker                                  |
+| *Build tools, Task Runners* | Make, Rake, Ant, Maven, Gradle, Grunt, Gulp, Bazel, Pants           |
+| *SSH based deploy tools*    | Capistrano, Fabric, Mina                                            |
+|                             |                                                                     |
+
+# Note: some of these systems I have not even used or run,
+# I mostly cover them through the insights which can be understood
+# from their documentation.
+
+* DONE Configuration Management
+
+The purpose of these set of technologies is to make changes into a
+server like installing packages, creating users, or creating
+configuration files.  A common theme in these tooling is that they
+should be /idempotent/, meaning that each one of the commands will
+have a check to verify whether the execution has been done already or
+not, and abort if it has.
+
+** DONE [[Chef]]
+
+- Uses: A Ruby DSL
+- Docs:
+  + [[https://docs.chef.io/resource_execute.html]]
+  + [[https://docs.chef.io/resource_bash.html]]
+
+Chef has some /resources/ which help in the execution of code blocks.
+The configuration is driven by Ruby, which allows to not only having to rely
+
+The following is based on the example found [[https://docs.chef.io/resource_execute.html][here]].  We have 2 code blocks
+in this case.  The first one creates a change in the server and the second one 
+checks whether that code block has been executed in the past already,
+in order to make the resource /idempotent/.
+
+#+BEGIN_SRC ruby
+%w{rover fido bubbers}.each do |pet_name|
+  execute "feed_pet_#{pet_name}" do
+    command "echo 'Feeding: #{pet_name}'; touch '/tmp/#{pet_name}'"
+    # not_if { ::File.exists?("/tmp/#{pet_name}")}
+    not_if "cat /tmp/#{pet_name} | grep Feeding"
+  end
+end
+#+END_SRC
+
+** DONE [[Puppet]]
+
+- Uses: A special DSL
+- Docs:
+  + [[https://docs.puppetlabs.com/references/latest/type.html#exec]]
+
+Puppet also tries to achieve idempotent runs of the code blocks.
+According to the docs:
+
+#+BEGIN_QUOTE
+There are three main ways for an exec to be idempotent:
+
+The command itself is already idempotent. (For example, =apt-get update=.)
+The exec has an =onlyif=, =unless=, or =creates attribute=, which prevents Puppet from running the command unless some condition is met.
+The exec has ~refreshonly => true~, which only allows Puppet to run the command when some other resource is changed.
+#+END_QUOTE
+
+Here the execution is driven via a specialized DSL (though Ruby inspired?)
+in order to make things declarative.
+
+An example of its usage:
+
+#+BEGIN_SRC ruby
+$my_file_arg = '/tmp/myarg.txt'
+
+file { $my_file_arg:
+  content => "Hello now",
+}
+
+exec {"Use $my_file_arg":
+  require => File[$my_file_arg],
+  command => "/bin/sed -i s/Hello/Bye/g $my_file_arg",
+}
+#+END_SRC
+
+Here we have 2 types of code blocks:
+
+- One expressing the contents of a file
+- Another expressing the execution of a sed command
+
+** DONE [[Ansible]]
+
+- Uses: YAML
+- Docs: 
+  + [[http://docs.ansible.com/shell_module.html]]
+
+Ansible uses =YAML= for its configuration.
+
+Example from the docs
+
+#+BEGIN_SRC yaml
+# Execute the command in remote shell; stdout goes to the specified
+# file on the remote.
+- shell: somescript.sh >> somelog.txt
+
+# Change the working directory to somedir/ before executing the command.
+- shell: somescript.sh >> somelog.txt chdir=somedir/
+
+# You can also use the 'args' form to provide the options. This command
+# will change the working directory to somedir/ and will only run when
+# somedir/somelog.txt doesn't exist.
+- shell: somescript.sh >> somelog.txt
+  args:
+    chdir: somedir/
+    creates: somelog.txt
+#+END_SRC
+
+Here each one of the code blocks are executed by using the =shell=
+configuration directive and then its execution is modified by setting
+options like =creates= which will trigger an idempotency check and
+abort the execution of the command if the file already exists.
+* DONE Infrastructure
+
+These days there are increasing number of possibilities 
+of Cloud APIs which streamline the acquisition of computing resources.  
+Though this also means that the number of layers has increased as well and thus
+new types of configuration and declarative approaches need to be find
+to /orchestrate/ what we want to do with those resources.
+
+Some use cases are like making calls to a cloud api like AWS, Google
+Compute Engine, to get resources and chain the result to the
+execution of a code block which furthers configures what we want to do
+with the resource, or yet again persisting those changes back to
+create a new type of resource (a new container or instance type for example.)
+
+** DONE Packer
+
+- Uses: JSON
+- Documentation: 
+  + [[https://www.packer.io/docs/command-line/build.html]]
+  + [[https://www.packer.io/docs/provisioners/shell.html]]
+
+Packer counts with a =shell provisioner=. 
+# A /provisioner/ is a common theme in the tooling from Hashicorp.
+The description from the website notes:
+
+#+BEGIN_QUOTE
+The shell Packer provisioner provisions machines built by Packer using
+shell scripts. Shell provisioning is the easiest way to get software
+installed and configured on a machine.
+#+END_QUOTE
+
+As an example, we can have =JSON= express what we want to do with the execution of the code block
+
+#+BEGIN_SRC js
+{
+  "type": "shell",
+  "inline": ["echo foo"]
+}
+#+END_SRC
+
+The execution of the remote resource then, is driven by the =JSON= format.
+Here is a more [[http://blog.endpoint.com/2014/03/provisioning-development-environment_14.html][complex example]] I could find, one that invokes =Ansible=.
+
+#+BEGIN_SRC js
+"provisioners": [
+  {
+    "type": "shell",
+    "inline": [
+      "mkdir .ssh",
+      "echo '{{user `public_key`}}' >> .ssh/authorized_keys"
+    ]
+  },
+  {
+    "type": "shell",
+    "execute_command": "echo '{{user `ssh_pass`}}' | {{ .Vars }} sudo -E -S sh '{{ .Path }}'",
+    "inline": [
+      "add-apt-repository ppa:rquillo/ansible",
+      "apt-get update",
+      "apt-get install -y ansible",
+      "echo '%sudo    ALL=(ALL)  NOPASSWD:ALL' >> /etc/sudoers"
+    ]
+  },
+  {
+    "type": "ansible-local",
+    "playbook_file": "site.yml"
+  }
+]
+#+END_SRC
+
+Here the provisioners are chained sequentially.
+One notable example is that we are now defining another sub code block named =execute_command=
+which is prepended to the execution of the original code block.
+
+#+BEGIN_QUOTE
+To many new users, the execute_command is puzzling. However, it provides an important function: customization of how the command is executed. The most common use case for this is dealing with sudo password prompts.
+#+END_QUOTE
+
+** DONE Terraform
+
+- Uses: The special Terraform format
+- Docs:
+  + [[https://www.terraform.io/docs/provisioners/remote-exec.html]]
+
+Terraform is an interesting case since it recognizes the limitations
+of using JSON and YAML to drive the execution of a provisioning run.
+
+The following is an example of applying puppet, also taken from the docs.
+
+#+BEGIN_SRC terraform
+# Run puppet and join our Consul cluster
+resource "aws_instance" "web" {
+    ...
+    provisioner "remote-exec" {
+        inline = [
+        "puppet apply",
+        "consul join ${aws_instance.web.private_ip}"
+        ]
+    }
+}
+#+END_SRC
+
+Here we are expressing that there is going to be a computing resource
+in AWS, and then when the resource is ready, the code block would be executed
+in that environment.
+
+** DONE Cloud Config and Cloud Init
+
+- Uses: YAML
+- Docs:
+  + [[http://cloudinit.readthedocs.org/en/latest/topics/format.html#cloud-config-data]]
+  + [[https://coreos.com/docs/cluster-management/setup/cloudinit-cloud-config/]]
+  + [[http://cloudinit.readthedocs.org/en/latest/topics/examples.html#yaml-examples]]
+
+Cloud config is an interesting case.  Its execution is leveraged via /Convention Over Configuration/ approach
+where anything under a certain path will be executed on the node.
+
+The execution in this case is driven by =YAML= as in Kubernetes.
+
+Here is an example of using =runcmd= (example taken from [[http://cloudinit.readthedocs.org/en/latest/topics/examples.html#yaml-examples][here]])
+
+#+BEGIN_SRC yaml
+#cloud-config
+
+# run commands
+# default: none
+# runcmd contains a list of either lists or a string
+# each item will be executed in order at rc.local like level with
+# output to the console
+# - if the item is a list, the items will be properly executed as if
+#   passed to execve(3) (with the first arg as the command).
+# - if the item is a string, it will be simply written to the file and
+#   will be interpreted by 'sh'
+#
+# Note, that the list has to be proper yaml, so you have to escape
+# any characters yaml would eat (':' can be problematic)
+runcmd:
+ - [ ls, -l, / ]
+ - [ sh, -xc, "echo $(date) ': hello world!'" ]
+ - [ sh, -c, echo "=========hello world'=========" ]
+ - ls -l /root
+ - [ wget, "http://slashdot.org", -O, /tmp/index.html ]
+#+END_SRC
+
+** DONE NixOps
+
+- Uses: Nix configuration format
+- Docs: 
+ + Site: [[http://nixos.org/nixops/]]
+ + Manual: [[http://nixos.org/nixops/manual/]]
+ + There is a paper!
+   [[http://nixos.org/~eelco/pubs/charon-releng2013-final.pdf]]
+
+NixOps is a super interesting solution! Here is the description that
+can be found in the site:
+
+#+BEGIN_QUOTE
+NixOps is a tool for deploying NixOS machines in a network or
+cloud. It takes as input a declarative specification of a set of
+"logical" machines and then performs any necessary steps actions to
+realise that specification: instantiate cloud machines, build and
+download dependencies, stop and start services, and so on. NixOps has
+several nice properties:
+#+END_QUOTE
+
+[[https://github.com/NixOS/nixops/blob/master/examples/mediawiki.nix][Here]] is an example of using it to setup Mediawiki and below is an
+edited version of it.  We can find that there is an =installPhase=
+block, as well as an =script= whcih is used to prepare the postgres database.
+
+#+BEGIN_SRC conf
+
+      # !!! Cut&paste, extremely ugly.
+      # Unpack Mediawiki and put the config file in its root directory.
+      mediawikiRoot = pkgs.stdenv.mkDerivation rec {
+        name= "mediawiki-1.15.5";
+
+        src = pkgs.fetchurl {
+          url = "http://download.wikimedia.org/mediawiki/1.15/${name}.tar.gz";
+          sha256 = "1d8afbdh3lsg54b69mnh6a47psb3lg978xpp277qs08yz15cjf7q";
+        };
+
+        buildPhase = "true";
+
+        installPhase =
+          ''
+            mkdir -p $out
+            cp -r * $out
+          '';
+      };
+
+      ...
+
+      jobs.init_mediawiki_db =
+        { task = true;
+          startOn = "started postgresql";
+          script =
+            ''
+              mkdir -p /var/lib/psql-schemas
+              if ! [ -e /var/lib/psql-schemas/mediawiki-created ]; then
+                  ${pkgs.postgresql}/bin/createuser --no-superuser --no-createdb --no-createrole mediawiki
+                  ${pkgs.postgresql}/bin/createdb mediawiki -O mediawiki
+                  ( echo 'CREATE LANGUAGE plpgsql;'
+                    cat ${mediawikiRoot}/maintenance/postgres/tables.sql
+                    echo 'CREATE TEXT SEARCH CONFIGURATION public.default ( COPY = pg_catalog.english );'
+                    echo COMMIT
+                  ) | ${pkgs.postgresql}/bin/psql -U mediawiki mediawiki
+                  touch /var/lib/psql-schemas/mediawiki-created
+              fi
+            '';
+        };
+      
+     ...
+
+    };
+#+END_SRC
+
+* DONE Isolation 
+
+(Note: Not sure if isolation would be right word for these.)
+
+What these do is automate the creation of another environment
+within another local environment by using virtualization or container technologies.
+
+** Vagrant 
+
+- Uses: A Ruby DSL (Vagrantfile)
+- Docs: 
+  + [[https://docs.vagrantup.com/v2/provisioning/basic_usage.html]]
+  + [[https://docs.vagrantup.com/v2/push]]
+
+Vagrant is a very popular tool which helps in the creation of local
+virtual environments.
+
+Vagrant uses a /Vagrantfile/ to specify the configuration and
+execution of code blocks within the created resource:
+
+#+BEGIN_SRC ruby
+Vagrant.configure("2") do |config|
+  config.vm.provision "shell", run: "always" do |s|
+    s.inline = "echo hello"
+  end
+end
+#+END_SRC
+
+There is also a related =push= option, which can be used to code
+blocks locally:
+
+#+BEGIN_SRC ruby
+config.push.define "local-exec" do |push|
+  push.inline = <<-SCRIPT
+    scp . /var/www/website
+  SCRIPT
+end
+#+END_SRC
+
+** Docker
+
+- Uses: The Dockerfile format
+- Docs:
+  + [[https://docs.docker.com/reference/builder/]]
+
+Docker uses its own basic configuration format.  Maybe due to the
+nature of Docker layers, it emphasizes running one liners via its
+=RUN= directive:
+
+#+BEGIN_SRC 
+# Comment
+RUN echo 'we are running some # of cool things'
+#+END_SRC
+
+But in the end, what will continue to run is what is defined in its
+=ENTRYPOINT=:
+
+#+BEGIN_SRC 
+FROM debian:stable
+RUN apt-get update && apt-get install -y --force-yes apache2
+EXPOSE 80 443
+VOLUME ["/var/www", "/var/log/apache2", "/etc/apache2"]
+ENTRYPOINT ["/usr/sbin/apache2ctl", "-D", "FOREGROUND"]
+#+END_SRC
+
+We can see that along with the execution of the code block, it is also being defined
+the folders and port mapping that are required to execute the code block.
+
+*  Build tools
+
+Build tools have a common functionality in that they chain together
+the execution of code blocks into steps, dependencies or prerequisities.
+Some of them also have notions of /idempotency/ as the configuration management tooling.
+The classic example of these tools I believe it would be =make=.
+
+** DONE Make
+
+- Uses: the /Makefile/ format
+- Docs: 
+  + Wikipedia entry: [[http://en.wikipedia.org/wiki/Makefile]]
+
+Borrowing the example of Wikipedia as well:
+
+#+BEGIN_QUOTE
+Here is a simple makefile that describes the way an executable file
+called edit depends on four object files which, in turn, depend on
+four C source and two header files.
+#+END_QUOTE
+
+#+BEGIN_SRC yaml
+edit : main.o kbd.o command.o display.o 
+    cc -o edit main.o kbd.o command.o display.o
+ 
+main.o : main.c defs.h
+    cc -c main.c
+kbd.o : kbd.c defs.h command.h
+    cc -c kbd.c
+command.o : command.c defs.h command.h
+    cc -c command.c
+display.o : display.c defs.h
+    cc -c display.c
+ 
+clean :
+     rm edit main.o kbd.o command.o display.o
+#+END_SRC
+
+We invoke a code block using =make clean=, which will trigger the
+execution of the =clean= code block.  On the other hand, 
+
+** DONE Rake
+
+- Uses: a Ruby DSL
+- Docs: 
+  + [[https://github.com/ruby/rake]]
+  + [[http://ruby-doc.org/core-1.9.3/doc/rake/rakefile_rdoc.html]]
+
+From its description:
+
+#+BEGIN_QUOTE
+Rake is a Make-like program implemented in Ruby. Tasks and dependencies are specified in standard Ruby syntax.
+#+END_QUOTE
+
+A simple example from the docs:
+
+#+BEGIN_QUOTE
+The following file task creates a executable program (named prog)
+given two object files name a.o and b.o. 
+The tasks for creating a.o and b.o are not shown.
+#+END_QUOTE 
+
+#+BEGIN_SRC ruby
+file "prog" => ["a.o", "b.o"] do |t|
+  sh "cc -o #{t.name} #{t.prerequisites.join(' ')}"
+end
+#+END_SRC
+
+It is also possible to run the tasks in [[http://devblog.avdi.org/2014/04/29/rake-part-7-multitask/][parallel]]:
+
+#+BEGIN_SRC ruby
+multitask :highlight => FileList["listings/*"]
+
+rule ".html" => ->(f){ FileList[f.ext(".*")].first } do |t|
+  sh "pygmentize -o #{t.name} #{t.source}"
+end
+#+END_SRC
+
+** COMMENT Ant
+
+- Uses: XML
+- Docs:
+  + [[https://ant.apache.org/manual/using.html]]
+
+** COMMENT Maven
+** COMMENT Gradle
+** COMMENT Grunt
+** COMMENT Gulp
+** COMMENT Pants
+** COMMENT Bazel
+* TODO Continuous Integration
+
+CI tools help in automating the creation of build artifacts
+and running of tests from a project.  In a sense, one could say 
+that they are also /schedulers/ as well, though specialized in the
+domain of running tests and creating steps which result in a release (batches).
+
+** COMMENT Jenkins
+
+- Uses: HTML textareas or XML.
+- Docs:
+  + [[https://wiki.jenkins-ci.org/display/JENKINS/Home]]
+
+Jenkins is an established open source CI solution with a large number
+of plugins, very extensible.
+
+Although most of its usage would be through HTML forms,
+there is a way to schedule Jenkins jobs via XML.
+Meaning that it is XML, the environment will be a little bit more
+unnatural than in other solutions since the code will have to be
+escaped for example so that it includes entities which make it conform
+valid XML.
+
+# TODO: Add example of Jenkins
+
+** COMMENT Drone.io
+** Travis
+
+- Uses: YAML
+- Docs:
+  + [[http://docs.travis-ci.com/user/build-configuration/]]
+  + [[http://docs.travis-ci.com/user/customizing-the-build/]]
+
+Travis is a great CI as a service solution, (which is also open source).
+
+Configuration is done via a local =.travis.yml= file which is located
+at the root of a repository directory.  In the example of the docs below,
+we have 2 code blocks, one that defines a list of =install= steps
+which provision an environment so that the =script= code block is
+executed successfully.
+
+#+BEGIN_SRC yaml
+
+install:
+  - bundle install --path vendor/bundle
+  - npm install
+
+script: bundle exec thor build
+
+#+END_SRC
+
+** Wercker
+
+- Uses: YAML
+- Docs: 
+  + [[http://devcenter.wercker.com/docs/]]
+
+* DONE Workloads scheduling
+
+Once having defined the infrastructure that is is desired, maybe by building upon
+the technologies in the list above, it is possible to
+create [[http://apprenda.com/blog/paas-wont-become-feature-iaas-unnatural/][another abstraction]] around the computing resources so that
+those running a workload can focus on how something should be executed
+rather than than detailing how to prepare the necessary infrastructure
+so that the workload runs.  These tools are usually referred to as
+PaaS systems or some of them with more simple features are just considered /Schedulers/.
+
+** DONE Kubernetes
+
+- Uses: JSON
+- Docs:
+  + [[https://github.com/GoogleCloudPlatform/kubernetes/blob/master/examples/update-demo/nautilus-rc.yaml]]
+
+In the case of Kubernetes, the execution is driven via a YAML file.
+
+A couple of examples below:
+
+**** Example: An Nginx service
+
+- Explicitly say it is a ~Service~
+- Describe the ports it will use
+- Set a constraint about where to run the service
+
+#+BEGIN_SRC yaml
+kind: Service
+apiVersion: v1beta1
+id: nginx-example
+# the port that this service should serve on
+port: 8000
+# just like the selector in the replication controller,
+# but this time it identifies the set of pods to load balance
+# traffic to.
+selector:
+  name: nginx
+# the container on each pod to connect to, can be a name
+# (e.g. 'www') or a number (e.g. 80)
+containerPort: 80
+#+END_SRC
+
+Not very clear what it is running, but it seems that 
+an internal =containerport= will be exposed as the port 8000
+and that it will only be running in nodes tagged to be running ~nginx~ workloads.
+
+The full example is [[https://github.com/GoogleCloudPlatform/kubernetes/commit/f1b55c04e2936fafb3c89d29dc474bb5b08f3673][here]].
+
+**** Example: A workload with a Healthcheck 
+
+Here we have a container that has a ~livenessProbe~,
+which can be done by either a command or a http request.
+
+There are 2 code blocks: the =liveness-exec= which is going to be
+periodically writing =ok= into =/tmp/health= and its liveness probe,
+which is another code block that will be checking =cat /tmp/health=
+
+#+BEGIN_SRC yaml
+apiVersion: v1beta1
+desiredState:
+  manifest:
+    containers:
+      - image: busybox
+        name: liveness
+        livenessProbe:
+          exec:
+            command:
+              - "cat"
+              - "/tmp/health"
+          initialDelaySeconds: 15
+        command:
+          - "/bin/sh"
+          - "-c"
+          - "echo ok > /tmp/health; sleep 10; echo fail > /tmp/health; sleep 600"
+    id: liveness-exec
+    version: v1beta1
+id: liveness-exec
+kind: Pod
+labels:
+  test: liveness
+#+END_SRC
+
+We can see some of the limitations already in deciding to use =YAML=
+for this since it looks unnatural that now a command has to be
+break apart and fit into an array structure by using YAML lists.
+
+**** COMMENT Org mode example
+
+This could be done with something as follows:
+
+#+BEGIN_SRC conf
+
+# sh -c is implicit
+
+# Note: Not sure if it is necessary to have the =Pod= definition.
+# Probably the ~kind~ is what it is defining what to ~:ensure~
+
+,#+name: liveness-exec
+,#+header: :kind pod
+,#+header: :dockerize t :image busybox
+,#+begin_src sh 
+
+# Test is very simple, but this is supposed to be a long running job though
+
+echo ok > /tmp/health;
+sleep 10;
+echo fail > /tmp/health;
+sleep 600
+
+,#+end_src
+#+end_src
+
+The translated block from Kubernetes would be like this below,
+though one issue with it is that is not clear how is it handling
+the status of the healthcheck, we need to open up the implementation
+of Kubernetes to find that out... and it turns out that 
+what it is expecting is an string saying "ok" ([[https://github.com/GoogleCloudPlatform/kubernetes/blob/6f6218cc1edc1d89e582691c5a2f47467f444e3a/pkg/probe/exec/exec.go#L28][link]])
+
+An alternative could be to use ~:ensure~ to match the expected output
+otherwise it is declared as failed.  Also we need to set the scope of
+the resource of the block:
+
+#+begin_src conf :results output
+,#+name: liveness
+,#+header: :initial_delay_seconds 15
+,#+header: :scope liveness-exec$container
+,#+begin_src sh :ensure output="ok"
+cat /tmp/health
+,#+end_src
+#+end_src
+
+Also, instead what we could do is notify of the event from
+the first code block to the second one:
+
+#+BEGIN_SRC conf
+,#+begin_src ruby :var probe_status=liveness
+case probe_status
+when "ok"
+  :nothing
+when "failed"
+  failures += 1
+end
+,#+end_src 
+#+END_SRC
+
+...which could be helpful to implement the circuit breaker pattern.
+
+Other option would be to require the exec to be already running,
+we could also use ~:wait~ instead of the verbose ~:initial_delay_seconds~.
+
+#+BEGIN_SRC conf
+,#+name: liveness
+,#+header: :wait 15s
+,#+begin_src sh :require liveness-exec
+cat /tmp/health
+,#+end_src
+#+END_SRC
+
+In that regard, Kubernetes seems to not be into implementing ordering
+of code blocks since that is [[https://github.com/GoogleCloudPlatform/kubernetes/issues/1727][too much]]:
+
+#+BEGIN_QUOTE
+#620 discusses readiness checks. We should collapse this discussion into that one.
+
+We really don't want to do ordering. B needs to handle transient A outages anyway.
+#+END_QUOTE
+** DONE Marathon
+
+- Uses: JSON
+- Docs:
+  + [[https://github.com/mesosphere/marathon]]
+
+In Marathon, scheduling of workloads is done via =JSON= payloads done to an HTTP API.
+
+Here is [[https://github.com/mesosphere/marathon/blob/master/examples/bridge.json][an example]] of starting a couple of code blocks,
+one which does a healthcheck and another one which is the job itself.
+
+#+BEGIN_SRC js
+{
+  "id": "bridged-webapp",
+  "cmd": "python3 -m http.server 8080",
+  "cpus": 0.25,
+  "mem": 64.0,
+  "instances": 2,
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "python:3",
+      "network": "BRIDGE",
+      "portMappings": [
+        { "containerPort": 8080, "hostPort": 0, "servicePort": 9000, "protocol": "tcp" },
+        { "containerPort": 161, "hostPort": 0, "protocol": "udp"}
+      ]
+    }
+  },
+  "healthChecks": [
+    {
+      "protocol": "HTTP",
+      "portIndex": 0,
+      "path": "/",
+      "gracePeriodSeconds": 5,
+      "intervalSeconds": 20,
+      "maxConsecutiveFailures": 3
+    },
+    {
+      "protocol": "COMMAND",
+      "command": { "value": "curl -f -X GET http://$HOST:$PORT" },
+      "gracePeriodSeconds": 5,
+      "intervalSeconds": 20,
+      "maxConsecutiveFailures": 3
+    }
+
+  ]
+}
+#+END_SRC
+
+Via the JSON configuration we are able to say transparently modify the execution of the code block and express
+that it should be done using a runtime which has =python:3= and a certain number of ports open.
+
+For the healthcheck code block, it is defined the path and one liner that should be executed
+to consider that the other job is healthy or not.  It is also expressed that after 3 failures
+something would happen, though not expressed explicitly in the configuration.
+
+** DONE Aurora
+
+- Uses: A sophisticated DSL in Python (according to the description in the [[https://github.com/apache/aurora/blob/14e7b84f4303968029c3803e9b096908f3499d57/README.md][readme]])
+- Docs: [[https://github.com/apache/aurora]]
+
+Aurora is another Mesos based scheduler to execute code blocks.
+
+An [[https://github.com/apache/aurora/blob/14e7b84f4303968029c3803e9b096908f3499d57/docs/tutorial.md][example]] from the docs is below.
+
+#+BEGIN_SRC python
+pkg_path = '/vagrant/hello_world.py'
+
+# we use a trick here to make the configuration change with
+# the contents of the file, for simplicity.  in a normal setting, packages would be
+# versioned, and the version number would be changed in the configuration.
+import hashlib
+with open(pkg_path, 'rb') as f:
+  pkg_checksum = hashlib.md5(f.read()).hexdigest()
+
+# copy hello_world.py into the local sandbox
+install = Process(
+  name = 'fetch_package',
+  cmdline = 'cp %s . && echo %s && chmod +x hello_world.py' % (pkg_path, pkg_checksum))
+
+# run the script
+hello_world = Process(
+  name = 'hello_world',
+  cmdline = 'python hello_world.py')
+
+# describe the task
+hello_world_task = SequentialTask(
+  processes = [install, hello_world],
+  resources = Resources(cpu = 1, ram = 1*MB, disk=8*MB))
+
+jobs = [
+  Service(cluster = 'devcluster',
+          environment = 'devel',
+          role = 'www-data',
+          name = 'hello_world',
+          task = hello_world_task)
+]
+#+END_SRC
+
+The Aurora documentation [[https://github.com/apache/aurora/blob/14e7b84f4303968029c3803e9b096908f3499d57/docs/tutorial.md#whats-going-on-in-that-configuration-file][has a helpful section]] regarding about what is
+being defined in the example:
+
+#+BEGIN_QUOTE
+*What's Going On In That Configuration File?*
+
+More than you might think.
+
+From a "big picture" viewpoint, it first defines two Processes. Then it defines a Task that runs the two Processes in the order specified in the Task definition, as well as specifying what computational and memory resources are available for them. Finally, it defines a Job that will schedule the Task on available and suitable machines. This Job is the sole member of a list of Jobs; you can specify more than one Job in a config file.
+
+At the Process level, it specifies how to get your code into the local sandbox in which it will run. It then specifies how the code is actually run once the second Process starts.
+#+END_QUOTE
+
+** DONE Fleet
+
+- Uses: Same style as =Systemd=
+- Docs: 
+  + [[https://github.com/coreos/fleet]]
+  + [[https://coreos.com/docs/launching-containers/launching/launching-containers-fleet/]]
+
+The CoreOS guide has a [[https://coreos.com/docs/launching-containers/launching/launching-containers-fleet/][good example]] of how to modify how to run a
+container on it:
+
+#+BEGIN_SRC sh
+[Unit]
+Description=My Apache Frontend
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker kill apache1
+ExecStartPre=-/usr/bin/docker rm apache1
+ExecStartPre=/usr/bin/docker pull coreos/apache
+ExecStart=/usr/bin/docker run -rm --name apache1 -p 80:80 coreos/apache /usr/sbin/apache2ctl -D FOREGROUND
+ExecStop=/usr/bin/docker stop apache1
+
+[X-Fleet]
+Conflicts=apache@*.service
+#+END_SRC
+
+By using =ExecStartPre=, the lines from a code block will accumulate
+and executed before running the container which has an Apache service.
+It is also specified that such code block should not be run in the
+same machine by using the =Conflicts= option (more options [[https://coreos.com/docs/launching-containers/launching/fleet-unit-files/][here]]).
+
+** DONE Heroku
+
+- Uses: Procfiles and Buildpacks
+- Docs:
+  + [[https://devcenter.heroku.com/articles/procfile]]
+  + [[https://devcenter.heroku.com/articles/buildpacks]]
+
+Actually is no longer just a hosting option, but a set of practices
+which inspired other technologies like Flynn, Deis.io, Dokku and Cloudfoundry.
+
+In case of Flynn, the code block execution is done via =Procfiles= ([[https://flynn.io/docs][link]]).
+
+A Procfile based application modifies the execution of a code block by
+prepending a tag to the start command. For example:
+
+#+BEGIN_SRC sh
+$ cat Procfile
+web: node web.js
+#+END_SRC
+
+In order to modify the environment of where that command would be run,
+[[https://devcenter.heroku.com/articles/buildpacks][buildpacks]] are used.  This is done by calling 3 possible other code
+blocks: detect, compile and release ([[https://devcenter.heroku.com/articles/buildpack-api][docs]]).
+
+- =detect= sends to stdout the type of application
+- =compile= makes changes to the environment which will persisted
+  for code blocks which will be run in the same environment later on.
+- =release= communicates YAML back to the scheduler for later reuse
+  For example, from the Clojure [[https://github.com/heroku/heroku-buildpack-clojure/blob/master/bin/release][buildpack]]:
+
+  #+begin_src yaml
+cat <<EOF
+---
+config_vars:
+default_process_types:
+  web: lein trampoline run
+EOF
+  #+end_src
+
+** DONE Atlas
+
+- Uses: JSON
+  + [[https://atlas.hashicorp.com/features/develop]]
+  + [[https://atlas.hashicorp.com/help/getting-started/package-services-with-artifacts]]
+
+Atlas is a gestalt of all the products from Hashicorp which 
+in the end runs a workload on a specified infrastructure.
+
+Below is an example of how something is run (taken from the docs
+[[https://atlas.hashicorp.com/help/getting-started/package-services-with-artifacts][here]]).
+
+#+BEGIN_SRC js
+{
+    "builders": [{
+        "type": "amazon-ebs",
+        "access_key": "ACCESS_KEY_HERE",
+        "secret_key": "SECRET_KEY_HERE",
+        "region": "us-east-1",
+        "source_ami": "ami-de0d9eb7",
+        "instance_type": "t1.micro",
+        "ssh_username": "ubuntu",
+        "ami_name": "atlas-example {{timestamp}}"
+    }],
+    "push": {
+      "name": "<username>/example-build-configuration"
+    },
+    "provisioners": [
+    {
+        "type": "shell",
+        "inline": [
+            "sleep 30",
+            "sudo apt-get update",
+            "sudo apt-get install apache2 -y"
+        ]
+    }],
+    "post-processors": [
+      {
+        "type": "atlas",
+        "artifact": "<username>/example-artifact",
+        "artifact_type": "aws.ami",
+        "metadata": {
+          "created_at": "{{timestamp}}"
+        }
+      }
+    ]
+}
+#+END_SRC
+
+** DONE Apcera Continuum
+
+- Uses: Same configuration format as =gnatsd=
+- Docs:
+  + [[http://docs.apcera.com/introduction/introducing-continuum/]]
+
+Continuum is easily one of my favorite platforms today.  It is very
+futuristic and waaaay ahead of anything else that exists today.
+
+Not only is it possible to specify directives to modify how 
+something is run, it is possible to script the interactions
+from the platform itself!
+
+To define what is being executed or packaged ([[https://github.com/apcera/continuum-package-scripts/blob/master/runtimes/go-1.3.conf][example]]),
+a =build= blocks are used:
+
+#+BEGIN_SRC conf
+environment { "PATH":    "/opt/apcera/go1.3.linux-amd64/bin:$PATH",
+              "GOROOT":  "/opt/apcera/go1.3.linux-amd64",
+              "GOPATH":  "/opt/apcera/go" }
+
+build (
+      export GOPATH=/opt/apcera/go
+      (
+            sudo mkdir -p $GOPATH
+            sudo chown -R `id -u` $GOPATH
+            cd $GOPATH
+            mkdir -p src bin pkg
+      )
+      export INSTALLPATH=/opt/apcera/go1.3.linux-amd64
+      tar -zxf go1.3.linux-amd64.tar.gz
+      sudo mkdir -p ${INSTALLPATH}
+      sudo cp -a go/. ${INSTALLPATH}
+
+      # Install godeps
+      export PATH=$INSTALLPATH/bin:$PATH
+      export GOROOT=$INSTALLPATH
+      go get github.com/apcera/godep
+)
+#+END_SRC
+
+And for the execution of a code block, options like =start_cmd=
+and =resources= [[https://github.com/apcera/continuum-sample-apps/blob/master/example-ruby-manifest/services.conf][are used]].
+
+#+BEGIN_SRC yaml
+# The command to start the app. If unset the stager will
+# attempt to auto detect the start command based on the
+# app framework used.
+start_cmd: "bundle exec rackup config.ru -p $PORT"
+
+# Resources allocated to the job.
+resources {
+  # CPU allocated to the job. Calculated in ms/s.
+  # Default: 0, uncapped
+  cpu: "0"
+
+  # Disk space to allow for the application.
+  # Default: 1024MB
+  disk_space: "768MB"
+
+  # Memory the job can use.
+  # Default: 256MB
+  memory: "256MB"
+
+  # Network bandwidth allocated to the job.
+  # Default: 5Mbps
+  network_bandwidth: "10Mbps"
+}
+#+END_SRC
+
+Also interesting is that the platform makes it possible to parameterize
+files providing info about how the file is being run.
+
+In the example below, =uuid= and =name= is information that comes
+directly from the platform.
+
+#+BEGIN_SRC ruby
+  # Link: https://github.com/apcera/continuum-sample-apps/blob/master/example-ruby-manifest/app.rb#L18
+  get "/template" do
+    "scalars:<br />
+uuid: {{uuid}}<br />
+name: {{name}}<br />
+num_instances: {{num_instances}}<br />
+cpu: {{cpu}}<br />
+memory: {{memory}}<br />
+disk: {{disk}}<br />
+...*edited*...
+"
+  end
+#+END_SRC
+
+** DONE Cron
+
+- Uses: Cron configuration format
+
+Just for completeness, the classic cron syntax. From [[http://en.wikipedia.org/wiki/Cron][Wikipedia]]:
+
+#+BEGIN_QUOTE
+The following specifies that the Apache error log clears at one minute
+past midnight (00:01) of every day of the month, or every day of the
+week, assuming that the default shell for the cron user is Bourne
+shell compliant:
+
+: 1 0 * * *  printf > /var/log/apache/error_log
+#+END_QUOTE
+
+** Conclusions
+
+Again, what I found interesting of all of these systems and tooling,
+is that they are variations around the same idea: wrap some configuration
+around the execution of a code block to transparently add some behavior 
+to its execution.
+
+It is impressive that there are so many different takes on this issue.
+even though that in essence what is happening is more or less the same.
+
+As an alternative, see for example what is being done in the
+[[https://github.com/aphyr/jepsen/blob/master/jepsen/etcd/src/jepsen/system/etcd.clj#L81][Jepsen tests]], where there are no code blocks and they have been
+assimilated into the code itself.
+
+#+BEGIN_SRC clojure
+(defn db []
+  (let [running (atom nil)] ; A map of nodes to whether they're running
+    (reify db/DB
+      (setup! [this test node]
+        ; You'll need debian testing for this, cuz etcd relies on go 1.2
+        (debian/install [:golang :git-core])
+
+        (c/su
+          (c/cd "/opt"
+                (when-not (cu/file? "etcd")
+                  (info node "cloning etcd")
+                  (c/exec :git :clone "https://github.com/coreos/etcd")))
+
+          (c/cd "/opt/etcd"
+                (when-not (cu/file? "bin/etcd")
+                  (info node "building etcd")
+                  (c/exec (c/lit "./build"))))
+#+END_SRC
+
+# Note: There are some technologies that I want to cover as well
+# so I will be updating this post in the near future...
+
+# If you have some feedback or think I'm onto something you can follow me on [[https://twitter.com/wallyqs][Twitter]].
+
+# My current impression of all of these, is that they take the code blocks and
+# move them into a place that is unnatural in the beginning,
+# and it is this limitation what is causing.
+
+* EOF
+
+-------
