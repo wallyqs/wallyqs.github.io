@@ -38,8 +38,8 @@ and will be updating this post to cover them all eventually.
 | *Isolation*                 | Vagrant, Docker                                                     |
 | *Workloads scheduling*      | Kubernetes, Marathon, Aurora, Heroku style, Fleet, Apcera Continuum |
 | *Continuous Integration*    | Jenkins, Drone.io, Travis, Wercker                                  |
-| *Build tools, Task Runners* | Make, Rake, Ant, Maven, Grunt, Gulp, Pants, Bazel, Gradle           |
-| *SSH based deploy tools*    | Capistrano, Mina, Fabric                                            |
+| *Build tools, Task Runners* | Make, Rake, Ant, Maven, Pants, Bazel, Gradle                        |
+| *SSH based deploy tools*    | Capistrano, Fabric                                                  |
 |                             |                                                                     |
 
 # Note: some of these systems I have not even used or run,
@@ -151,7 +151,6 @@ Here each one of the code blocks are executed by using the =shell=
 configuration directive and then its execution is modified by setting
 options like =creates= which will trigger an idempotency check and
 abort the execution of the command if the file already exists.
-* ● ● ●
 * DONE Infrastructure
 
 These days there are increasing number of possibilities 
@@ -367,7 +366,6 @@ block, as well as an =script= whcih is used to prepare the postgres database.
     };
 #+END_SRC
 
-* ● ● ●
 * DONE Isolation 
 
 (Note: Not sure if isolation would be right word for these.)
@@ -436,8 +434,7 @@ ENTRYPOINT ["/usr/sbin/apache2ctl", "-D", "FOREGROUND"]
 We can see that along with the execution of the code block, it is also being defined
 the folders and port mapping that are required to execute the code block.
 
-* ● ● ●
-* TODO Build tools and Task runners
+* DONE Build tools and Task runners
 
 These have the common functionality of chaining together
 the execution of code blocks into steps, dependencies or
@@ -628,15 +625,14 @@ The SBT building tool also offers code blocks execution...
   + 
   + Interesting read: [[https://gradle.org/gradle-team-perspective-on-bazel/]]
 
-* ● ● ●
-* TODO Continuous Integration
+* DONE Continuous Integration
 
 CI tools help in automating the creation of build artifacts
 and running of tests from a project.  In a sense, one could say 
 that they are also /schedulers/ as well, though specialized in the
 domain of running tests and creating steps which result in a release (batches).
 
-** TODO Jenkins
+** DONE Jenkins
 
 - Uses: HTML textareas or XML.
 - Docs:
@@ -654,11 +650,19 @@ valid XML.
 
 # /TODO: Add example of Jenkins XML/
 
-** COMMENT Drone.io
+[[https://wiki.jenkins-ci.org/download/attachments/9240589/ruby.png]]
 
-- Uses: 
+** DONE Drone.io
+
+- Uses: An HTML textarea and checkboxes
 - Docs:
-  + 
+  + [[http://docs.drone.io/buildscript.html]]
+
+Via the UI, it is possible to specify the environment variables
+and then within a text area write the script to be executed.
+
+[[http://docs.drone.io/img/build-script.png]]
+
 ** DONE Travis
 
 - Uses: YAML
@@ -733,7 +737,53 @@ deploy:
             bucket_url: $AWS_BUCKET_URL
             source_dir: build/
 #+END_SRC
-* ● ● ●
+* DONE SSH based deploy tools
+
+What these tool do is automate the remote (possibly parallel)
+execution of commands in a number of servers.
+
+** DONE Capistrano
+
+- Uses: A Ruby DSL
+- Docs:
+  + [[http://capistranorb.com/documentation/getting-started/tasks/]]
+
+With Capistrano we can define a list of servers where we want to
+execute a task (defined with =:execute=).
+
+#+BEGIN_SRC ruby
+server 'example.com', roles: [:web, :app]
+server 'example.org', roles: [:db, :workers]
+desc "Report Uptimes"
+task :uptime do
+  on roles(:all) do |host|
+    execute :any_command, "with args", :here, "and here"
+    info "Host #{host} (#{host.roles.to_a.join(', ')}):\t#{capture(:uptime)}"
+  end
+end
+#+END_SRC
+
+** DONE Fabric
+
+- Uses: Python
+- Docs:
+  + [[http://docs.fabfile.org/en/latest/usage/execution.html]]
+
+Similar to Capistrano, here we define a list of the servers and then
+use a command line tool to execute actions on them.  
+
+#+BEGIN_SRC python
+from fabric.api import run, env
+
+env.hosts = ['host1', 'host2']
+
+def taskA():
+    run('ls')
+
+def taskB():
+    run('whoami')
+#+END_SRC
+
 * DONE Workloads scheduling
 
 Once having defined the infrastructure that is is desired, maybe by building upon
