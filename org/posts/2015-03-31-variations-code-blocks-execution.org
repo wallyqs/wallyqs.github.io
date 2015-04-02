@@ -31,16 +31,15 @@ defined outside of the runtime where it is intended to be run.
 Also I decided to narrow down to those in the list below,
 and will be updating this post to cover them all eventually.
 
-| Domain                      | Name                                                                |
-|                             |                                                                     |
-| *Configuration Management*  | Chef, Puppet, Ansible                                               |
-| *Infrastructure*            | Packer, Terraform, Cloud Init, NixOps                               |
-| *Isolation*                 | Vagrant, Docker                                                     |
-| *Workloads scheduling*      | Kubernetes, Marathon, Aurora, Heroku style, Fleet, Apcera Continuum |
-| *Continuous Integration*    | Jenkins, Drone.io, Travis, Wercker                                  |
-| *Build tools, Task Runners* | Make, Rake, Ant, Maven, Pants, Bazel, Gradle                        |
-| *SSH based deploy tools*    | Capistrano, Fabric                                                  |
-|                             |                                                                     |
+| Domain                      | Name                                                                               |
+|                             |                                                                                    |
+| *Configuration Management*  | Chef, Puppet, Ansible                                                              |
+| *Infrastructure*            | Packer, Terraform, Cloud Init, NixOps                                              |
+| *Isolation*                 | Vagrant, Docker                                                                    |
+| *Workloads scheduling*      | Kubernetes, Marathon, Aurora, Heroku style, Fleet, Apcera Continuum, Consul checks |
+| *Continuous Integration*    | Jenkins, Drone.io, Travis, Wercker                                                 |
+| *Build tools, Task Runners* | Make, Rake, Ant, Maven, Pants, Bazel, Gradle                                       |
+| *SSH based deploy tools*    | Capistrano, Fabric                                                                 |
 
 # Note: some of these systems I have not even used or run,
 # I mostly cover them through the insights which can be understood
@@ -616,14 +615,137 @@ Similar to Ant, an exec block in XML can be used:
 
 The SBT building tool also offers code blocks execution...
 
-** COMMENT Pants
-** COMMENT Bazel
-** COMMENT Gradle
+** DONE Bazel
 
-- Uses:
+- Uses: Google magic
 - Docs:
-  + 
+  + [[http://bazel.io/docs/build-encyclopedia.html]]
+
+Bazel has great [[http://bazel.io/FAQ.html][FAQ]] where it succintly explains the issues that Google
+had delivering its software which resulted in the creation of the
+original *Blaze*.
+
+Quoting it:
+
+#+BEGIN_QUOTE
+*What is Bazel best at?*
+
+Bazel shines at building and testing projects with the following properties:
+
+- Projects with a large codebase
+- Projects written in (multiple) compiled languages
+- Projects that deploy on multiple platforms
+- Projects that have extensive tests
+
+*What should I not use Bazel for?*
+
+Bazel tries to be smart about caching. This means it is a bad match
+for build steps that should not be cached. 
+For example, the following steps should not be controlled from Bazel:
+
+- A compilation step that fetches data from the internet.
+- A test step that connects to the QA instance of your site.
+- A deployment step that changes your site's cloud configuration.
+
+Bazel tries to minimize expensive compilation steps. If you are only using interpreted languages directly, such as JavaScript or Python, Bazel will likely not interest you.
+#+END_QUOTE
+
+Bazel has a large number of [[http://bazel.io/docs/build-encyclopedia.html][rules]] which define how to do the builds.
+Here is an example of running a bash script for testing:
+
+#+BEGIN_SRC 
+sh_test(
+    name = "foo_integration_test",
+    size = "small",
+    srcs = ["foo_integration_test.sh"],
+    deps = [":foo_sh_lib"],
+    data = glob(["testdata/*.txt"]),
+)
+#+END_SRC
+
+By specifying that the test is /small/ so that is times out after 1 minute.
+
+** DONE Pants
+
+- Uses: Similar BUILD syntax as Bazel
+- Docs:
+  + [[https://pantsbuild.github.io/]]
+
+Description from the site:
+
+#+BEGIN_QUOTE
+Pants is similar to =make, maven, ant, gradle, sbt=, etc.; but pants
+pursues different design goals. 
+
+Pants optimizes for
+
+- building multiple, dependent things from source
+- building code in a variety of languages
+- speed of build execution
+#+END_QUOTE
+
+Here is a very basic example from the [[https://pantsbuild.github.io/python-readme.html][readme]].
+
+#+BEGIN_SRC sh
+python_tests(name='greet',
+  dependencies=[
+    'examples/src/python/example/hello/greet:greet',
+    ':prep',
+  ],
+  sources=globs('*.py'),
+)
+
+# Prepare for the 'greet' test. Realistically, you wouldn't set up a
+# prep_command just to create an emtpy temp file. This is meant as a
+# simple example.
+prep_command(name='prep',
+  prep_executable='touch',
+  prep_args=['/tmp/prep_command_result']
+)
+#+END_SRC
+
+** DONE Gradle
+
+- Uses: Groovy based DSL
+- Docs:
+  + DSL reference:  [[http://gradle.org/docs/current/dsl/]]
+  + Exec: [[http://gradle.org/docs/current/dsl/org.gradle.api.tasks.Exec.html]]a
+  + Wikipedia entry: [[http://en.wikipedia.org/wiki/Gradle]]
   + Interesting read: [[https://gradle.org/gradle-team-perspective-on-bazel/]]
+  + Article: [[http://www.drdobbs.com/jvm/why-build-your-java-projects-with-gradle/240168608]]
+
+According to Wikipedia:
+
+#+BEGIN_QUOTE
+Gradle was designed for multi-project builds which can grow to be
+quite large, and supports incremental builds by intelligently
+determining which parts of the build tree are up-to-date, so that any
+task dependent upon those parts will not need to be re-executed.
+#+END_QUOTE
+
+In the =Exec= example, before executing the command,
+it is defined the working directory where it should run
+and more interesting, a /stream/ that will capture the output.
+
+#+BEGIN_SRC C
+task stopTomcat(type:Exec) {
+  workingDir '../tomcat/bin'
+
+  //on windows:
+  commandLine 'cmd', '/c', 'stop.bat'
+
+  //on linux
+  commandLine './stop.sh'
+
+  //store the output instead of printing to the console:
+  standardOutput = new ByteArrayOutputStream()
+
+  //extension method stopTomcat.output() can be used to obtain the output:
+  ext.output = {
+    return standardOutput.toString()
+  }
+}
+#+END_SRC
 
 * DONE Continuous Integration
 
@@ -784,6 +906,10 @@ def taskB():
     run('whoami')
 #+END_SRC
 
+** COMMENT Supernal
+
+# TODO: https://github.com/celestial-ops/supernal
+
 * DONE Workloads scheduling
 
 Once having defined the infrastructure that is is desired, maybe by building upon
@@ -792,7 +918,9 @@ create [[http://apprenda.com/blog/paas-wont-become-feature-iaas-unnatural/][anot
 those running a workload can focus on how something should be executed
 rather than than detailing how to prepare the necessary infrastructure
 so that the workload runs.  These tools are usually referred to as
-PaaS systems or some of them with more simple features are just considered /Schedulers/.
+PaaS systems or some of them with more simple features are just
+considered /Schedulers/.  Thanks to Mesos, there is an increasing
+number of these so only covering some of them.
 
 ** DONE Kubernetes
 
@@ -1290,15 +1418,53 @@ shell compliant:
 : 1 0 * * *  printf > /var/log/apache/error_log
 #+END_QUOTE
 
-** Conclusions
+** DONE Consul
+
+- Uses: JSON
+- Docs:
+  + [[https://www.consul.io/docs/agent/checks.html]]
+
+More like an honorable mention, =Consul= for doing monitoring also
+periodically executes /checks/ (similar to the liveness probes
+functionality from Kubernetes for example).  It is interesting
+that Hashicorp decoupled the healthchecks from other parts of their solution.
+
+#+BEGIN_SRC js
+{
+  "checks": [
+    {
+      "id": "chk1",
+      "name": "mem",
+      "script": "/bin/check_mem",
+      "interval": "5s"
+    },
+    {
+      "id": "chk2",
+      "name": "/health",
+      "http": "http://localhost:5000/health",
+      "interval": "15s"
+    },
+    {
+      "id": "chk3",
+      "name": "cpu",
+      "script": "/bin/check_cpu",
+      "interval": "10s"
+    },
+    ...
+  ]
+}
+#+END_SRC
+
+* Remarks
 
 Again, what I found interesting of all of these systems and tooling,
 is that they are variations around the same idea: wrap some configuration
 around the execution of a code block to transparently add some behavior 
 to its execution.
 
-It is impressive that there are so many different takes on this issue.
-even though that in essence what is happening is more or less the same.
+It is impressive that there are so many different takes on this issue
+even though that in essence what is happening is more or less the
+same.
 
 As an alternative, see for example what is being done in the
 [[https://github.com/aphyr/jepsen/blob/master/jepsen/etcd/src/jepsen/system/etcd.clj#L81][Jepsen tests]], where there are no code blocks and they have been
@@ -1324,11 +1490,21 @@ assimilated into the code itself.
                   (c/exec (c/lit "./build"))))
 #+END_SRC
 
+Something to note as well is that there is a spectrum and repeated
+functionality among the tools, e.g. chaining, a task that is executed after
+other task, or piping the output from a command somehow to wrap some
+logic around it, which makes me think whether eventually there will be
+some tool which picks up the best parts from and offers the
+functionality in an agnostic way somehow.
+
+# 
+# There landscape of this tooling is already vast 
+# 
 # Note: There are some technologies that I want to cover as well
 # so I will be updating this post in the near future...
-
+# 
 # If you have some feedback or think I'm onto something you can follow me on [[https://twitter.com/wallyqs][Twitter]].
-
+# 
 # My current impression of all of these, is that they take the code blocks and
 # move them into a place that is unnatural in the beginning,
 # and it is this limitation what is causing.
