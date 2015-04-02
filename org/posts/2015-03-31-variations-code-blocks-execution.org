@@ -4,7 +4,9 @@
 #+category: posts
 #+layout: post
 
-I recently read [[http://www.brainpickings.org/2011/12/22/umberto-eco-on-lists/][the following quote]] from Umberto Eco:
+(or /A list of things that run things/. Also, this post is a bit long...)
+
+I recently stumbled upon [[http://www.brainpickings.org/2011/12/22/umberto-eco-on-lists/][the following quote]] from Umberto Eco:
 
 #+BEGIN_QUOTE
 The list is the origin of culture. It’s part of the history of art and
@@ -17,7 +19,7 @@ dictionaries.
 #+END_QUOTE
 
 Inspired by it, I decided to try to make one about around
-a topic that I care about a lot: how to specify how to run something.
+a topic that I care about a lot: /how to specify how to run something/.
 
 The following is then, an enumeration of some systems or tools which 
 in the end result in the execution of a /code block/
@@ -36,8 +38,8 @@ and will be updating this post to cover them all eventually.
 | *Isolation*                 | Vagrant, Docker                                                     |
 | *Workloads scheduling*      | Kubernetes, Marathon, Aurora, Heroku style, Fleet, Apcera Continuum |
 | *Continuous Integration*    | Jenkins, Drone.io, Travis, Wercker                                  |
-| *Build tools, Task Runners* | Make, Rake, Ant, Maven, Gradle, Grunt, Gulp, Bazel, Pants           |
-| *SSH based deploy tools*    | Capistrano, Fabric, Mina                                            |
+| *Build tools, Task Runners* | Make, Rake, Ant, Maven, Grunt, Gulp, Pants, Bazel, Gradle           |
+| *SSH based deploy tools*    | Capistrano, Mina, Fabric                                            |
 |                             |                                                                     |
 
 # Note: some of these systems I have not even used or run,
@@ -53,7 +55,7 @@ should be /idempotent/, meaning that each one of the commands will
 have a check to verify whether the execution has been done already or
 not, and abort if it has.
 
-** DONE [[Chef]]
+** DONE Chef
 
 - Uses: A Ruby DSL
 - Docs:
@@ -78,7 +80,7 @@ in order to make the resource /idempotent/.
 end
 #+END_SRC
 
-** DONE [[Puppet]]
+** DONE Puppet
 
 - Uses: A special DSL
 - Docs:
@@ -118,7 +120,7 @@ Here we have 2 types of code blocks:
 - One expressing the contents of a file
 - Another expressing the execution of a sed command
 
-** DONE [[Ansible]]
+** DONE Ansible
 
 - Uses: YAML
 - Docs: 
@@ -149,6 +151,7 @@ Here each one of the code blocks are executed by using the =shell=
 configuration directive and then its execution is modified by setting
 options like =creates= which will trigger an idempotency check and
 abort the execution of the command if the file already exists.
+* ● ● ●
 * DONE Infrastructure
 
 These days there are increasing number of possibilities 
@@ -364,6 +367,7 @@ block, as well as an =script= whcih is used to prepare the postgres database.
     };
 #+END_SRC
 
+* ● ● ●
 * DONE Isolation 
 
 (Note: Not sure if isolation would be right word for these.)
@@ -371,7 +375,7 @@ block, as well as an =script= whcih is used to prepare the postgres database.
 What these do is automate the creation of another environment
 within another local environment by using virtualization or container technologies.
 
-** Vagrant 
+** DONE Vagrant 
 
 - Uses: A Ruby DSL (Vagrantfile)
 - Docs: 
@@ -403,7 +407,7 @@ config.push.define "local-exec" do |push|
 end
 #+END_SRC
 
-** Docker
+** DONE Docker
 
 - Uses: The Dockerfile format
 - Docs:
@@ -432,10 +436,13 @@ ENTRYPOINT ["/usr/sbin/apache2ctl", "-D", "FOREGROUND"]
 We can see that along with the execution of the code block, it is also being defined
 the folders and port mapping that are required to execute the code block.
 
-*  Build tools
+* ● ● ●
+* TODO Build tools and Task runners
 
-Build tools have a common functionality in that they chain together
-the execution of code blocks into steps, dependencies or prerequisities.
+These have the common functionality of chaining together
+the execution of code blocks into steps, dependencies or
+prerequisities.
+
 Some of them also have notions of /idempotency/ as the configuration management tooling.
 The classic example of these tools I believe it would be =make=.
 
@@ -510,18 +517,118 @@ rule ".html" => ->(f){ FileList[f.ext(".*")].first } do |t|
 end
 #+END_SRC
 
-** COMMENT Ant
+** DONE Ant
 
 - Uses: XML
 - Docs:
   + [[https://ant.apache.org/manual/using.html]]
+  + [[http://en.wikipedia.org/wiki/Apache_Ant]]
+  + [[https://ant.apache.org/manual/Tasks/exec.html]]
 
-** COMMENT Maven
-** COMMENT Gradle
+According to Wikipedia:
+
+#+BEGIN_QUOTE
+One of the primary aims of Ant was to solve Make's portability problems.
+#+END_QUOTE
+
+Below is an example from the wikipedia entry:
+
+#+BEGIN_SRC xml
+<?xml version="1.0"?>
+<project name="Hello" default="compile">
+    <target name="clean" description="remove intermediate files">
+        <delete dir="classes"/>
+    </target>
+    <target name="clobber" depends="clean" description="remove all artifact files">
+        <delete file="hello.jar"/>
+    </target>
+    <target name="compile" description="compile the Java source code to class files">
+        <mkdir dir="classes"/>
+        <javac srcdir="." destdir="classes"/>
+    </target>
+    <target name="jar" depends="compile" description="create a Jar file for the application">
+        <jar destfile="hello.jar">
+            <fileset dir="classes" includes="**/*.class"/>
+            <manifest>
+                <attribute name="Main-Class" value="HelloProgram"/>
+            </manifest>
+        </jar>
+    </target>
+</project>
+#+END_SRC
+
+Among the XML, we can see the tasks are chained together via =depends=.  
+
+To execute a script, there is an =exec= task, where each one of the
+arguments to the command line are defined via an ordered list of =arg= tags:
+
+#+BEGIN_SRC xml
+<target name="help">
+  <exec executable="cmd">
+    <arg value="/c"/>
+    <arg value="ant.bat"/>
+    <arg value="-p"/>
+  </exec>
+</target>
+#+END_SRC
+
+** DONE Maven
+
+- Uses: XML
+- Docs: 
+  + [[https://maven.apache.org/guides/mini/guide-using-ant.html]]
+  
+Similar to Ant, an exec block in XML can be used:
+
+#+BEGIN_SRC xml
+<project>
+  ...
+  <build>
+    <plugins>
+      <plugin>
+        ...
+        <executions>
+          <execution>
+	    ...
+            <configuration>
+              <tasks>
+                <exec
+                  dir="${project.basedir}"
+                  executable="${project.basedir}/src/main/sh/do-something.sh"
+                  failonerror="true">
+                  <arg line="arg1 arg2 arg3 arg4" />
+                </exec>
+              </tasks>
+            </configuration>
+	    ...
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
+#+END_SRC
+
 ** COMMENT Grunt
 ** COMMENT Gulp
+** COMMENT SBT
+
+- Uses: Scala
+- Docs:
+  + [[http://www.scala-sbt.org/0.13/docs/Basic-Def-Examples.html]]
+
+The SBT building tool also offers code blocks execution...
+
 ** COMMENT Pants
 ** COMMENT Bazel
+** COMMENT Gradle
+
+- Uses:
+- Docs:
+  + 
+  + Interesting read: [[https://gradle.org/gradle-team-perspective-on-bazel/]]
+
+* ● ● ●
 * TODO Continuous Integration
 
 CI tools help in automating the creation of build artifacts
@@ -529,7 +636,7 @@ and running of tests from a project.  In a sense, one could say
 that they are also /schedulers/ as well, though specialized in the
 domain of running tests and creating steps which result in a release (batches).
 
-** COMMENT Jenkins
+** TODO Jenkins
 
 - Uses: HTML textareas or XML.
 - Docs:
@@ -545,10 +652,14 @@ unnatural than in other solutions since the code will have to be
 escaped for example so that it includes entities which make it conform
 valid XML.
 
-# TODO: Add example of Jenkins
+# /TODO: Add example of Jenkins XML/
 
 ** COMMENT Drone.io
-** Travis
+
+- Uses: 
+- Docs:
+  + 
+** DONE Travis
 
 - Uses: YAML
 - Docs:
@@ -573,12 +684,56 @@ script: bundle exec thor build
 
 #+END_SRC
 
-** Wercker
+** DONE Wercker
 
 - Uses: YAML
 - Docs: 
   + [[http://devcenter.wercker.com/docs/]]
+  + [[http://devcenter.wercker.com/learn/wercker-yml/01_introduction.html]]
 
+From the docs:
+
+#+BEGIN_QUOTE
+The wercker.yml file is a configuration file that specifies how your build and deploy pipelines should be run and which steps should be executed in those pipelines.
+#+END_QUOTE
+
+And a full example below.  As part of a Wercker build pipeline,
+we can find a series of steps which will be run sequentially.
+The =box= option defines the environment, and then =code= is used
+to define the code block.
+
+#+BEGIN_SRC yaml
+# use the default golang container from Docker Hub
+box: golang
+# The steps that will be executed in the build pipeline
+build:
+  steps:
+    # golint step!
+    - wercker/golint
+
+    # Build the project
+    - script:
+        name: go build
+        code: |
+          go build ./...
+
+    # Test the project
+    - script:
+        name: go test
+        code: |
+          go test ./...
+
+# The steps that will be executed in the deploy pipeline
+deploy:
+    steps:
+        # Execute the s3sync deploy step, a step provided by wercker
+        - s3sync:
+            key_id: $AWS_ACCESS_KEY_ID
+            key_secret: $AWS_SECRET_ACCESS_KEY
+            bucket_url: $AWS_BUCKET_URL
+            source_dir: build/
+#+END_SRC
+* ● ● ●
 * DONE Workloads scheduling
 
 Once having defined the infrastructure that is is desired, maybe by building upon

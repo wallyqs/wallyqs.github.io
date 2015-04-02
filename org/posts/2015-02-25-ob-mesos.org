@@ -1,5 +1,5 @@
 # -*- mode: org; mode: auto-fill -*-
-#+TITLE:	Running Org Babel workloads on top of Mesos with Go
+#+TITLE:	Running Org Babel workloads on top of Mesos with Go and the Docker Containerizer
 #+CATEGORY:	posts
 #+LAYOUT:	post
 
@@ -71,9 +71,113 @@ Not only that though, we also have to specify both the credentials
 and resources that we are using for running the workloads.
 Luckily, that is an area where Mesos really shines.
 
-*** How it would look
+*** Implementation using the Mesos Go bindings
 
-For the end result, I wanted something like this:
+Mesos with its /level of indirection/ approach, exposes a set of APIs
+that we can rely on to be able to write custom schedulers in a
+different runtime.  The [[https://github.com/mesos/mesos-go][mesos-go]] bindings seem in actively development
+in particular, so I decided to base on those to write the scheduler.
+
+Then, another thing we need is something which can understand Org mode
+documents, for this I implemented a basic parser of [[http://github.com/wallyqs/org-go][Org mode in Go]]
+which can be loaded by the scheduler to orchestrate the run.
+
+Using the Go bindings, we start defining our scheduler:
+
+#+BEGIN_SRC go
+type OrgBabelScheduler struct {
+	tasksLaunched int
+	tasksFinished int
+	blocks        []*org.OrgSrcBlock
+}
+#+END_SRC
+
+And below is a a basic example of how the =ResourceOffers=  handle
+would look.  Once having loaded the contents of the Org mode document,
+we will be inspecting the content of the code block its header
+arguments to procure the resources we want:
+
+#+BEGIN_SRC go
+
+func (sched *OrgBabelScheduler) ResourceOffers(driver sched.SchedulerDriver, offers []*mesos.Offer) {
+
+    // We will get many resource offerings,
+    // but sometimes the resources being offered will not be enough
+    // so we will need to implement backing off in case that happens.
+    for _, offer := range offers {
+
+        ...
+
+        var tasks []*mesos.TaskInfo
+
+        for _, src := range sched.blocks {
+                sched.tasksLaunched++
+
+                taskId := &mesos.TaskID{
+                        Value: proto.String(strconv.Itoa(sched.tasksLaunched)),
+                }
+
+                // Should build the command properly depending of the runtime
+                // Currenty only sh supported, but good enough
+                // since I can just call the runtime from there
+                cmd := src.RawContent
+
+                fmt.Println("[OFFER ] Executing this code block:", src.Name, src.Headers)
+
+                // The code block specifies the resources it should allocate
+                //
+                taskCpus := MIN_CPUS_PER_TASK
+                if src.Headers[":cpus"] != "" {
+                  taskCpus, _ = strconv.Atoi(src.Headers[":cpus"])
+                }
+
+                taskMem := MIN_MEM_PER_TASK
+                if src.Headers[":mem"] != "" {
+                  taskMem, _ = strconv.Atoi(src.Headers[":mem"])
+                }
+
+                task := &mesos.TaskInfo{
+                        Name:     proto.String("ob-mesos-" + taskId.GetValue()),
+                        TaskId:   taskId,
+                        SlaveId:  offer.SlaveId,
+                        // Executor: sched.executor,
+                        Resources: []*mesos.Resource{
+                                util.NewScalarResource("cpus", float64(taskCpus)),
+                                util.NewScalarResource("mem", float64(taskMem)),
+                        },
+                        Command: &mesos.CommandInfo{
+                                Value: proto.String(cmd),
+                        },
+                }
+
+                // Run within a Docker container if :dockerimage is specified
+                //
+                if len(src.Headers[":dockerimage"]) > 0 {
+                        task.Container = &mesos.ContainerInfo{
+                                Type: mesos.ContainerInfo_DOCKER.Enum(),
+                                Docker: &mesos.ContainerInfo_DockerInfo{
+                                        Image: proto.String(src.Headers[":dockerimage"]),
+					// ...
+                                },
+                        }
+                }
+
+                fmt.Printf("[OFFER ] Prepared to launch task:%s with offer %s \n", task.GetName(), offer.Id.GetValue())
+
+                tasks = append(tasks, task)
+        }
+        fmt.Println("[OFFER ] Launching ", len(tasks), "tasks for offer", offer.Id.GetValue())
+        driver.LaunchTasks([]*mesos.OfferID{offer.Id}, tasks, &mesos.Filters{RefuseSeconds: proto.Float64(1)})
+    }
+}
+#+END_SRC
+
+Full source of the implementation can be found [[https://github.com/wallyqs/mesos-notes/blob/master/org/org-scheduler.org][here]], written in
+literate programming with Org mode of course..
+
+*** Basic usage example: Running two commands in parallel
+
+A basic example, would be something like this:
 
 #+BEGIN_HTML
 <div class="org-src-container">
@@ -118,95 +222,7 @@ running the scheduler.
 # (if we don't do this it will use the loopback
 # address for some reason and scheduler will fail communicating with the slave).
 
-*** Implementation using the Mesos Go bindings
-
-Mesos with its /level of indirection/ approach, exposes a set of APIs
-that we can rely on to be able to write custom schedulers in a
-different runtime.  The [[https://github.com/mesos/mesos-go][mesos-go]] bindings seem in actively development
-in particular, so I decided to base on those to write the scheduler.
-
-Then, another thing we need is something which can understand Org mode
-documents, for this I implemented a basic parser of [[http://github.com/wallyqs/org-go][Org mode in Go]]
-which can be loaded by the scheduler to orchestrate the run.
-
-Using the Go bindings, we start defining our scheduler:
-
-#+BEGIN_SRC go
-type OrgBabelScheduler struct {
-	tasksLaunched int
-	tasksFinished int
-	blocks        []*org.OrgSrcBlock
-}
-#+END_SRC
-
-And below is a a basic example of how the =ResourceOffers=  handle
-would look.  Once having loaded the contents of the Org mode document,
-we will be inspecting the content of the code block its header
-arguments to procure the resources we want:
-
-#+BEGIN_SRC go
-
-func (sched *OrgBabelScheduler) ResourceOffers(driver sched.SchedulerDriver, offers []*mesos.Offer) {
-
-        // We will get many resource offerings,
-	// but sometimes the resources being offered will not be enough
-	// so we will need to implement backing off in case that happens.
-	for _, offer := range offers {
-
-	        ...
-
-		var tasks []*mesos.TaskInfo
-
-		for _, src := range sched.blocks {
-			sched.tasksLaunched++
-
-			taskId := &mesos.TaskID{
-				Value: proto.String(strconv.Itoa(sched.tasksLaunched)),
-			}
-
-			// Should build the command properly depending of the runtime
-			// Currenty only bash supported, but good enough
-			// since I can just call the runtime from there
-			cmd := src.RawContent
-
-			fmt.Println("[OFFER ] Executing this code block:", src.Name, src.Headers)
-
-			// The code block specifies the resources it should allocate
-			//
-			taskCpus := MIN_CPUS_PER_TASK
-			if src.Headers[":cpus"] != "" {
-			  taskCpus, _ = strconv.Atoi(src.Headers[":cpus"])
-			}
-
-			taskMem := MIN_MEM_PER_TASK
-			if src.Headers[":mem"] != "" {
-			  taskMem, _ = strconv.Atoi(src.Headers[":mem"])
-			}
-
-			task := &mesos.TaskInfo{
-				Name:     proto.String("ob-mesos-" + taskId.GetValue()),
-				TaskId:   taskId,
-				SlaveId:  offer.SlaveId,
-				// Executor: sched.executor,
-				Resources: []*mesos.Resource{
-					util.NewScalarResource("cpus", float64(taskCpus)),
-					util.NewScalarResource("mem", float64(taskMem)),
-				},
-			        Command: &mesos.CommandInfo{
-				 	Value: proto.String(cmd),
-				},
-			}
-			fmt.Printf("[OFFER ] Prepared to launch task:%s with offer %s \n", task.GetName(), offer.Id.GetValue())
-
-			tasks = append(tasks, task)
-		}
-		fmt.Println("[OFFER ] Launching ", len(tasks), "tasks for offer", offer.Id.GetValue())
-		driver.LaunchTasks([]*mesos.OfferID{offer.Id}, tasks, &mesos.Filters{RefuseSeconds: proto.Float64(1)})
-	}
-}
-#+END_SRC
-
-*** Results
+**** Results
 
 The end result of this experiment looks like this:
 
@@ -229,8 +245,111 @@ We can also check the logs within the Mesos slave sandbox:
 
 [[/public/mesos-tasks.png]]
 
-Full source of the implementation can be found [[https://github.com/wallyqs/mesos-notes/blob/master/org/org-scheduler.org][here]], written in
-literate programming with Org mode of course..
+*** Containerizer usage example: Running a command within a Docker container
+
+Thanks to the built-in Docker containerizer from Mesos,
+it would also be possible to specify a Docker image so
+that the command gets executed within a container.
+
+In this example, the first block will specify the entrypoint and set
+=:dockerimage redis= so that the redis image is pulled and ran.
+
+Then the second one will be using that redis container and updating a timestamp.
+
+#+BEGIN_HTML
+<div class="org-src-container">
+
+<pre class="src src-org"><span style="color: #b3b3b3;">#+title:</span>   <span style="color: #cafe12; font-size: 144%; font-weight: bold;">Org + Docker + Mesos + Redis Example</span>
+<span style="color: #465457; font-style: italic;">#+address: 192.168.0.7</span>
+<span style="color: #465457; font-style: italic;">#+master:  192.168.0.7:5050</span>
+
+Here is a redis server, we can define the entrypoint to be used
+within the Docker image via an Org Babel block:
+
+<span style="color: #465457; font-style: italic;">#+name: redis-server</span>
+<span style="color: #465457; font-style: italic;">#+header: :cpus 2 :mem 512 :dockerimage redis</span>
+<span style="color: #465457; font-style: italic;">#+BEGIN_SRC sh</span>
+redis-server
+<span style="color: #465457; font-style: italic;">#+END_SRC</span>
+
+In parallel, there will be another job running
+which will be setting the time in the redis server:
+
+<span style="color: #465457; font-style: italic;">#+name: set-time-in-redis</span>
+<span style="color: #465457; font-style: italic;">#+header: :cpus 2 :mem 256</span>
+<span style="color: #465457; font-style: italic;">#+BEGIN_SRC sh</span>
+<span style="color: #66D9EF;">while</span> true; <span style="color: #66D9EF;">do</span> 
+  <span style="color: #A6E22E;">echo</span> <span style="color: #E6DB74;">"SET time `date '+%s'`"</span> | nc 127.0.0.1 6379
+  sleep 1
+<span style="color: #66D9EF;">done</span>
+<span style="color: #465457; font-style: italic;">#+END_SRC</span>
+</pre>
+</div>
+#+END_HTML
+
+**** Results
+
+Output would be:
+
+#+BEGIN_SRC conf
+[OFFER ] offerId = 20150225-174751-117483712-5050-13334-O1376 , cpus = 4 , mem = 2812
+[OFFER ] Executing this code block: redis-server map[:mem:512 :dockerimage:redis :cpus:2]
+[OFFER ] Prepared to launch task:ob-mesos-1 with offer 20150225-174751-117483712-5050-13334-O1376 
+[OFFER ] Executing this code block: set-time-in-redis map[:mem:256 :cpus:2]
+[OFFER ] Prepared to launch task:ob-mesos-2 with offer 20150225-174751-117483712-5050-13334-O1376 
+[OFFER ] Launching  2 tasks for offer 20150225-174751-117483712-5050-13334-O1376
+[STATUS] task 2  is in state  TASK_RUNNING
+[STATUS] task 1  is in state  TASK_RUNNING
+[OFFER ] offerId = 20150225-174751-117483712-5050-13334-O1377 , cpus = 0 , mem = 2044
+#+END_SRC
+
+And we can also confirm that it has been run by the Docker engine:
+
+#+BEGIN_SRC sh
+sudo docker ps
+
+CONTAINER ID        IMAGE               COMMAND                CREATED             STATUS              PORTS               NAMES
+1a8b3c964c3e        redis:latest        "\"/bin/sh -c redis-   17 minutes ago      Up 17 minutes                           mesos-88de0870-b613-4bda-9ed4-30995834ccab
+#+END_SRC
+
+and that a timestamp has been set:
+
+#+BEGIN_SRC sh :results output output
+telnet 127.0.0.1 6379
+
+Trying 127.0.0.1...
+Connected to 127.0.0.1.
+Escape character is '^]'.
+get time
+$10
+1424882889
+#+END_SRC
+
+We can also check the logs within the sandbox:
+
+#+BEGIN_SRC 
+==> /tmp/mesos/slaves/20150223-223304-117483712-5050-29395-S0/frameworks/20150225-174751-117483712-5050-13334-0018/executors/1/runs/88de0870-b613-4bda-9ed4-30995834ccab/stdout <==
+[8] 25 Feb 16:25:07.322 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+                _._
+           _.-``__ ''-._
+      _.-``    `.  `_.  ''-._           Redis 2.8.17 (00000000/0) 64 bit
+  .-`` .-```.  ```\/    _.,_ ''-._
+ (    '      ,       .-`  | `,    )     Running in stand alone mode
+ |`-._`-...-` __...-.``-._|'` _.-'|     Port: 6379
+ |    `-._   `._    /     _.-'    |     PID: 8
+  `-._    `-._  `-./  _.-'    _.-'
+ |`-._`-._    `-.__.-'    _.-'_.-'|
+ |    `-._`-._        _.-'_.-'    |           http://redis.io
+  `-._    `-._`-.__.-'_.-'    _.-'
+ |`-._`-._    `-.__.-'    _.-'_.-'|
+ |    `-._`-._        _.-'_.-'    |
+  `-._    `-._`-.__.-'_.-'    _.-'
+      `-._    `-.__.-'    _.-'
+          `-._        _.-'
+              `-.__.-'
+
+[8] 25 Feb 16:25:07.349 # Server started, Redis version 2.8.17
+#+END_SRC
 
 *** Conclusion
 
@@ -253,3 +372,33 @@ that it would open around /reproducible research/.
 
 Feedback is very welcome! You can also follow me on [[https://twitter.com/wallyqs][Twitter]] if you
 find this interesting...
+
+*** COMMENT _
+
+#+BEGIN_SRC org
+,#+title:   Org + Docker + Mesos + Redis Example
+,#+address: 192.168.0.7
+,#+master:  192.168.0.7:5050
+
+Here is a redis server, we can define the entrypoint to be used
+within the Docker image via an Org Babel block:
+
+,#+name: redis-server
+,#+header: :cpus 2 :mem 512 :dockerimage redis
+,#+BEGIN_SRC sh
+redis-server
+,#+END_SRC
+
+In parallel, there will be another job running
+which will be setting the time in the redis server:
+
+,#+name: set-time-in-redis
+,#+header: :cpus 2 :mem 256
+,#+BEGIN_SRC sh
+while true; do 
+  echo "SET time `date '+%s'`" | nc 127.0.0.1 6379
+  sleep 1
+done
+,#+END_SRC
+
+#+END_SRC

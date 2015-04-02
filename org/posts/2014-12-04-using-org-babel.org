@@ -138,10 +138,11 @@ Some of the most basic elements of an Org mode document are:
 - tables :: 
      An Org mode table:
 
-     #+BEGIN_SRC org
-     | apples  | 10 |
-     | oranges | 20 |
-     #+END_SRC
+     #+BEGIN_HTML
+     <pre class="src src-org"><span style="color: #87cefa;">| apples  | 10 |</span>
+     <span style="color: #87cefa;">| oranges | 20 |</span>
+     </pre>
+     #+END_HTML
 
      Tables in Org mode are very powerful.  They are not meant to be
      only for authoring tables, but they have spreadsheet
@@ -150,54 +151,58 @@ Some of the most basic elements of an Org mode document are:
 
      Before:
 
-     #+BEGIN_SRC org
-       | fruit   |      quantity | price per fruit | COST          |
-       | apples  |            10 |               5 | =$2 * $3      |
-       | oranges |            20 |               7 | =$2 * $3      |
-       | TOTAL   | =vsum(@2..@3) |                 |               |
-     #+END_SRC
-     
+     #+BEGIN_HTML
+     <pre class="src src-org">  <span style="color: #87cefa;">| fruit   |      quantity | price per fruit | COST          |</span>
+     <span style="color: #87cefa;">| apples  |            10 |               5 | </span><span style="color: #ff7f24;">=$2 * $3      </span><span style="color: #87cefa;">|</span>
+     <span style="color: #87cefa;">| oranges |            20 |               7 | </span><span style="color: #ff7f24;">=$2 * $3      </span><span style="color: #87cefa;">|</span>
+     <span style="color: #87cefa;">| TOTAL   | </span><span style="color: #ff7f24;">=vsum(@2..@3) </span><span style="color: #87cefa;">|                 |               |</span>
+     </pre>
+     #+END_HTML
+
      After:
 
-     #+BEGIN_SRC org
-       | fruit   |      quantity | price per fruit | COST     |
-       | apples  |            10 |               5 | 50       |
-       | oranges |            20 |               7 | 140      |
-       | TOTAL   |            30 |                 |          |
-       ,#+TBLFM: $2=vsum(@2..@3)::$4=$2 * $3
-     #+END_SRC
+     #+BEGIN_HTML
+     <pre class="src src-org">  <span style="color: #87cefa;">| fruit   |      quantity | price per fruit | COST     |</span>
+     <span style="color: #87cefa;">| apples  |            10 |               5 | 50       |</span>
+     <span style="color: #87cefa;">| oranges |            20 |               7 | 140      |</span>
+     <span style="color: #87cefa;">| TOTAL   |            30 |                 |          |</span>
+     <span style="color: #465457; font-style: italic;">  #+TBLFM: $2=vsum(@2..@3)::$4=$2 * $3</span>
+     </pre>
+     #+END_HTML
 
 ***** Basic usage of Org mode for TODO lists
 
 At the beginning of my Org mode usage, my documents used to look like
 this I think:
 
-#+BEGIN_SRC org
-,* TODO Reply email from Alice
+#+BEGIN_HTML
+<pre class="src src-org"><span style="color: #66D9EF; font-style: italic;">* </span><span style="color: #ff0000; font-weight: bold;">TODO</span><span style="color: #66D9EF; font-style: italic;"> Reply email from Alice</span>
 
-,** TODO Reply
+<span style="color: #F92672;">** </span><span style="color: #ff0000; font-weight: bold;">TODO</span><span style="color: #F92672;"> Reply</span>
 
 Dear Alice...
 
-,* TODO Capacity planning
-#+END_SRC
+<span style="color: #66D9EF; font-style: italic;">* </span><span style="color: #ff0000; font-weight: bold;">TODO</span><span style="color: #66D9EF; font-style: italic;"> Capacity planning</span>
+</pre>
+#+END_HTML
 
 One of the features I first adopted is the use of =CLOCKS=. 
 You can start a clock by pressing: =C-c C-x TAB=, 
 then we you are done you clock out with =C-c C-x C-o=.
-Then you can use  =C-c C-x C-d= to heck the total time spent.
+Then you can use  =C-c C-x C-d= to check the total time spent.
 
-#+BEGIN_SRC org
-  ,* DONE Reply email from Alice
-    CLOCK: [2014-12-04 Thu 15:45]--[2014-12-04 Thu 15:50] =>  0:05
+#+BEGIN_HTML
+<pre class="src src-org">  * DONE Reply email from Alice
+    <span style="color: #66D9EF;">CLOCK:</span> <span style="color: #00ffff; text-decoration: underline;">[2014-12-04 Thu 15:45]--[2014-12-04 Thu 15:50]</span> =&gt;  0:05
 
   ,** DONE Reply
-     CLOCK: [2014-12-04 Thu 16:00]--[2014-12-04 Thu 17:00] =>  1:00
+     <span style="color: #66D9EF;">CLOCK:</span> <span style="color: #00ffff; text-decoration: underline;">[2014-12-04 Thu 16:00]--[2014-12-04 Thu 17:00]</span> =&gt;  1:00
 
   Dear Alice...
 
   ,* TODO Capacity planning
-#+END_SRC
+</pre>
+#+END_HTML
 
 Another helpful feature is /narrowing down/ to a headline so that
 other headlines are not shown. This can be done by pressing =C-x n s=.
@@ -248,52 +253,53 @@ it is possible to reference later on to that part of the document.
 
 For example we can have a code block and eval it with =C-c C-c=:
 
-#+BEGIN_SRC org
-  ,#+BEGIN_SRC ruby
+#+BEGIN_HTML
+<pre class="src src-org"><span style="color: #465457; font-style: italic;">  #+BEGIN_SRC ruby</span>
   1 + 1
-  ,#+END_SRC
+<span style="color: #465457; font-style: italic;">  #+END_SRC</span>
 
-  ,#+RESULTS:
-  : 2
-#+END_SRC
+<span style="color: #465457; font-style: italic;">  #+RESULTS:</span>
+  <span style="color: #b3b3b3;">: 2</span>
+</pre>
+#+END_HTML
 
 But by giving it a name, we can reuse this code block:
 
-#+BEGIN_SRC org
-  ,#+name: sum
-  ,#+BEGIN_SRC ruby :var arg1=1 :var arg2=2
+#+BEGIN_HTML
+<pre class="src src-org"><span style="color: #465457; font-style: italic;">  #+name: sum</span>
+<span style="color: #465457; font-style: italic;">  #+BEGIN_SRC ruby :var arg1=1 :var arg2=2</span>
   arg1 + arg2
-  ,#+END_SRC
+<span style="color: #465457; font-style: italic;">  #+END_SRC</span>
 
-  ,#+RESULTS:
-  : 2
+<span style="color: #465457; font-style: italic;">  #+RESULTS:</span>
+  <span style="color: #b3b3b3;">: 2</span>
 
-  ,#+call: sum(10, 100)
+<span style="color: #465457; font-style: italic;">  #+call: sum(10, 100)</span>
 
-  ,#+RESULTS:
-  : 110
-#+END_SRC
+<span style="color: #465457; font-style: italic;">  #+RESULTS:</span>
+  <span style="color: #b3b3b3;">: 110</span>
+</pre>
+#+END_HTML
 
 Or chain it with a table:
 
-#+BEGIN_SRC org
+#+BEGIN_HTML
+<pre class="src src-org"><span style="color: #465457; font-style: italic;">  #+name: fruits</span>
+  <span style="color: #87cefa;">| apples  | 10 |</span>
+  <span style="color: #87cefa;">| oranges | 20 |</span>
 
-  ,#+name: fruits
-  | apples  | 10 |
-  | oranges | 20 |
-
-  ,#+name: show-fruits
-  ,#+BEGIN_SRC ruby :var fruitstable=fruits :results output code
-  fruits = Hash[fruitstable]
+<span style="color: #465457; font-style: italic;">  #+name: show-fruits</span>
+<span style="color: #465457; font-style: italic;">  #+BEGIN_SRC ruby :var fruitstable=fruits :results output code</span>
+  fruits = <span style="color: #66D9EF;">Hash</span>[fruitstable]
 
   p fruits
-  ,#+END_SRC
+<span style="color: #465457; font-style: italic;">  #+END_SRC</span>
 
-  ,#+RESULTS: show-fruits
-  ,#+BEGIN_SRC ruby
-  {"apples"=>10, "oranges"=>20}
-  ,#+END_SRC
-
-#+END_SRC
+<span style="color: #465457; font-style: italic;">  #+RESULTS: show-fruits</span>
+<span style="color: #465457; font-style: italic;">  #+BEGIN_SRC ruby</span>
+  {<span style="color: #E6DB74;">"apples"</span>=&gt;10, <span style="color: #E6DB74;">"oranges"</span>=&gt;20}
+<span style="color: #465457; font-style: italic;">  #+END_SRC</span>
+</pre>
+#+END_HTML
 
 To be continued...
