@@ -35,7 +35,7 @@ and will be updating this post to cover them all eventually.
 |                             |                                                                                    |
 | *Configuration Management*  | Chef, Puppet, Ansible                                                              |
 | *Infrastructure*            | Packer, Terraform, Cloud Init, NixOps                                              |
-| *Isolation*                 | Vagrant, Docker                                                                    |
+| *Isolation*                 | Vagrant, Docker, CoreOS ACI                                                        |
 | *Workloads scheduling*      | Kubernetes, Marathon, Aurora, Heroku style, Fleet, Apcera Continuum, Consul checks |
 | *Continuous Integration*    | Jenkins, Drone.io, Travis, Wercker                                                 |
 | *Build tools, Task Runners* | Make, Rake, Ant, Maven, Pants, Bazel, Gradle                                       |
@@ -433,6 +433,73 @@ ENTRYPOINT ["/usr/sbin/apache2ctl", "-D", "FOREGROUND"]
 We can see that along with the execution of the code block, it is also being defined
 the folders and port mapping that are required to execute the code block.
 
+** DONE CoreOS Appc
+
+- Uses: JSON
+- Docs:
+  + [[https://github.com/appc/spec/blob/master/SPEC.md#app-container-executor]]
+
+The Application Container Specification uses JSON to define an
+[[https://github.com/appc/spec/blob/master/SPEC.md#image-manifest-schema][Image Manifest]]. The commands to execute are comma separated,
+and there is a chain of execution via /event handlers/.
+
+#+BEGIN_SRC js
+ "app": {
+        "exec": ["/usr/bin/reduce-worker", "--quiet"],
+        "user": "100",
+        "group": "300",
+        "eventHandlers": [
+            {
+                "exec": [
+                    "/usr/bin/data-downloader"
+                ],
+                "name": "pre-start"
+            },
+            {
+                "exec": [
+                    "/usr/bin/deregister-worker",
+                    "--verbose"
+                ],
+                "name": "post-stop"
+            }
+        ],
+        "workingDirectory": "/opt/work",
+        "environment": [
+            {
+                "name": "REDUCE_WORKER_DEBUG",
+                "value": "true"
+            }
+        ],
+#+END_SRC
+
+The specification of the resource that the workload would be using
+can be found under the /isolation/ key:
+
+#+BEGIN_SRC js
+"isolators": [
+            {
+                "name": "resources/cpu",
+                "value": {
+                    "request": "250",
+                    "limit": "500"
+                }
+            },
+            {
+                "name": "resource/memory",
+                "value": {
+                    "request": "1G",
+                    "limit": "2G"
+                }
+            },
+            {
+                "name": "os/linux/capabilities-retain-set",
+                "value": {
+                    "set": ["CAP_NET_BIND_SERVICE", "CAP_SYS_ADMIN"]
+                }
+            }
+        ],
+#+END_SRC
+
 * DONE Build tools and Task runners
 
 These have the common functionality of chaining together
@@ -527,7 +594,7 @@ According to Wikipedia:
 One of the primary aims of Ant was to solve Make's portability problems.
 #+END_QUOTE
 
-Below is an example from the wikipedia entry:
+Below is an example from the Wikipedia entry:
 
 #+BEGIN_SRC xml
 <?xml version="1.0"?>
@@ -1318,15 +1385,15 @@ Below is an example of how something is run (taken from the docs
 - Docs:
   + [[http://docs.apcera.com/introduction/introducing-continuum/]]
 
-Continuum is easily one of my favorite platforms today.  It is very
-futuristic and waaaay ahead of anything else that exists today.
+Continuum is one of my favorite platforms today.  It is very
+futuristic, waaaay ahead of anything else that exists today.
 
 Not only is it possible to specify directives to modify how 
 something is run, it is possible to script the interactions
 from the platform itself!
 
 To define what is being executed or packaged ([[https://github.com/apcera/continuum-package-scripts/blob/master/runtimes/go-1.3.conf][example]]),
-a =build= blocks are used:
+=build= blocks are used:
 
 #+BEGIN_SRC conf
 environment { "PATH":    "/opt/apcera/go1.3.linux-amd64/bin:$PATH",
@@ -1494,8 +1561,8 @@ Something to note as well is that there is a spectrum and repeated
 functionality among the tools, e.g. chaining, a task that is executed after
 other task, or piping the output from a command somehow to wrap some
 logic around it, which makes me think whether eventually there will be
-some tool which picks up the best parts from and offers the
-functionality in an agnostic way somehow.
+some tool which picks up the best parts from them and offers the
+same functionality in an agnostic way somehow.
 
 # 
 # There landscape of this tooling is already vast 

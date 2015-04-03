@@ -1,0 +1,316 @@
+# -*- mode: org; mode: auto-fill -*-
+#+TITLE: How to Declare an Execution
+#+category: posts
+#+layout: post
+
+Following up on a list of configuration formats which are used,
+I will try to summarize here some of the behaviors which are being
+expressed in order to transparently modify the execution of something.
+
+This time, I will divide into sections around how to express...
+
+- execution chains
+- IO redirection
+- requirements & dependencies
+- constraints
+- resources
+- liveness
+- calls & rules
+
+*** DONE Execution Chains
+
+The very basic functionality of task runners like =make=.  In order
+for something to be executed, first it must meet its prerequisites.
+
+The most basic example of this is =make=:
+
+#+BEGIN_SRC sh
+some_binary: other.txt
+	touch some_binary
+
+other.txt:
+	touch other.txt
+#+END_SRC
+
+And a similar example in Ant. Here =jar= needs to be called once
+=compile= has succeeded in execution:
+
+#+BEGIN_SRC xml
+    <target name="compile" description="compile the Java source code to class files">
+        <mkdir dir="classes"/>
+        <javac srcdir="." destdir="classes"/>
+    </target>
+    <target name="jar" depends="compile" description="create a Jar file for the application">
+        <jar destfile="hello.jar">
+            <fileset dir="classes" includes="**/*.class"/>
+            <manifest>
+                <attribute name="Main-Class" value="HelloProgram"/>
+            </manifest>
+        </jar>
+    </target>
+#+END_SRC
+
+And a much more complex example is Bazel, where
+
+*** DONE IO Redirection
+
+Sometimes it is needed to capture the output from a workload to
+something with it.  It could be only for inspection purposes (the
+logging problem), or to trigger the execution of something else in
+case it matches some condition (e.g. determining its liveness).
+
+An example of this usage would be /Gradle/, which captures the output
+from the command to trigger other actions ([[http://stackoverflow.com/questions/11093223/how-to-use-exec-output-in-gradle][link]])
+
+#+BEGIN_SRC scala
+// Link to SO question where this example belongs:
+//
+// http://stackoverflow.com/questions/11093223/how-to-use-exec-output-in-gradle
+//
+task setWhoamiProperty << {
+    new ByteArrayOutputStream().withStream { os ->
+        def result = exec {
+            executable = 'whoami'
+        }
+        ext.whoami = os.toString()
+    }
+}
+
+task setHostnameProperty << {
+    new ByteArrayOutputStream().withStream { os ->
+        def result = exec {
+            executable = 'hostname'
+        }
+        ext.hostname = os.toString()
+    }
+}
+
+task printBuildInfo(dependsOn: [setWhoamiProperty, setHostnameProperty]) {
+    println whoami
+    println hostname
+}
+#+END_SRC
+
+A much more interesting example are the Continuum [[http://docs.apcera.com/tutorials/pipelines/][Semantic Pipelines]],
+which can create hooks in the connection so they can be actioned upon 
+by an event handler:
+
+#+BEGIN_SRC js
+// Example from the Continuum docs here: http://docs.apcera.com/tutorials/pipelines/
+  //
+  if (req.body.Command.match(/DROP/i) || req.body.Command.match(/DELETE/i)) {
+    // reject all drop and delete commands
+    res.json({ Permitted: false, Reason: "No!" });
+  } else {
+    // permit anything else
+    res.json({ Permitted: true, Reason: "Move along" });
+  }
+#+END_SRC
+
+*** DONE Requirements & Dependencies
+
+These are conditions which must be met in order for the execution to succeed.
+For example, we would like to express that a package should exists,
+or that it should use a certain container image.
+
+An example of how Aurora specifies that something should be run using
+the =python:2.7= docker container is below:
+
+#+BEGIN_SRC python
+hello_world_proc = Process(
+    name="hello_process",
+    cmdline="""
+while true; do
+    echo -n "Hello world! The time is now: " && date
+    sleep 10
+done
+""")
+
+hello_world_docker = Task(
+  name = 'hello docker',
+  processes = [hello_world_proc],
+  resources = Resources(cpu = 1, ram = 1*MB, disk=8*MB))
+
+jobs = [
+  Service(cluster = 'devcluster',
+          environment = 'devel',
+          role = 'docker-test',
+          name = 'hello_docker',
+          task = hello_world_docker,
+          container = Container(docker = Docker(image = 'python:2.7')))]
+#+END_SRC
+
+Another example of this could be Puppet's usage of =require=, =before= and
+=ensures= ([[https://docs.puppetlabs.com/learning/ordering.html#before-and-require][link]]), which reminds me a bit on the /Hoare-style program verification/ ([[http://research.microsoft.com/en-us/um/people/leino/papers/cse503-Leino-Lecture2.ppt][link]]).
+
+#+BEGIN_SRC sh
+file {'/tmp/test1':
+  ensure  => present,
+  content => "Hi.",
+}
+
+notify {'/tmp/test1 has already been synced.':
+  require => File['/tmp/test1'],
+}
+#+END_SRC
+
+Continuum also has its own package resolution functionality,
+meaning that when creating a new package: ([[https://github.com/apcera/continuum-package-scripts/blob/master/runtimes/go-1.3.conf#L10][link]])
+
+#+BEGIN_SRC ruby
+depends  [ { os: "ubuntu" },
+           { package: "build-essential" },
+           { package: "git" },
+           { package: "bzr" },
+           { package: "mercurial" } ]
+
+provides [ { runtime: "go" },
+           { runtime: "go-1.3" } ]
+#+END_SRC
+
+*** DONE Constraints
+
+These are checks which happen to an execution which is ready
+and determine the context on which the execution would be valid.
+
+An example of this are the Marathon constraints.  By using =UNIQUE=
+for example, a command would be executed only once per hostname.
+
+#+BEGIN_SRC 
+{
+    "id": "sleep-unique",
+    "cmd": "sleep 60",
+    "instances": 3,
+    "constraints": [["hostname", "UNIQUE"]]
+}
+#+END_SRC
+
+This functionality is similar to =Conflicts= in [[https://coreos.com/docs/launching-containers/launching/fleet-unit-files/][CoreOS Fleet]].
+In Fleet, it is also possible to set =Global=, which in Marathon
+translates to =rack_id:GROUP_BY=.
+
+*** COMMENT Policy
+
+A really cool example of constraining the actions which can happen on a
+platform is provided by the [[http://docs.apcera.com/tutorials/policies/][policy engine]] from Continuum.
+
+#+BEGIN_SRC C
+on job::/purchasing{
+  if (route nameMatch "route::/http/com/acme/purchasing") { 
+    permit map 
+  }
+}
+#+END_SRC
+
+*** DONE Resources
+
+Besides having a proper environment to run, it will also need some
+resources in the infrastructure like 
+
+An extensive specfication of the resources that a workload may needs
+can be found in the [[https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/resources.md][Kubernetes Resource Model]]
+
+#+BEGIN_SRC sh
+resources: [
+  request:   [ cpu: 2.5, memory: "40Mi" ],
+  limit:     [ cpu: 4.0, memory: "99Mi" ],
+  capacity:  [ cpu: 12,  memory: "128Gi" ],
+  maxusage:  [ cpu: 3.8, memory: "80Mi" ],
+]
+#+END_SRC
+
+Some of the resources could be cpus, memory, storage and network related.
+
+*** DONE Liveness and Desired State
+
+Once something is executed, we may want to define the health of a
+workload to be able to either restart it or forcibly terminate it.
+
+Kubernetes has the concept of =probes= to check whether something is ok or not.
+
+#+BEGIN_SRC yaml
+        livenessProbe:
+          exec:
+            command:
+              - "cat"
+              - "/tmp/health"
+          initialDelaySeconds: 15
+#+END_SRC
+
+In the case of Marathon:
+
+#+BEGIN_SRC js
+{
+  "protocol": "COMMAND",
+  "command": { "value": "curl -f -X GET http://$HOST:$PORT0/health" },
+  "gracePeriodSeconds": 300,
+  "intervalSeconds": 60,
+  "timeoutSeconds": 20,
+  "maxConsecutiveFailures": 3
+}
+#+END_SRC
+
+Consul has its version of =checks= as well ([[https://www.consul.io/docs/agent/checks.html][link]]):
+
+#+BEGIN_SRC js
+{
+  "check": {
+    "id": "api",
+    "name": "HTTP API on port 5000",
+    "http": "http://localhost:5000/health",
+    "interval": "10s",
+    "timeout": "1s"
+  }
+}
+#+END_SRC
+
+[[http://docs.apcera.com/tutorials/apps/][Continuum]] and [[http://bazel.io/docs/build-encyclopedia.html][Bazel]] both have =timeout= option meaning that if the
+execution takes longer than the timeout parameter, then it is
+stopped.
+
+Bazel also provides =flaky= meaning that it will retry to execute 3
+times before failing.
+
+# - Marathon example
+# - Consul checks
+# - Kubernetes probes
+# - marathon healthchecks
+# - aurora healthchecks
+
+*** DONE Calls & Rules
+
+Many times the same resulting command will change
+depending on the environment.  In order to cope around this, it is
+taken advantage the fact that we are using a configuration format to
+have function like constructs which we can call.
+
+For example, Ant defines the =delete= method to remote a file:
+
+#+BEGIN_SRC xml
+<delete file="hello.jar"/>
+#+END_SRC
+
+To put it in other words, it is calling a function named =delete=
+which takes a =$file= as parameter, and then wrapping the portability
+logic inside there.
+
+In Bazel, we can see a similar concept in its [[http://bazel.io/docs/build-encyclopedia.html#sh_binary][rules]]. In the example
+below, we pass 3 parameters when calling =sh_binary=:
+
+#+BEGIN_SRC sh
+sh_binary(
+    name = "foo",
+    srcs = ["foo.sh"],
+    deps = ...,
+    data = glob(["datafiles/*.txt"]),
+)
+#+END_SRC
+*** DONE Remarks
+
+The coverage of this writing is not very extensive but hopefully it
+serves to clarify a bit  what are some of the common ways or patterns to modify the
+execution of something.  The list could go on and on, though next time
+I see some new build or automation tool, I'll make sure to check what
+it is doing around the items that I described above.
+
+*** EOF
