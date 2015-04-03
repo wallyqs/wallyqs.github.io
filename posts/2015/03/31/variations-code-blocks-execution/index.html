@@ -131,11 +131,10 @@
   <tr><td><b>Configuration Management</b></td><td>Chef, Puppet, Ansible</td></tr>
   <tr><td><b>Infrastructure</b></td><td>Packer, Terraform, Cloud Init, NixOps</td></tr>
   <tr><td><b>Isolation</b></td><td>Vagrant, Docker</td></tr>
-  <tr><td><b>Workloads scheduling</b></td><td>Kubernetes, Marathon, Aurora, Heroku style, Fleet, Apcera Continuum</td></tr>
+  <tr><td><b>Workloads scheduling</b></td><td>Kubernetes, Marathon, Aurora, Heroku style, Fleet, Apcera Continuum, Consul checks</td></tr>
   <tr><td><b>Continuous Integration</b></td><td>Jenkins, Drone.io, Travis, Wercker</td></tr>
-  <tr><td><b>Build tools, Task Runners</b></td><td>Make, Rake, Ant, Maven, Grunt, Gulp, Pants, Bazel, Gradle</td></tr>
-  <tr><td><b>SSH based deploy tools</b></td><td>Capistrano, Mina, Fabric</td></tr>
-  <tr><td></td><td></td></tr>
+  <tr><td><b>Build tools, Task Runners</b></td><td>Make, Rake, Ant, Maven, Pants, Bazel, Gradle</td></tr>
+  <tr><td><b>SSH based deploy tools</b></td><td>Capistrano, Fabric</td></tr>
 </table>
 <h1>Configuration Management</h1>
 <p>The purpose of these set of technologies is to make changes into a
@@ -234,7 +233,6 @@
   configuration directive and then its execution is modified by setting
   options like <code>creates</code> which will trigger an idempotency check and
   abort the execution of the command if the file already exists.</p>
-<h1>● ● ●</h1>
 <h1>Infrastructure</h1>
 <p>These days there are increasing number of possibilities
   of Cloud APIs which streamline the acquisition of computing resources.
@@ -432,7 +430,6 @@ resource &quot;aws_instance&quot; &quot;web&quot; {
 
 };
 </pre></div>
-<h1>● ● ●</h1>
 <h1>Isolation</h1>
 <p>(Note: Not sure if isolation would be right word for these.)</p>
 <p>What these do is automate the creation of another environment
@@ -490,7 +487,6 @@ ENTRYPOINT [&quot;/usr/sbin/apache2ctl&quot;, &quot;-D&quot;, &quot;FOREGROUND&q
 </pre></div>
 <p>We can see that along with the execution of the code block, it is also being defined
   the folders and port mapping that are required to execute the code block.</p>
-<h1>● ● ●</h1>
 <h1>Build tools and Task runners</h1>
 <p>These have the common functionality of chaining together
   the execution of code blocks into steps, dependencies or
@@ -646,7 +642,128 @@ ENTRYPOINT [&quot;/usr/sbin/apache2ctl&quot;, &quot;-D&quot;, &quot;FOREGROUND&q
   <span class="nt">&lt;/build&gt;</span>
 <span class="nt">&lt;/project&gt;</span>
 </pre></div>
-<h1>● ● ●</h1>
+<h2>Bazel</h2>
+<ul>
+  <li>Uses: Google magic</li>
+  <li>Docs:
+    <ul>
+      <li><a href="http://bazel.io/docs/build-encyclopedia.html">http://bazel.io/docs/build-encyclopedia.html</a></li>
+    </ul>
+  </li>
+</ul>
+<p>Bazel has great <a href="http://bazel.io/FAQ.html">FAQ</a> where it succintly explains the issues that Google
+  had delivering its software which resulted in the creation of the
+  original <b>Blaze</b>.</p>
+<p>Quoting it:</p>
+<blockquote>
+  <p><b>What is Bazel best at?</b></p>
+  <p>Bazel shines at building and testing projects with the following properties:</p>
+  <ul>
+    <li>Projects with a large codebase</li>
+    <li>Projects written in (multiple) compiled languages</li>
+    <li>Projects that deploy on multiple platforms</li>
+    <li>Projects that have extensive tests</li>
+  </ul>
+  <p><b>What should I not use Bazel for?</b></p>
+  <p>Bazel tries to be smart about caching. This means it is a bad match
+    for build steps that should not be cached.
+    For example, the following steps should not be controlled from Bazel:</p>
+  <ul>
+    <li>A compilation step that fetches data from the internet.</li>
+    <li>A test step that connects to the QA instance of your site.</li>
+    <li>A deployment step that changes your site&#8217;s cloud configuration.</li>
+  </ul>
+  <p>Bazel tries to minimize expensive compilation steps. If you are only using interpreted languages directly, such as JavaScript or Python, Bazel will likely not interest you.</p>
+</blockquote>
+<p>Bazel has a large number of <a href="http://bazel.io/docs/build-encyclopedia.html">rules</a> which define how to do the builds.
+  Here is an example of running a bash script for testing:</p>
+<div class="highlight"><pre>sh_test(
+    name = &quot;foo_integration_test&quot;,
+    size = &quot;small&quot;,
+    srcs = [&quot;foo_integration_test.sh&quot;],
+    deps = [&quot;:foo_sh_lib&quot;],
+    data = glob([&quot;testdata/*.txt&quot;]),
+)
+</pre></div>
+<p>By specifying that the test is <i>small</i> so that is times out after 1 minute.</p>
+<h2>Pants</h2>
+<ul>
+  <li>Uses: Similar BUILD syntax as Bazel</li>
+  <li>Docs:
+    <ul>
+      <li><a href="https://pantsbuild.github.io/">https://pantsbuild.github.io/</a></li>
+    </ul>
+  </li>
+</ul>
+<p>Description from the site:</p>
+<blockquote>
+  <p>Pants is similar to <code>make, maven, ant, gradle, sbt</code>, etc.; but pants
+    pursues different design goals.</p>
+  <p>Pants optimizes for</p>
+  <ul>
+    <li>building multiple, dependent things from source</li>
+    <li>building code in a variety of languages</li>
+    <li>speed of build execution</li>
+  </ul>
+</blockquote>
+<p>Here is a very basic example from the <a href="https://pantsbuild.github.io/python-readme.html">readme</a>.</p>
+<div class="highlight"><pre>python_tests<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">&#39;greet&#39;</span>,
+  <span class="nv">dependencies</span><span class="o">=[</span>
+    <span class="s1">&#39;examples/src/python/example/hello/greet:greet&#39;</span>,
+    <span class="s1">&#39;:prep&#39;</span>,
+  <span class="o">]</span>,
+  <span class="nv">sources</span><span class="o">=</span>globs<span class="o">(</span><span class="s1">&#39;*.py&#39;</span><span class="o">)</span>,
+<span class="o">)</span>
+
+<span class="c"># Prepare for the &#39;greet&#39; test. Realistically, you wouldn&#39;t set up a</span>
+<span class="c"># prep_command just to create an emtpy temp file. This is meant as a</span>
+<span class="c"># simple example.</span>
+prep_command<span class="o">(</span><span class="nv">name</span><span class="o">=</span><span class="s1">&#39;prep&#39;</span>,
+  <span class="nv">prep_executable</span><span class="o">=</span><span class="s1">&#39;touch&#39;</span>,
+  <span class="nv">prep_args</span><span class="o">=[</span><span class="s1">&#39;/tmp/prep_command_result&#39;</span><span class="o">]</span>
+<span class="o">)</span>
+</pre></div>
+<h2>Gradle</h2>
+<ul>
+  <li>Uses: Groovy based DSL</li>
+  <li>Docs:
+    <ul>
+      <li>DSL reference:  <a href="http://gradle.org/docs/current/dsl/">http://gradle.org/docs/current/dsl/</a></li>
+      <li>Exec: <a href="http://gradle.org/docs/current/dsl/org.gradle.api.tasks.Exec.html">http://gradle.org/docs/current/dsl/org.gradle.api.tasks.Exec.html</a>a</li>
+      <li>Wikipedia entry: <a href="http://en.wikipedia.org/wiki/Gradle">http://en.wikipedia.org/wiki/Gradle</a></li>
+      <li>Interesting read: <a href="https://gradle.org/gradle-team-perspective-on-bazel/">https://gradle.org/gradle-team-perspective-on-bazel/</a></li>
+      <li>Article: <a href="http://www.drdobbs.com/jvm/why-build-your-java-projects-with-gradle/240168608">http://www.drdobbs.com/jvm/why-build-your-java-projects-with-gradle/240168608</a></li>
+    </ul>
+  </li>
+</ul>
+<p>According to Wikipedia:</p>
+<blockquote>
+  <p>Gradle was designed for multi-project builds which can grow to be
+    quite large, and supports incremental builds by intelligently
+    determining which parts of the build tree are up-to-date, so that any
+    task dependent upon those parts will not need to be re-executed.</p>
+</blockquote>
+<p>In the <code>Exec</code> example, before executing the command,
+  it is defined the working directory where it should run
+  and more interesting, a <i>stream</i> that will capture the output.</p>
+<div class="highlight"><pre>task stopTomcat(type:Exec) {
+  workingDir &#39;../tomcat/bin&#39;
+
+  //on windows:
+  commandLine &#39;cmd&#39;, &#39;/c&#39;, &#39;stop.bat&#39;
+
+  //on linux
+  commandLine &#39;./stop.sh&#39;
+
+  //store the output instead of printing to the console:
+  standardOutput = new ByteArrayOutputStream()
+
+  //extension method stopTomcat.output() can be used to obtain the output:
+  ext.output = {
+    return standardOutput.toString()
+  }
+}
+</pre></div>
 <h1>Continuous Integration</h1>
 <p>CI tools help in automating the creation of build artifacts
   and running of tests from a project.  In a sense, one could say
@@ -669,6 +786,19 @@ ENTRYPOINT [&quot;/usr/sbin/apache2ctl&quot;, &quot;-D&quot;, &quot;FOREGROUND&q
   unnatural than in other solutions since the code will have to be
   escaped for example so that it includes entities which make it conform
   valid XML.</p>
+<p><img src="https://wiki.jenkins-ci.org/download/attachments/9240589/ruby.png" alt="https://wiki.jenkins-ci.org/download/attachments/9240589/ruby.png" /></p>
+<h2>Drone.io</h2>
+<ul>
+  <li>Uses: An HTML textarea and checkboxes</li>
+  <li>Docs:
+    <ul>
+      <li><a href="http://docs.drone.io/buildscript.html">http://docs.drone.io/buildscript.html</a></li>
+    </ul>
+  </li>
+</ul>
+<p>Via the UI, it is possible to specify the environment variables
+  and then within a text area write the script to be executed.</p>
+<p><img src="http://docs.drone.io/img/build-script.png" alt="http://docs.drone.io/img/build-script.png" /></p>
 <h2>Travis</h2>
 <ul>
   <li>Uses: YAML</li>
@@ -691,7 +821,99 @@ ENTRYPOINT [&quot;/usr/sbin/apache2ctl&quot;, &quot;-D&quot;, &quot;FOREGROUND&q
 
 <span class="l-Scalar-Plain">script</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">bundle exec thor build</span>
 </pre></div>
-<h1>● ● ●</h1>
+<h2>Wercker</h2>
+<ul>
+  <li>Uses: YAML</li>
+  <li>Docs:
+    <ul>
+      <li><a href="http://devcenter.wercker.com/docs/">http://devcenter.wercker.com/docs/</a></li>
+      <li><a href="http://devcenter.wercker.com/learn/wercker-yml/01_introduction.html">http://devcenter.wercker.com/learn/wercker-yml/01_introduction.html</a></li>
+    </ul>
+  </li>
+</ul>
+<p>From the docs:</p>
+<blockquote>
+  <p>The wercker.yml file is a configuration file that specifies how your build and deploy pipelines should be run and which steps should be executed in those pipelines.</p>
+</blockquote>
+<p>And a full example below.  As part of a Wercker build pipeline,
+  we can find a series of steps which will be run sequentially.
+  The <code>box</code> option defines the environment, and then <code>code</code> is used
+  to define the code block.</p>
+<div class="highlight"><pre><span class="c1"># use the default golang container from Docker Hub</span>
+<span class="l-Scalar-Plain">box</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">golang</span>
+<span class="c1"># The steps that will be executed in the build pipeline</span>
+<span class="l-Scalar-Plain">build</span><span class="p-Indicator">:</span>
+  <span class="l-Scalar-Plain">steps</span><span class="p-Indicator">:</span>
+    <span class="c1"># golint step!</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">wercker/golint</span>
+
+    <span class="c1"># Build the project</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">script</span><span class="p-Indicator">:</span>
+        <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">go build</span>
+        <span class="l-Scalar-Plain">code</span><span class="p-Indicator">:</span> <span class="p-Indicator">|</span>
+          <span class="no">go build ./...</span>
+
+    <span class="c1"># Test the project</span>
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">script</span><span class="p-Indicator">:</span>
+        <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">go test</span>
+        <span class="l-Scalar-Plain">code</span><span class="p-Indicator">:</span> <span class="p-Indicator">|</span>
+          <span class="no">go test ./...</span>
+
+<span class="c1"># The steps that will be executed in the deploy pipeline</span>
+<span class="l-Scalar-Plain">deploy</span><span class="p-Indicator">:</span>
+    <span class="l-Scalar-Plain">steps</span><span class="p-Indicator">:</span>
+        <span class="c1"># Execute the s3sync deploy step, a step provided by wercker</span>
+        <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">s3sync</span><span class="p-Indicator">:</span>
+            <span class="l-Scalar-Plain">key_id</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">$AWS_ACCESS_KEY_ID</span>
+            <span class="l-Scalar-Plain">key_secret</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">$AWS_SECRET_ACCESS_KEY</span>
+            <span class="l-Scalar-Plain">bucket_url</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">$AWS_BUCKET_URL</span>
+            <span class="l-Scalar-Plain">source_dir</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">build/</span>
+</pre></div>
+<h1>SSH based deploy tools</h1>
+<p>What these tool do is automate the remote (possibly parallel)
+  execution of commands in a number of servers.</p>
+<h2>Capistrano</h2>
+<ul>
+  <li>Uses: A Ruby DSL</li>
+  <li>Docs:
+    <ul>
+      <li><a href="http://capistranorb.com/documentation/getting-started/tasks/">http://capistranorb.com/documentation/getting-started/tasks/</a></li>
+    </ul>
+  </li>
+</ul>
+<p>With Capistrano we can define a list of servers where we want to
+  execute a task (defined with <code>:execute</code>).</p>
+<div class="highlight"><pre><span class="n">server</span> <span class="s1">&#39;example.com&#39;</span><span class="p">,</span> <span class="ss">roles</span><span class="p">:</span> <span class="o">[</span><span class="ss">:web</span><span class="p">,</span> <span class="ss">:app</span><span class="o">]</span>
+<span class="n">server</span> <span class="s1">&#39;example.org&#39;</span><span class="p">,</span> <span class="ss">roles</span><span class="p">:</span> <span class="o">[</span><span class="ss">:db</span><span class="p">,</span> <span class="ss">:workers</span><span class="o">]</span>
+<span class="n">desc</span> <span class="s2">&quot;Report Uptimes&quot;</span>
+<span class="n">task</span> <span class="ss">:uptime</span> <span class="k">do</span>
+  <span class="n">on</span> <span class="n">roles</span><span class="p">(</span><span class="ss">:all</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">host</span><span class="o">|</span>
+    <span class="n">execute</span> <span class="ss">:any_command</span><span class="p">,</span> <span class="s2">&quot;with args&quot;</span><span class="p">,</span> <span class="ss">:here</span><span class="p">,</span> <span class="s2">&quot;and here&quot;</span>
+    <span class="n">info</span> <span class="s2">&quot;Host </span><span class="si">#{</span><span class="n">host</span><span class="si">}</span><span class="s2"> (</span><span class="si">#{</span><span class="n">host</span><span class="o">.</span><span class="n">roles</span><span class="o">.</span><span class="n">to_a</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;, &#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">):</span><span class="se">\t</span><span class="si">#{</span><span class="n">capture</span><span class="p">(</span><span class="ss">:uptime</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</pre></div>
+<h2>Fabric</h2>
+<ul>
+  <li>Uses: Python</li>
+  <li>Docs:
+    <ul>
+      <li><a href="http://docs.fabfile.org/en/latest/usage/execution.html">http://docs.fabfile.org/en/latest/usage/execution.html</a></li>
+    </ul>
+  </li>
+</ul>
+<p>Similar to Capistrano, here we define a list of the servers and then
+  use a command line tool to execute actions on them.</p>
+<div class="highlight"><pre><span class="kn">from</span> <span class="nn">fabric.api</span> <span class="kn">import</span> <span class="n">run</span><span class="p">,</span> <span class="n">env</span>
+
+<span class="n">env</span><span class="o">.</span><span class="n">hosts</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;host1&#39;</span><span class="p">,</span> <span class="s">&#39;host2&#39;</span><span class="p">]</span>
+
+<span class="k">def</span> <span class="nf">taskA</span><span class="p">():</span>
+    <span class="n">run</span><span class="p">(</span><span class="s">&#39;ls&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">taskB</span><span class="p">():</span>
+    <span class="n">run</span><span class="p">(</span><span class="s">&#39;whoami&#39;</span><span class="p">)</span>
+</pre></div>
 <h1>Workloads scheduling</h1>
 <p>Once having defined the infrastructure that is is desired, maybe by building upon
   the technologies in the list above, it is possible to
@@ -699,7 +921,9 @@ ENTRYPOINT [&quot;/usr/sbin/apache2ctl&quot;, &quot;-D&quot;, &quot;FOREGROUND&q
   those running a workload can focus on how something should be executed
   rather than than detailing how to prepare the necessary infrastructure
   so that the workload runs.  These tools are usually referred to as
-  PaaS systems or some of them with more simple features are just considered <i>Schedulers</i>.</p>
+  PaaS systems or some of them with more simple features are just
+  considered <i>Schedulers</i>.  Thanks to Mesos, there is an increasing
+  number of these so only covering some of them.</p>
 <h2>Kubernetes</h2>
 <ul>
   <li>Uses: JSON</li>
@@ -1080,13 +1304,51 @@ build (
 1 0 * * *  printf &gt; /var/log/apache/error_log
   </pre>
 </blockquote>
-<h2>Conclusions</h2>
+<h2>Consul</h2>
+<ul>
+  <li>Uses: JSON</li>
+  <li>Docs:
+    <ul>
+      <li><a href="https://www.consul.io/docs/agent/checks.html">https://www.consul.io/docs/agent/checks.html</a></li>
+    </ul>
+  </li>
+</ul>
+<p>More like an honorable mention, <code>Consul</code> for doing monitoring also
+  periodically executes <i>checks</i> (similar to the liveness probes
+  functionality from Kubernetes for example).  It is interesting
+  that Hashicorp decoupled the healthchecks from other parts of their solution.</p>
+<div class="highlight"><pre><span class="p">{</span>
+  <span class="s2">&quot;checks&quot;</span><span class="o">:</span> <span class="p">[</span>
+    <span class="p">{</span>
+      <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="s2">&quot;chk1&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;name&quot;</span><span class="o">:</span> <span class="s2">&quot;mem&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;script&quot;</span><span class="o">:</span> <span class="s2">&quot;/bin/check_mem&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;interval&quot;</span><span class="o">:</span> <span class="s2">&quot;5s&quot;</span>
+    <span class="p">},</span>
+    <span class="p">{</span>
+      <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="s2">&quot;chk2&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;name&quot;</span><span class="o">:</span> <span class="s2">&quot;/health&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;http&quot;</span><span class="o">:</span> <span class="s2">&quot;http://localhost:5000/health&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;interval&quot;</span><span class="o">:</span> <span class="s2">&quot;15s&quot;</span>
+    <span class="p">},</span>
+    <span class="p">{</span>
+      <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="s2">&quot;chk3&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;name&quot;</span><span class="o">:</span> <span class="s2">&quot;cpu&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;script&quot;</span><span class="o">:</span> <span class="s2">&quot;/bin/check_cpu&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;interval&quot;</span><span class="o">:</span> <span class="s2">&quot;10s&quot;</span>
+    <span class="p">},</span>
+    <span class="p">...</span>
+  <span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+<h1>Remarks</h1>
 <p>Again, what I found interesting of all of these systems and tooling,
   is that they are variations around the same idea: wrap some configuration
   around the execution of a code block to transparently add some behavior
   to its execution.</p>
-<p>It is impressive that there are so many different takes on this issue.
-  even though that in essence what is happening is more or less the same.</p>
+<p>It is impressive that there are so many different takes on this issue
+  even though that in essence what is happening is more or less the
+  same.</p>
 <p>As an alternative, see for example what is being done in the
   <a href="https://github.com/aphyr/jepsen/blob/master/jepsen/etcd/src/jepsen/system/etcd.clj#L81">Jepsen tests</a>, where there are no code blocks and they have been
   assimilated into the code itself.</p>
@@ -1108,6 +1370,12 @@ build (
                   <span class="p">(</span><span class="nf">info</span> <span class="nb">node </span><span class="s">&quot;building etcd&quot;</span><span class="p">)</span>
                   <span class="p">(</span><span class="nf">c/exec</span> <span class="p">(</span><span class="nf">c/lit</span> <span class="s">&quot;./build&quot;</span><span class="p">))))</span>
 </pre></div>
+<p>Something to note as well is that there is a spectrum and repeated
+  functionality among the tools, e.g. chaining, a task that is executed after
+  other task, or piping the output from a command somehow to wrap some
+  logic around it, which makes me think whether eventually there will be
+  some tool which picks up the best parts from and offers the
+  functionality in an agnostic way somehow.</p>
 <h1>EOF</h1>
 <hr />
 
