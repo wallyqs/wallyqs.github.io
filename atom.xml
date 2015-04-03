@@ -44,11 +44,10 @@
   &lt;tr&gt;&lt;td&gt;&lt;b&gt;Configuration Management&lt;/b&gt;&lt;/td&gt;&lt;td&gt;Chef, Puppet, Ansible&lt;/td&gt;&lt;/tr&gt;
   &lt;tr&gt;&lt;td&gt;&lt;b&gt;Infrastructure&lt;/b&gt;&lt;/td&gt;&lt;td&gt;Packer, Terraform, Cloud Init, NixOps&lt;/td&gt;&lt;/tr&gt;
   &lt;tr&gt;&lt;td&gt;&lt;b&gt;Isolation&lt;/b&gt;&lt;/td&gt;&lt;td&gt;Vagrant, Docker&lt;/td&gt;&lt;/tr&gt;
-  &lt;tr&gt;&lt;td&gt;&lt;b&gt;Workloads scheduling&lt;/b&gt;&lt;/td&gt;&lt;td&gt;Kubernetes, Marathon, Aurora, Heroku style, Fleet, Apcera Continuum&lt;/td&gt;&lt;/tr&gt;
+  &lt;tr&gt;&lt;td&gt;&lt;b&gt;Workloads scheduling&lt;/b&gt;&lt;/td&gt;&lt;td&gt;Kubernetes, Marathon, Aurora, Heroku style, Fleet, Apcera Continuum, Consul checks&lt;/td&gt;&lt;/tr&gt;
   &lt;tr&gt;&lt;td&gt;&lt;b&gt;Continuous Integration&lt;/b&gt;&lt;/td&gt;&lt;td&gt;Jenkins, Drone.io, Travis, Wercker&lt;/td&gt;&lt;/tr&gt;
-  &lt;tr&gt;&lt;td&gt;&lt;b&gt;Build tools, Task Runners&lt;/b&gt;&lt;/td&gt;&lt;td&gt;Make, Rake, Ant, Maven, Grunt, Gulp, Pants, Bazel, Gradle&lt;/td&gt;&lt;/tr&gt;
-  &lt;tr&gt;&lt;td&gt;&lt;b&gt;SSH based deploy tools&lt;/b&gt;&lt;/td&gt;&lt;td&gt;Capistrano, Mina, Fabric&lt;/td&gt;&lt;/tr&gt;
-  &lt;tr&gt;&lt;td&gt;&lt;/td&gt;&lt;td&gt;&lt;/td&gt;&lt;/tr&gt;
+  &lt;tr&gt;&lt;td&gt;&lt;b&gt;Build tools, Task Runners&lt;/b&gt;&lt;/td&gt;&lt;td&gt;Make, Rake, Ant, Maven, Pants, Bazel, Gradle&lt;/td&gt;&lt;/tr&gt;
+  &lt;tr&gt;&lt;td&gt;&lt;b&gt;SSH based deploy tools&lt;/b&gt;&lt;/td&gt;&lt;td&gt;Capistrano, Fabric&lt;/td&gt;&lt;/tr&gt;
 &lt;/table&gt;
 &lt;h1&gt;Configuration Management&lt;/h1&gt;
 &lt;p&gt;The purpose of these set of technologies is to make changes into a
@@ -147,7 +146,6 @@
   configuration directive and then its execution is modified by setting
   options like &lt;code&gt;creates&lt;/code&gt; which will trigger an idempotency check and
   abort the execution of the command if the file already exists.&lt;/p&gt;
-&lt;h1&gt;● ● ●&lt;/h1&gt;
 &lt;h1&gt;Infrastructure&lt;/h1&gt;
 &lt;p&gt;These days there are increasing number of possibilities
   of Cloud APIs which streamline the acquisition of computing resources.
@@ -345,7 +343,6 @@ resource &amp;quot;aws_instance&amp;quot; &amp;quot;web&amp;quot; {
 
 };
 &lt;/pre&gt;&lt;/div&gt;
-&lt;h1&gt;● ● ●&lt;/h1&gt;
 &lt;h1&gt;Isolation&lt;/h1&gt;
 &lt;p&gt;(Note: Not sure if isolation would be right word for these.)&lt;/p&gt;
 &lt;p&gt;What these do is automate the creation of another environment
@@ -403,7 +400,6 @@ ENTRYPOINT [&amp;quot;/usr/sbin/apache2ctl&amp;quot;, &amp;quot;-D&amp;quot;, &a
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;We can see that along with the execution of the code block, it is also being defined
   the folders and port mapping that are required to execute the code block.&lt;/p&gt;
-&lt;h1&gt;● ● ●&lt;/h1&gt;
 &lt;h1&gt;Build tools and Task runners&lt;/h1&gt;
 &lt;p&gt;These have the common functionality of chaining together
   the execution of code blocks into steps, dependencies or
@@ -559,7 +555,128 @@ ENTRYPOINT [&amp;quot;/usr/sbin/apache2ctl&amp;quot;, &amp;quot;-D&amp;quot;, &a
   &lt;span class=&quot;nt&quot;&gt;&amp;lt;/build&amp;gt;&lt;/span&gt;
 &lt;span class=&quot;nt&quot;&gt;&amp;lt;/project&amp;gt;&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
-&lt;h1&gt;● ● ●&lt;/h1&gt;
+&lt;h2&gt;Bazel&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Uses: Google magic&lt;/li&gt;
+  &lt;li&gt;Docs:
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;http://bazel.io/docs/build-encyclopedia.html&quot;&gt;http://bazel.io/docs/build-encyclopedia.html&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Bazel has great &lt;a href=&quot;http://bazel.io/FAQ.html&quot;&gt;FAQ&lt;/a&gt; where it succintly explains the issues that Google
+  had delivering its software which resulted in the creation of the
+  original &lt;b&gt;Blaze&lt;/b&gt;.&lt;/p&gt;
+&lt;p&gt;Quoting it:&lt;/p&gt;
+&lt;blockquote&gt;
+  &lt;p&gt;&lt;b&gt;What is Bazel best at?&lt;/b&gt;&lt;/p&gt;
+  &lt;p&gt;Bazel shines at building and testing projects with the following properties:&lt;/p&gt;
+  &lt;ul&gt;
+    &lt;li&gt;Projects with a large codebase&lt;/li&gt;
+    &lt;li&gt;Projects written in (multiple) compiled languages&lt;/li&gt;
+    &lt;li&gt;Projects that deploy on multiple platforms&lt;/li&gt;
+    &lt;li&gt;Projects that have extensive tests&lt;/li&gt;
+  &lt;/ul&gt;
+  &lt;p&gt;&lt;b&gt;What should I not use Bazel for?&lt;/b&gt;&lt;/p&gt;
+  &lt;p&gt;Bazel tries to be smart about caching. This means it is a bad match
+    for build steps that should not be cached.
+    For example, the following steps should not be controlled from Bazel:&lt;/p&gt;
+  &lt;ul&gt;
+    &lt;li&gt;A compilation step that fetches data from the internet.&lt;/li&gt;
+    &lt;li&gt;A test step that connects to the QA instance of your site.&lt;/li&gt;
+    &lt;li&gt;A deployment step that changes your site&amp;#8217;s cloud configuration.&lt;/li&gt;
+  &lt;/ul&gt;
+  &lt;p&gt;Bazel tries to minimize expensive compilation steps. If you are only using interpreted languages directly, such as JavaScript or Python, Bazel will likely not interest you.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Bazel has a large number of &lt;a href=&quot;http://bazel.io/docs/build-encyclopedia.html&quot;&gt;rules&lt;/a&gt; which define how to do the builds.
+  Here is an example of running a bash script for testing:&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;sh_test(
+    name = &amp;quot;foo_integration_test&amp;quot;,
+    size = &amp;quot;small&amp;quot;,
+    srcs = [&amp;quot;foo_integration_test.sh&amp;quot;],
+    deps = [&amp;quot;:foo_sh_lib&amp;quot;],
+    data = glob([&amp;quot;testdata/*.txt&amp;quot;]),
+)
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;By specifying that the test is &lt;i&gt;small&lt;/i&gt; so that is times out after 1 minute.&lt;/p&gt;
+&lt;h2&gt;Pants&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Uses: Similar BUILD syntax as Bazel&lt;/li&gt;
+  &lt;li&gt;Docs:
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;https://pantsbuild.github.io/&quot;&gt;https://pantsbuild.github.io/&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Description from the site:&lt;/p&gt;
+&lt;blockquote&gt;
+  &lt;p&gt;Pants is similar to &lt;code&gt;make, maven, ant, gradle, sbt&lt;/code&gt;, etc.; but pants
+    pursues different design goals.&lt;/p&gt;
+  &lt;p&gt;Pants optimizes for&lt;/p&gt;
+  &lt;ul&gt;
+    &lt;li&gt;building multiple, dependent things from source&lt;/li&gt;
+    &lt;li&gt;building code in a variety of languages&lt;/li&gt;
+    &lt;li&gt;speed of build execution&lt;/li&gt;
+  &lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Here is a very basic example from the &lt;a href=&quot;https://pantsbuild.github.io/python-readme.html&quot;&gt;readme&lt;/a&gt;.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;python_tests&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;greet&amp;#39;&lt;/span&gt;,
+  &lt;span class=&quot;nv&quot;&gt;dependencies&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=[&lt;/span&gt;
+    &lt;span class=&quot;s1&quot;&gt;&amp;#39;examples/src/python/example/hello/greet:greet&amp;#39;&lt;/span&gt;,
+    &lt;span class=&quot;s1&quot;&gt;&amp;#39;:prep&amp;#39;&lt;/span&gt;,
+  &lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;,
+  &lt;span class=&quot;nv&quot;&gt;sources&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;globs&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;*.py&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;,
+&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;# Prepare for the &amp;#39;greet&amp;#39; test. Realistically, you wouldn&amp;#39;t set up a&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# prep_command just to create an emtpy temp file. This is meant as a&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# simple example.&lt;/span&gt;
+prep_command&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;prep&amp;#39;&lt;/span&gt;,
+  &lt;span class=&quot;nv&quot;&gt;prep_executable&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;touch&amp;#39;&lt;/span&gt;,
+  &lt;span class=&quot;nv&quot;&gt;prep_args&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=[&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;/tmp/prep_command_result&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h2&gt;Gradle&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Uses: Groovy based DSL&lt;/li&gt;
+  &lt;li&gt;Docs:
+    &lt;ul&gt;
+      &lt;li&gt;DSL reference:  &lt;a href=&quot;http://gradle.org/docs/current/dsl/&quot;&gt;http://gradle.org/docs/current/dsl/&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;Exec: &lt;a href=&quot;http://gradle.org/docs/current/dsl/org.gradle.api.tasks.Exec.html&quot;&gt;http://gradle.org/docs/current/dsl/org.gradle.api.tasks.Exec.html&lt;/a&gt;a&lt;/li&gt;
+      &lt;li&gt;Wikipedia entry: &lt;a href=&quot;http://en.wikipedia.org/wiki/Gradle&quot;&gt;http://en.wikipedia.org/wiki/Gradle&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;Interesting read: &lt;a href=&quot;https://gradle.org/gradle-team-perspective-on-bazel/&quot;&gt;https://gradle.org/gradle-team-perspective-on-bazel/&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;Article: &lt;a href=&quot;http://www.drdobbs.com/jvm/why-build-your-java-projects-with-gradle/240168608&quot;&gt;http://www.drdobbs.com/jvm/why-build-your-java-projects-with-gradle/240168608&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;According to Wikipedia:&lt;/p&gt;
+&lt;blockquote&gt;
+  &lt;p&gt;Gradle was designed for multi-project builds which can grow to be
+    quite large, and supports incremental builds by intelligently
+    determining which parts of the build tree are up-to-date, so that any
+    task dependent upon those parts will not need to be re-executed.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;In the &lt;code&gt;Exec&lt;/code&gt; example, before executing the command,
+  it is defined the working directory where it should run
+  and more interesting, a &lt;i&gt;stream&lt;/i&gt; that will capture the output.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;task stopTomcat(type:Exec) {
+  workingDir &amp;#39;../tomcat/bin&amp;#39;
+
+  //on windows:
+  commandLine &amp;#39;cmd&amp;#39;, &amp;#39;/c&amp;#39;, &amp;#39;stop.bat&amp;#39;
+
+  //on linux
+  commandLine &amp;#39;./stop.sh&amp;#39;
+
+  //store the output instead of printing to the console:
+  standardOutput = new ByteArrayOutputStream()
+
+  //extension method stopTomcat.output() can be used to obtain the output:
+  ext.output = {
+    return standardOutput.toString()
+  }
+}
+&lt;/pre&gt;&lt;/div&gt;
 &lt;h1&gt;Continuous Integration&lt;/h1&gt;
 &lt;p&gt;CI tools help in automating the creation of build artifacts
   and running of tests from a project.  In a sense, one could say
@@ -582,6 +699,19 @@ ENTRYPOINT [&amp;quot;/usr/sbin/apache2ctl&amp;quot;, &amp;quot;-D&amp;quot;, &a
   unnatural than in other solutions since the code will have to be
   escaped for example so that it includes entities which make it conform
   valid XML.&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://wiki.jenkins-ci.org/download/attachments/9240589/ruby.png&quot; alt=&quot;https://wiki.jenkins-ci.org/download/attachments/9240589/ruby.png&quot; /&gt;&lt;/p&gt;
+&lt;h2&gt;Drone.io&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Uses: An HTML textarea and checkboxes&lt;/li&gt;
+  &lt;li&gt;Docs:
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;http://docs.drone.io/buildscript.html&quot;&gt;http://docs.drone.io/buildscript.html&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Via the UI, it is possible to specify the environment variables
+  and then within a text area write the script to be executed.&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;http://docs.drone.io/img/build-script.png&quot; alt=&quot;http://docs.drone.io/img/build-script.png&quot; /&gt;&lt;/p&gt;
 &lt;h2&gt;Travis&lt;/h2&gt;
 &lt;ul&gt;
   &lt;li&gt;Uses: YAML&lt;/li&gt;
@@ -604,7 +734,99 @@ ENTRYPOINT [&amp;quot;/usr/sbin/apache2ctl&amp;quot;, &amp;quot;-D&amp;quot;, &a
 
 &lt;span class=&quot;l-Scalar-Plain&quot;&gt;script&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;bundle exec thor build&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
-&lt;h1&gt;● ● ●&lt;/h1&gt;
+&lt;h2&gt;Wercker&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Uses: YAML&lt;/li&gt;
+  &lt;li&gt;Docs:
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;http://devcenter.wercker.com/docs/&quot;&gt;http://devcenter.wercker.com/docs/&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;http://devcenter.wercker.com/learn/wercker-yml/01_introduction.html&quot;&gt;http://devcenter.wercker.com/learn/wercker-yml/01_introduction.html&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;From the docs:&lt;/p&gt;
+&lt;blockquote&gt;
+  &lt;p&gt;The wercker.yml file is a configuration file that specifies how your build and deploy pipelines should be run and which steps should be executed in those pipelines.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;And a full example below.  As part of a Wercker build pipeline,
+  we can find a series of steps which will be run sequentially.
+  The &lt;code&gt;box&lt;/code&gt; option defines the environment, and then &lt;code&gt;code&lt;/code&gt; is used
+  to define the code block.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;c1&quot;&gt;# use the default golang container from Docker Hub&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;box&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;golang&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# The steps that will be executed in the build pipeline&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;build&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;l-Scalar-Plain&quot;&gt;steps&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;# golint step!&lt;/span&gt;
+    &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;wercker/golint&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;# Build the project&lt;/span&gt;
+    &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;script&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;l-Scalar-Plain&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;go build&lt;/span&gt;
+        &lt;span class=&quot;l-Scalar-Plain&quot;&gt;code&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;|&lt;/span&gt;
+          &lt;span class=&quot;no&quot;&gt;go build ./...&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;# Test the project&lt;/span&gt;
+    &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;script&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;l-Scalar-Plain&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;go test&lt;/span&gt;
+        &lt;span class=&quot;l-Scalar-Plain&quot;&gt;code&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p-Indicator&quot;&gt;|&lt;/span&gt;
+          &lt;span class=&quot;no&quot;&gt;go test ./...&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# The steps that will be executed in the deploy pipeline&lt;/span&gt;
+&lt;span class=&quot;l-Scalar-Plain&quot;&gt;deploy&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;l-Scalar-Plain&quot;&gt;steps&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;c1&quot;&gt;# Execute the s3sync deploy step, a step provided by wercker&lt;/span&gt;
+        &lt;span class=&quot;p-Indicator&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;s3sync&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt;
+            &lt;span class=&quot;l-Scalar-Plain&quot;&gt;key_id&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;$AWS_ACCESS_KEY_ID&lt;/span&gt;
+            &lt;span class=&quot;l-Scalar-Plain&quot;&gt;key_secret&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;$AWS_SECRET_ACCESS_KEY&lt;/span&gt;
+            &lt;span class=&quot;l-Scalar-Plain&quot;&gt;bucket_url&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;$AWS_BUCKET_URL&lt;/span&gt;
+            &lt;span class=&quot;l-Scalar-Plain&quot;&gt;source_dir&lt;/span&gt;&lt;span class=&quot;p-Indicator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;l-Scalar-Plain&quot;&gt;build/&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h1&gt;SSH based deploy tools&lt;/h1&gt;
+&lt;p&gt;What these tool do is automate the remote (possibly parallel)
+  execution of commands in a number of servers.&lt;/p&gt;
+&lt;h2&gt;Capistrano&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Uses: A Ruby DSL&lt;/li&gt;
+  &lt;li&gt;Docs:
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;http://capistranorb.com/documentation/getting-started/tasks/&quot;&gt;http://capistranorb.com/documentation/getting-started/tasks/&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;With Capistrano we can define a list of servers where we want to
+  execute a task (defined with &lt;code&gt;:execute&lt;/code&gt;).&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;n&quot;&gt;server&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;example.com&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;roles&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:web&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:app&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;server&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;example.org&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;roles&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:db&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:workers&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;desc&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;Report Uptimes&amp;quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;task&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:uptime&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;on&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;roles&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:all&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;host&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;execute&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:any_command&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;with args&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:here&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;and here&amp;quot;&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;info&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;Host &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;host&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt; (&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;host&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;roles&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;to_a&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;join&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;, &amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;):&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\t&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;capture&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:uptime&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h2&gt;Fabric&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Uses: Python&lt;/li&gt;
+  &lt;li&gt;Docs:
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;http://docs.fabfile.org/en/latest/usage/execution.html&quot;&gt;http://docs.fabfile.org/en/latest/usage/execution.html&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Similar to Capistrano, here we define a list of the servers and then
+  use a command line tool to execute actions on them.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;kn&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;fabric.api&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;run&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;env&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;env&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;hosts&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;#39;host1&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;#39;host2&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;taskA&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;():&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;run&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;#39;ls&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;taskB&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;():&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;run&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;#39;whoami&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
 &lt;h1&gt;Workloads scheduling&lt;/h1&gt;
 &lt;p&gt;Once having defined the infrastructure that is is desired, maybe by building upon
   the technologies in the list above, it is possible to
@@ -612,7 +834,9 @@ ENTRYPOINT [&amp;quot;/usr/sbin/apache2ctl&amp;quot;, &amp;quot;-D&amp;quot;, &a
   those running a workload can focus on how something should be executed
   rather than than detailing how to prepare the necessary infrastructure
   so that the workload runs.  These tools are usually referred to as
-  PaaS systems or some of them with more simple features are just considered &lt;i&gt;Schedulers&lt;/i&gt;.&lt;/p&gt;
+  PaaS systems or some of them with more simple features are just
+  considered &lt;i&gt;Schedulers&lt;/i&gt;.  Thanks to Mesos, there is an increasing
+  number of these so only covering some of them.&lt;/p&gt;
 &lt;h2&gt;Kubernetes&lt;/h2&gt;
 &lt;ul&gt;
   &lt;li&gt;Uses: JSON&lt;/li&gt;
@@ -993,13 +1217,51 @@ build (
 1 0 * * *  printf &amp;gt; /var/log/apache/error_log
   &lt;/pre&gt;
 &lt;/blockquote&gt;
-&lt;h2&gt;Conclusions&lt;/h2&gt;
+&lt;h2&gt;Consul&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Uses: JSON&lt;/li&gt;
+  &lt;li&gt;Docs:
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;https://www.consul.io/docs/agent/checks.html&quot;&gt;https://www.consul.io/docs/agent/checks.html&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;More like an honorable mention, &lt;code&gt;Consul&lt;/code&gt; for doing monitoring also
+  periodically executes &lt;i&gt;checks&lt;/i&gt; (similar to the liveness probes
+  functionality from Kubernetes for example).  It is interesting
+  that Hashicorp decoupled the healthchecks from other parts of their solution.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;s2&quot;&gt;&amp;quot;checks&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;id&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;chk1&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;name&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;mem&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;script&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;/bin/check_mem&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;interval&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;5s&amp;quot;&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;id&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;chk2&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;name&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;/health&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;http&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;http://localhost:5000/health&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;interval&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;15s&amp;quot;&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;id&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;chk3&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;name&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;cpu&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;script&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;/bin/check_cpu&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+      &lt;span class=&quot;s2&quot;&gt;&amp;quot;interval&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;10s&amp;quot;&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;...&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;h1&gt;Remarks&lt;/h1&gt;
 &lt;p&gt;Again, what I found interesting of all of these systems and tooling,
   is that they are variations around the same idea: wrap some configuration
   around the execution of a code block to transparently add some behavior
   to its execution.&lt;/p&gt;
-&lt;p&gt;It is impressive that there are so many different takes on this issue.
-  even though that in essence what is happening is more or less the same.&lt;/p&gt;
+&lt;p&gt;It is impressive that there are so many different takes on this issue
+  even though that in essence what is happening is more or less the
+  same.&lt;/p&gt;
 &lt;p&gt;As an alternative, see for example what is being done in the
   &lt;a href=&quot;https://github.com/aphyr/jepsen/blob/master/jepsen/etcd/src/jepsen/system/etcd.clj#L81&quot;&gt;Jepsen tests&lt;/a&gt;, where there are no code blocks and they have been
   assimilated into the code itself.&lt;/p&gt;
@@ -1021,6 +1283,12 @@ build (
                   &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;info&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;node &lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;building etcd&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
                   &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;c/exec&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;c/lit&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;./build&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))))&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Something to note as well is that there is a spectrum and repeated
+  functionality among the tools, e.g. chaining, a task that is executed after
+  other task, or piping the output from a command somehow to wrap some
+  logic around it, which makes me think whether eventually there will be
+  some tool which picks up the best parts from and offers the
+  functionality in an agnostic way somehow.&lt;/p&gt;
 &lt;h1&gt;EOF&lt;/h1&gt;
 &lt;hr /&gt;
 
