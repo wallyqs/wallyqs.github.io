@@ -130,7 +130,7 @@
   <tr><td></td><td></td></tr>
   <tr><td><b>Configuration Management</b></td><td>Chef, Puppet, Ansible</td></tr>
   <tr><td><b>Infrastructure</b></td><td>Packer, Terraform, Cloud Init, NixOps</td></tr>
-  <tr><td><b>Isolation</b></td><td>Vagrant, Docker</td></tr>
+  <tr><td><b>Isolation</b></td><td>Vagrant, Docker, CoreOS ACI</td></tr>
   <tr><td><b>Workloads scheduling</b></td><td>Kubernetes, Marathon, Aurora, Heroku style, Fleet, Apcera Continuum, Consul checks</td></tr>
   <tr><td><b>Continuous Integration</b></td><td>Jenkins, Drone.io, Travis, Wercker</td></tr>
   <tr><td><b>Build tools, Task Runners</b></td><td>Make, Rake, Ant, Maven, Pants, Bazel, Gradle</td></tr>
@@ -487,6 +487,70 @@ ENTRYPOINT [&quot;/usr/sbin/apache2ctl&quot;, &quot;-D&quot;, &quot;FOREGROUND&q
 </pre></div>
 <p>We can see that along with the execution of the code block, it is also being defined
   the folders and port mapping that are required to execute the code block.</p>
+<h2>CoreOS Appc</h2>
+<ul>
+  <li>Uses: JSON</li>
+  <li>Docs:
+    <ul>
+      <li><a href="https://github.com/appc/spec/blob/master/SPEC.md#app-container-executor">https://github.com/appc/spec/blob/master/SPEC.md#app-container-executor</a></li>
+    </ul>
+  </li>
+</ul>
+<p>The Application Container Specification uses JSON to define an
+  <a href="https://github.com/appc/spec/blob/master/SPEC.md#image-manifest-schema">Image Manifest</a>. The commands to execute are comma separated,
+  and there is a chain of execution via <i>event handlers</i>.</p>
+<div class="highlight"><pre><span class="s2">&quot;app&quot;</span><span class="o">:</span> <span class="p">{</span>
+       <span class="s2">&quot;exec&quot;</span><span class="o">:</span> <span class="p">[</span><span class="s2">&quot;/usr/bin/reduce-worker&quot;</span><span class="p">,</span> <span class="s2">&quot;--quiet&quot;</span><span class="p">],</span>
+       <span class="s2">&quot;user&quot;</span><span class="o">:</span> <span class="s2">&quot;100&quot;</span><span class="p">,</span>
+       <span class="s2">&quot;group&quot;</span><span class="o">:</span> <span class="s2">&quot;300&quot;</span><span class="p">,</span>
+       <span class="s2">&quot;eventHandlers&quot;</span><span class="o">:</span> <span class="p">[</span>
+           <span class="p">{</span>
+               <span class="s2">&quot;exec&quot;</span><span class="o">:</span> <span class="p">[</span>
+                   <span class="s2">&quot;/usr/bin/data-downloader&quot;</span>
+               <span class="p">],</span>
+               <span class="s2">&quot;name&quot;</span><span class="o">:</span> <span class="s2">&quot;pre-start&quot;</span>
+           <span class="p">},</span>
+           <span class="p">{</span>
+               <span class="s2">&quot;exec&quot;</span><span class="o">:</span> <span class="p">[</span>
+                   <span class="s2">&quot;/usr/bin/deregister-worker&quot;</span><span class="p">,</span>
+                   <span class="s2">&quot;--verbose&quot;</span>
+               <span class="p">],</span>
+               <span class="s2">&quot;name&quot;</span><span class="o">:</span> <span class="s2">&quot;post-stop&quot;</span>
+           <span class="p">}</span>
+       <span class="p">],</span>
+       <span class="s2">&quot;workingDirectory&quot;</span><span class="o">:</span> <span class="s2">&quot;/opt/work&quot;</span><span class="p">,</span>
+       <span class="s2">&quot;environment&quot;</span><span class="o">:</span> <span class="p">[</span>
+           <span class="p">{</span>
+               <span class="s2">&quot;name&quot;</span><span class="o">:</span> <span class="s2">&quot;REDUCE_WORKER_DEBUG&quot;</span><span class="p">,</span>
+               <span class="s2">&quot;value&quot;</span><span class="o">:</span> <span class="s2">&quot;true&quot;</span>
+           <span class="p">}</span>
+       <span class="p">],</span>
+</pre></div>
+<p>The specification of the resource that the workload would be using
+  can be found under the <i>isolation</i> key:</p>
+<div class="highlight"><pre><span class="s2">&quot;isolators&quot;</span><span class="o">:</span> <span class="p">[</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="o">:</span> <span class="s2">&quot;resources/cpu&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;value&quot;</span><span class="o">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;request&quot;</span><span class="o">:</span> <span class="s2">&quot;250&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;limit&quot;</span><span class="o">:</span> <span class="s2">&quot;500&quot;</span>
+                <span class="p">}</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="o">:</span> <span class="s2">&quot;resource/memory&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;value&quot;</span><span class="o">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;request&quot;</span><span class="o">:</span> <span class="s2">&quot;1G&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;limit&quot;</span><span class="o">:</span> <span class="s2">&quot;2G&quot;</span>
+                <span class="p">}</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="o">:</span> <span class="s2">&quot;os/linux/capabilities-retain-set&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;value&quot;</span><span class="o">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;set&quot;</span><span class="o">:</span> <span class="p">[</span><span class="s2">&quot;CAP_NET_BIND_SERVICE&quot;</span><span class="p">,</span> <span class="s2">&quot;CAP_SYS_ADMIN&quot;</span><span class="p">]</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">],</span>
+</pre></div>
 <h1>Build tools and Task runners</h1>
 <p>These have the common functionality of chaining together
   the execution of code blocks into steps, dependencies or
@@ -1217,13 +1281,13 @@ web: node web.js
     </ul>
   </li>
 </ul>
-<p>Continuum is easily one of my favorite platforms today.  It is very
-  futuristic and waaaay ahead of anything else that exists today.</p>
+<p>Continuum is one of my favorite platforms today.  It is very
+  futuristic, waaaay ahead of anything else that exists today.</p>
 <p>Not only is it possible to specify directives to modify how
   something is run, it is possible to script the interactions
   from the platform itself!</p>
 <p>To define what is being executed or packaged (<a href="https://github.com/apcera/continuum-package-scripts/blob/master/runtimes/go-1.3.conf">example</a>),
-  a <code>build</code> blocks are used:</p>
+  <code>build</code> blocks are used:</p>
 <div class="highlight"><pre>environment { &quot;PATH&quot;:    &quot;/opt/apcera/go1.3.linux-amd64/bin:$PATH&quot;,
               &quot;GOROOT&quot;:  &quot;/opt/apcera/go1.3.linux-amd64&quot;,
               &quot;GOPATH&quot;:  &quot;/opt/apcera/go&quot; }
@@ -1374,8 +1438,8 @@ build (
   functionality among the tools, e.g. chaining, a task that is executed after
   other task, or piping the output from a command somehow to wrap some
   logic around it, which makes me think whether eventually there will be
-  some tool which picks up the best parts from and offers the
-  functionality in an agnostic way somehow.</p>
+  some tool which picks up the best parts from them and offers the
+  same functionality in an agnostic way somehow.</p>
 <h1>EOF</h1>
 <hr />
 
@@ -1386,6 +1450,15 @@ build (
 <div class="related">
   <h2>Related Posts</h2>
   <ul class="related-posts">
+    
+      <li>
+        <h3>
+          <a href="/posts/2015/04/03/how-to-declare-execution/">
+            How to Declare an Execution
+            <small>03 Apr 2015</small>
+          </a>
+        </h3>
+      </li>
     
       <li>
         <h3>
@@ -1401,15 +1474,6 @@ build (
           <a href="/posts/2015/02/25/ob-mesos/">
             Running Org Babel workloads on top of Mesos with Go and the Docker Containerizer
             <small>25 Feb 2015</small>
-          </a>
-        </h3>
-      </li>
-    
-      <li>
-        <h3>
-          <a href="/posts/2014/12/25/learning-go-backwards/">
-            About type switch usage in Go
-            <small>25 Dec 2014</small>
           </a>
         </h3>
       </li>

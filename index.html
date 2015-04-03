@@ -138,7 +138,7 @@
   <tr><td></td><td></td></tr>
   <tr><td><b>Configuration Management</b></td><td>Chef, Puppet, Ansible</td></tr>
   <tr><td><b>Infrastructure</b></td><td>Packer, Terraform, Cloud Init, NixOps</td></tr>
-  <tr><td><b>Isolation</b></td><td>Vagrant, Docker</td></tr>
+  <tr><td><b>Isolation</b></td><td>Vagrant, Docker, CoreOS ACI</td></tr>
   <tr><td><b>Workloads scheduling</b></td><td>Kubernetes, Marathon, Aurora, Heroku style, Fleet, Apcera Continuum, Consul checks</td></tr>
   <tr><td><b>Continuous Integration</b></td><td>Jenkins, Drone.io, Travis, Wercker</td></tr>
   <tr><td><b>Build tools, Task Runners</b></td><td>Make, Rake, Ant, Maven, Pants, Bazel, Gradle</td></tr>
@@ -495,6 +495,70 @@ ENTRYPOINT [&quot;/usr/sbin/apache2ctl&quot;, &quot;-D&quot;, &quot;FOREGROUND&q
 </pre></div>
 <p>We can see that along with the execution of the code block, it is also being defined
   the folders and port mapping that are required to execute the code block.</p>
+<h2>CoreOS Appc</h2>
+<ul>
+  <li>Uses: JSON</li>
+  <li>Docs:
+    <ul>
+      <li><a href="https://github.com/appc/spec/blob/master/SPEC.md#app-container-executor">https://github.com/appc/spec/blob/master/SPEC.md#app-container-executor</a></li>
+    </ul>
+  </li>
+</ul>
+<p>The Application Container Specification uses JSON to define an
+  <a href="https://github.com/appc/spec/blob/master/SPEC.md#image-manifest-schema">Image Manifest</a>. The commands to execute are comma separated,
+  and there is a chain of execution via <i>event handlers</i>.</p>
+<div class="highlight"><pre><span class="s2">&quot;app&quot;</span><span class="o">:</span> <span class="p">{</span>
+       <span class="s2">&quot;exec&quot;</span><span class="o">:</span> <span class="p">[</span><span class="s2">&quot;/usr/bin/reduce-worker&quot;</span><span class="p">,</span> <span class="s2">&quot;--quiet&quot;</span><span class="p">],</span>
+       <span class="s2">&quot;user&quot;</span><span class="o">:</span> <span class="s2">&quot;100&quot;</span><span class="p">,</span>
+       <span class="s2">&quot;group&quot;</span><span class="o">:</span> <span class="s2">&quot;300&quot;</span><span class="p">,</span>
+       <span class="s2">&quot;eventHandlers&quot;</span><span class="o">:</span> <span class="p">[</span>
+           <span class="p">{</span>
+               <span class="s2">&quot;exec&quot;</span><span class="o">:</span> <span class="p">[</span>
+                   <span class="s2">&quot;/usr/bin/data-downloader&quot;</span>
+               <span class="p">],</span>
+               <span class="s2">&quot;name&quot;</span><span class="o">:</span> <span class="s2">&quot;pre-start&quot;</span>
+           <span class="p">},</span>
+           <span class="p">{</span>
+               <span class="s2">&quot;exec&quot;</span><span class="o">:</span> <span class="p">[</span>
+                   <span class="s2">&quot;/usr/bin/deregister-worker&quot;</span><span class="p">,</span>
+                   <span class="s2">&quot;--verbose&quot;</span>
+               <span class="p">],</span>
+               <span class="s2">&quot;name&quot;</span><span class="o">:</span> <span class="s2">&quot;post-stop&quot;</span>
+           <span class="p">}</span>
+       <span class="p">],</span>
+       <span class="s2">&quot;workingDirectory&quot;</span><span class="o">:</span> <span class="s2">&quot;/opt/work&quot;</span><span class="p">,</span>
+       <span class="s2">&quot;environment&quot;</span><span class="o">:</span> <span class="p">[</span>
+           <span class="p">{</span>
+               <span class="s2">&quot;name&quot;</span><span class="o">:</span> <span class="s2">&quot;REDUCE_WORKER_DEBUG&quot;</span><span class="p">,</span>
+               <span class="s2">&quot;value&quot;</span><span class="o">:</span> <span class="s2">&quot;true&quot;</span>
+           <span class="p">}</span>
+       <span class="p">],</span>
+</pre></div>
+<p>The specification of the resource that the workload would be using
+  can be found under the <i>isolation</i> key:</p>
+<div class="highlight"><pre><span class="s2">&quot;isolators&quot;</span><span class="o">:</span> <span class="p">[</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="o">:</span> <span class="s2">&quot;resources/cpu&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;value&quot;</span><span class="o">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;request&quot;</span><span class="o">:</span> <span class="s2">&quot;250&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;limit&quot;</span><span class="o">:</span> <span class="s2">&quot;500&quot;</span>
+                <span class="p">}</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="o">:</span> <span class="s2">&quot;resource/memory&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;value&quot;</span><span class="o">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;request&quot;</span><span class="o">:</span> <span class="s2">&quot;1G&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;limit&quot;</span><span class="o">:</span> <span class="s2">&quot;2G&quot;</span>
+                <span class="p">}</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="o">:</span> <span class="s2">&quot;os/linux/capabilities-retain-set&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;value&quot;</span><span class="o">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;set&quot;</span><span class="o">:</span> <span class="p">[</span><span class="s2">&quot;CAP_NET_BIND_SERVICE&quot;</span><span class="p">,</span> <span class="s2">&quot;CAP_SYS_ADMIN&quot;</span><span class="p">]</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">],</span>
+</pre></div>
 <h1>Build tools and Task runners</h1>
 <p>These have the common functionality of chaining together
   the execution of code blocks into steps, dependencies or
@@ -1225,13 +1289,13 @@ web: node web.js
     </ul>
   </li>
 </ul>
-<p>Continuum is easily one of my favorite platforms today.  It is very
-  futuristic and waaaay ahead of anything else that exists today.</p>
+<p>Continuum is one of my favorite platforms today.  It is very
+  futuristic, waaaay ahead of anything else that exists today.</p>
 <p>Not only is it possible to specify directives to modify how
   something is run, it is possible to script the interactions
   from the platform itself!</p>
 <p>To define what is being executed or packaged (<a href="https://github.com/apcera/continuum-package-scripts/blob/master/runtimes/go-1.3.conf">example</a>),
-  a <code>build</code> blocks are used:</p>
+  <code>build</code> blocks are used:</p>
 <div class="highlight"><pre>environment { &quot;PATH&quot;:    &quot;/opt/apcera/go1.3.linux-amd64/bin:$PATH&quot;,
               &quot;GOROOT&quot;:  &quot;/opt/apcera/go1.3.linux-amd64&quot;,
               &quot;GOPATH&quot;:  &quot;/opt/apcera/go&quot; }
@@ -1382,8 +1446,8 @@ build (
   functionality among the tools, e.g. chaining, a task that is executed after
   other task, or piping the output from a command somehow to wrap some
   logic around it, which makes me think whether eventually there will be
-  some tool which picks up the best parts from and offers the
-  functionality in an agnostic way somehow.</p>
+  some tool which picks up the best parts from them and offers the
+  same functionality in an agnostic way somehow.</p>
 <h1>EOF</h1>
 <hr />
 
@@ -1958,75 +2022,6 @@ o.Name undefined (type interface {} has no field or method Name)
 <h3>Is this better?</h3>
 <p>I think so.  Even though the implementation is a bit more verbose, the last example using a <code>type interface</code>
   might be the way to go in case we face the grouping issue from the raw interface.</p>
-
-
-
-  </div>
-  
-  <div class="post">
-    <h1 class="post-title">
-      <a href="/posts/2014/12/12/using-tcpdump/">
-        Quickly inspecting HTTP traffic with tcpdump
-      </a>
-    </h1>
-
-    <span class="post-date">12 Dec 2014</span>
-
-    
-<p>Just a quick post on one of my favorite features of <code>tcpdump</code> that I
-  have found useful for doing quick investigations of the behavior of an app
-  and you need a little bit more than what you get with the access logs.</p>
-<p>Wireshark has this <a href="http://www.wireshark.org/tools/string-cf.html">great site</a> that given a HTTP request,
-  will give you a filter that if paired with the <code>-A</code> (print packet in ASCII) option from <code>tcpdump</code>
-  will match all related HTTP traffic that is going on in a node.</p>
-<p>A couple of basic examples:</p>
-<ul>
-  <li>Show all <code>GET</code> requests</li>
-</ul>
-<div class="highlight"><pre>tcpdump -A <span class="s1">&#39;tcp[((tcp[12:1] &amp; 0xf0) &gt;&gt; 2):2] = 0x4745 &amp;&amp; tcp[((tcp[12:1] &amp; 0xf0) &gt;&gt; 2) + 2:1] = 0x54&#39;</span>
-
-tcpdump: verbose output suppressed, use -v or -vv <span class="k">for </span>full protocol decode
-listening on wlan0, link-type EN10MB <span class="o">(</span>Ethernet<span class="o">)</span>, capture size 65535 bytes
-16:31:54.870479 IP 10.0.1.134.56724 &gt; 10.0.7.64.http-alt: Flags <span class="o">[</span>P.<span class="o">]</span>, seq 1988783165:1988783563, ack 2609786817, win 65535, options <span class="o">[</span>nop,nop,TS val 703013338 ecr 40647638<span class="o">]</span>, length 398
-E...Bt@.@...
-...
-..@....v.l<span class="o">=</span>../............
-<span class="o">)</span>.!..l<span class="p">;</span>.GET /v2/apps HTTP/1.1
-Host: 10.0.77.64:8080
-Connection: keep-alive
-Accept: application/json, text/javascript, */*<span class="p">;</span> <span class="nv">q</span><span class="o">=</span>0.01
-X-Requested-With: XMLHttpRequest
-User-Agent: Mozilla/5.0 <span class="o">(</span>Macintosh<span class="p">;</span> Intel Mac OS X 10_7_5<span class="o">)</span> AppleWebKit/537.36 <span class="o">(</span>KHTML, like Gecko<span class="o">)</span> Chrome/39.0.2171.71 Safari/537.36
-Referer: http://10.0.7.64:8080/
-Accept-Encoding: gzip, deflate, sdch
-Accept-Language: en-US,en<span class="p">;</span><span class="nv">q</span><span class="o">=</span>0.8
-</pre></div>
-<ul>
-  <li>Show all <code>POST</code> requests</li>
-</ul>
-<div class="highlight"><pre>tcpdump -A <span class="s1">&#39;tcp[((tcp[12:1] &amp; 0xf0) &gt;&gt; 2):4] = 0x504f5354&#39;</span>
-
-tcpdump: verbose output suppressed, use -v or -vv <span class="k">for </span>full protocol decode
-listening on wlan0, link-type EN10MB <span class="o">(</span>Ethernet<span class="o">)</span>, capture size 65535 bytes
-16:41:59.925399 IP 10.0.1.134.56765 &gt; 10.0.7.64.http-alt: Flags <span class="o">[</span>P.<span class="o">]</span>, seq 1595944397:1595945056, ack 1073928153, win 65535, options <span class="o">[</span>nop,nop,TS val 703610055 ecr 40792556<span class="o">]</span>, length 659
-E.....@.@.o.
-...
-..@...._ -.@..............
-<span class="o">)</span>.&lt;..nq.POST /v2/apps HTTP/1.1
-Host: 10.0.77.64:8080
-Connection: keep-alive
-Content-Length: 182
-Accept: application/json, text/javascript, */*<span class="p">;</span> <span class="nv">q</span><span class="o">=</span>0.01
-Origin: http://10.0.7.64:8080
-X-Requested-With: XMLHttpRequest
-User-Agent: Mozilla/5.0 <span class="o">(</span>Macintosh<span class="p">;</span> Intel Mac OS X 10_7_5<span class="o">)</span> AppleWebKit/537.36 <span class="o">(</span>KHTML, like Gecko<span class="o">)</span> Chrome/39.0.2171.71 Safari/537.36
-Content-Type: application/json
-Referer: http://10.0.7.64:8080/
-Accept-Encoding: gzip, deflate
-Accept-Language: en-US,en<span class="p">;</span><span class="nv">q</span><span class="o">=</span>0.8
-</pre></div>
-<p>You can add more info to the path (e.g. <code>GET /v2/</code>) to narrow down the actions
-  that are being investigated.</p>
 
 
 
