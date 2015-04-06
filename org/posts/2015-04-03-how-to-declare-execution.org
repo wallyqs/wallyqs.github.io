@@ -3,7 +3,8 @@
 #+category: posts
 #+layout: post
 
-Following up on a list of configuration formats which are used,
+Following up on the [[posts/2015/03/31/variations-code-blocks-execution/][previous list]] I did on configuration formats which
+are used to execute code snippets,
 I will try to summarize here some of the behaviors which are being
 expressed in order to transparently modify the execution of something.
 
@@ -50,7 +51,7 @@ And a similar example in Ant. Here =jar= needs to be called once
     </target>
 #+END_SRC
 
-And a much more complex example is Bazel, where
+# And a much more complex example is Bazel, where
 
 *** DONE IO Redirection
 

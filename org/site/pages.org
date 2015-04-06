@@ -18,30 +18,34 @@ layout: default
 #+BEGIN_SRC html :tangle src/about.html
 ---
 layout: page
-title: "About"
+title: "About Wally"
 permalink: about.html
 ---
 
   <p>
 
-    Hi, my name is Waldemar Quevedo (though most people call me Wally) <br /><br />
+  I'm a Tokyo based full stack developer specializing in PaaS & logging technologies,
+  as well as declarative approaches around the deployment of workloads.
 
-    Originally from Guadalajara, Mexico <br /> <br />
+  In the past, I have participated in communities such as <a href="https://developers.google.com/open-source/soc/">Google Summer of Code</a> and <a href="http://recurse.com">the Recurse Center</a> (formerly HackerSchool).
 
-    B.A in Computer Science from the Monterey Institute of Technology and Higher Education. <br /><br />
+  Originally from Guadalajara, Mexico (also known as the 
+  <a href="http://techcrunch.com/2015/03/26/beyond-the-maquiladora-a-look-at-mexicos-startup-scene/">Engineering Hub from Mexico</a>)
 
-    Emacsen, Rubyist, ex-GSoC <br /><br />
+  In October 2010, I moved to Tokyo to join Rakuten during its initial
+  stages of globalization as part of the Rakuten Research team,
+  where I had my first experience working in a completely Japanese environment. 
 
-    Moved to Tokyo in 2010 to join Rakuten during its initial stages of globalization. <br /><br />
+  Then in 2012, I moved on as one of the first members of Rakuten PaaS team
+  to help in its launch.  It was a Cloudfoundry based solution, and we needed
+  persistent logs so I implemented its logging infrastructure
+  <a href="http://www.slideshare.net/rakutentech/fluentd-meetup-logging-infrastructure-in-paa-s"> using Fluentd.</a>  
 
-    Helped launch the platform as a service from Rakuten in 2012 using Cloudfoundry. Developped its logging infrastructure. <br /><br />
-
-    Interested in distributed systems, literate programming, and GIS technologies. <br /><br />
-
-    Current maintainer of the <a href="https://github.com/bdewey/org-ruby">org-ruby</a> gem being used at Github,
-    (in case you find some functionality missing please issue a ticket <a href="https://github.com/bdewey/org-ruby/issues">here</a>
-    please) <br /><br />
-
+  I am proficient in Japanese (JLPT 2 - Business level), English & Spanish.
+  
+  My editor is Emacs and its always full of Org mode buffers
+  (if Org mode support in Github is broken <a href="https://github.com/wallyqs/org-ruby/issues">please ping me</a>)
+  
     You can find me at:
 
     <ul>

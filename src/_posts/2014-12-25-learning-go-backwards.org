@@ -1,4 +1,4 @@
-#+TITLE:	Learning Go backwards: Using Type Switch
+#+TITLE:	About type switch usage in Go
 #+CATEGORY:	posts
 #+LAYOUT:	post
 
