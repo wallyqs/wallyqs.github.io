@@ -18,34 +18,53 @@ layout: default
 #+BEGIN_SRC html :tangle src/about.html
 ---
 layout: page
-title: "About Wally"
+title: "About"
 permalink: about.html
 ---
 
+<div>
+  
   <p>
-
-  I'm a Tokyo based full stack developer specializing in PaaS & logging technologies,
-  as well as declarative approaches around the deployment of workloads.
-
-  In the past, I have participated in communities such as <a href="https://developers.google.com/open-source/soc/">Google Summer of Code</a> and <a href="http://recurse.com">the Recurse Center</a> (formerly HackerSchool).
-
-  Originally from Guadalajara, Mexico (also known as the 
-  <a href="http://techcrunch.com/2015/03/26/beyond-the-maquiladora-a-look-at-mexicos-startup-scene/">Engineering Hub from Mexico</a>)
-
-  In October 2010, I moved to Tokyo to join Rakuten during its initial
-  stages of globalization as part of the Rakuten Research team,
-  where I had my first experience working in a completely Japanese environment. 
-
-  Then in 2012, I moved on as one of the first members of Rakuten PaaS team
-  to help in its launch.  It was a Cloudfoundry based solution, and we needed
-  persistent logs so I implemented its logging infrastructure
-  <a href="http://www.slideshare.net/rakutentech/fluentd-meetup-logging-infrastructure-in-paa-s"> using Fluentd.</a>  
-
-  I am proficient in Japanese (JLPT 2 - Business level), English & Spanish.
+    <a href="mailto:waldemar.quevedo@gmail.com">
+      I'm available for new opportunities! :)    
+    </a>
+  </p>
   
-  My editor is Emacs and its always full of Org mode buffers
-  (if Org mode support in Github is broken <a href="https://github.com/wallyqs/org-ruby/issues">please ping me</a>)
-  
+  <p>
+    I'm a Tokyo based full stack developer specializing in PaaS & logging technologies,
+    as well as declarative approaches around the deployment of workloads.
+  </p>
+
+  <p>
+    In the past, I have participated in communities such as <a href="https://developers.google.com/open-source/soc/">Google Summer of Code</a> and <a href="http://recurse.com">the Recurse Center</a> (formerly HackerSchool).
+  </p>
+
+  <p>
+    Originally from Guadalajara, Mexico (also known as the
+    <a href="http://techcrunch.com/2015/03/26/beyond-the-maquiladora-a-look-at-mexicos-startup-scene/">Engineering Hub from Mexico</a>)
+  </p>
+
+  <p>
+    In October 2010, I moved to Tokyo to join Rakuten during its initial
+    stages of globalization as part of the Rakuten Research team,
+    where I had my first experience working in a completely Japanese environment.
+  </p>
+
+  <p>
+    Then in 2012, I moved on as one of the first members of Rakuten PaaS team
+    to help in its launch.  It was a Cloudfoundry based solution, and we needed
+    persistent logs so I implemented its logging infrastructure
+    <a href="http://www.slideshare.net/rakutentech/fluentd-meetup-logging-infrastructure-in-paa-s"> using Fluentd.</a>
+  </p>
+
+  <p>
+    I am proficient in Japanese (JLPT 2 - Business level), English & Spanish.
+  </p>
+
+  <p>  My editor is Emacs. Also, I really, really like Org mode, so if support in Github is broken <a href="https://github.com/wallyqs/org-ruby/issues">please ping me</a>.
+  </p>
+
+  <p>
     You can find me at:
 
     <ul>
@@ -54,6 +73,7 @@ permalink: about.html
       <li><a href="http://jp.linkedin.com/in/waldemarquevedo">Linkedin</a></li>
     </ul>
   </p>
+</div>
 #+END_SRC
 
 *** Posts index
