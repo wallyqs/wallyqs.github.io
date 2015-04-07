@@ -46,7 +46,7 @@
     <div class="sidebar-about">
       <h2>
         <a href="/">
-	  apps<span style="color: red;">●</span>tokyo
+	  ops<span style="color: red;">●</span>tokyo
         </a>
       </h2>
       <p>a blog by</p>
@@ -123,11 +123,11 @@
 <p>The very basic functionality of task runners like <code>make</code>.  In order
   for something to be executed, first it must meet its prerequisites.</p>
 <p>The most basic example of this is <code>make</code>:</p>
-<div class="highlight"><pre>some_binary: other.txt
-	touch some_binary
+<div class="highlight"><pre><span class="l-Scalar-Plain">some_binary</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">other.txt</span>
+<span class="err">	</span><span class="l-Scalar-Plain">touch some_binary</span>
 
-other.txt:
-	touch other.txt
+<span class="l-Scalar-Plain">other.txt</span><span class="p-Indicator">:</span>
+<span class="err">	</span><span class="l-Scalar-Plain">touch other.txt</span>
 </pre></div>
 <p>And a similar example in Ant. Here <code>jar</code> needs to be called once
   <code>compile</code> has succeeded in execution:</p>
@@ -246,12 +246,12 @@ notify <span class="o">{</span><span class="s1">&#39;/tmp/test1 has already been
   and determine the context on which the execution would be valid.</p>
 <p>An example of this are the Marathon constraints.  By using <code>UNIQUE</code>
   for example, a command would be executed only once per hostname.</p>
-<div class="highlight"><pre>{
-    &quot;id&quot;: &quot;sleep-unique&quot;,
-    &quot;cmd&quot;: &quot;sleep 60&quot;,
-    &quot;instances&quot;: 3,
-    &quot;constraints&quot;: [[&quot;hostname&quot;, &quot;UNIQUE&quot;]]
-}
+<div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="s2">&quot;sleep-unique&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;cmd&quot;</span><span class="o">:</span> <span class="s2">&quot;sleep 60&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;instances&quot;</span><span class="o">:</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="s2">&quot;constraints&quot;</span><span class="o">:</span> <span class="p">[[</span><span class="s2">&quot;hostname&quot;</span><span class="p">,</span> <span class="s2">&quot;UNIQUE&quot;</span><span class="p">]]</span>
+<span class="p">}</span>
 </pre></div>
 <p>This functionality is similar to <code>Conflicts</code> in <a href="https://coreos.com/docs/launching-containers/launching/fleet-unit-files/">CoreOS Fleet</a>.
   In Fleet, it is also possible to set <code>Global</code>, which in Marathon
