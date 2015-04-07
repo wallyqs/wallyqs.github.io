@@ -9,7 +9,7 @@
     <div class="sidebar-about">
       <h2>
         <a href="{{ site.baseurl }}">
-          {{ site.title }}
+	  apps<span style="color: red;">●</span>tokyo
         </a>
       </h2>
       <p>{{ site.tagline }}</p>
@@ -48,7 +48,7 @@
 
   <title>
     {% if page.title == "Home" %}
-      {{ site.title }} &middot; {{ site.tagline }}
+      {{ site.title }} &middot; @wallyqs
     {% else %}
       {{ page.title }} &middot; {{ site.title }}
     {% endif %}

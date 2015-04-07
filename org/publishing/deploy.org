@@ -5,7 +5,7 @@
 *** Set the CNAME for the site
 
 #+BEGIN_SRC text :tangle src/CNAME
-literateinfrastructure.org
+ops.tokyo
 #+END_SRC
 
 *** Deploying to Github

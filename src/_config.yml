@@ -6,13 +6,13 @@ permalink:        pretty
 relative_permalinks: true
 
 # Setup
-title:            Literate Infrastructure
-tagline:          'PaaS + Org mode'
+title:            'ops●tokyo'
+tagline:          'a blog by'
 description:      '<a href="https://twitter.com/wallyqs" target="_blank">@wallyqs</a>'
 baseurl:          /
 
 author:
-  name:           'Waldemar Quevedo'
+  name:           '@wallyqs'
   url:            https://twitter.com/wallyqs
 
 paginate:         5
