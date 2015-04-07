@@ -11,7 +11,7 @@
 
   <title>
     
-      Gradually adopting Org mode, part 1 &middot; Literate Infrastructure
+      Gradually adopting Org mode, part 1 &middot; ops●tokyo
     
   </title>
 
@@ -46,10 +46,10 @@
     <div class="sidebar-about">
       <h2>
         <a href="/">
-          Literate Infrastructure
+	  apps<span style="color: red;">●</span>tokyo
         </a>
       </h2>
-      <p>PaaS + Org mode</p>
+      <p>a blog by</p>
       <p class="lead"><a href="https://twitter.com/wallyqs" target="_blank">@wallyqs</a></p>
     </div>
 
@@ -88,10 +88,14 @@
           
         
       
+        
+          
+        
+      
 
     </nav>
 
-    <p>&copy; 2014. All rights reserved.</p>
+    <p>&copy; 2015. All rights reserved.</p>
   </div>
 </div>
 
@@ -186,8 +190,7 @@ Paragraph within a /headline/
   </dd>
   <dt>tables</dt><dd>
     An Org mode table:
-    <pre class="src src-org">
-     <span style="color: #87cefa;">| apples  | 10 |</span>
+     <pre class="src src-org"><span style="color: #87cefa;">| apples  | 10 |</span>
      <span style="color: #87cefa;">| oranges | 20 |</span>
      </pre>
     <p>Tables in Org mode are very powerful.  They are not meant to be
@@ -195,15 +198,13 @@ Paragraph within a /headline/
       functionality as well.  The following table would have its formulas
       evaluated after pressing TAB on it:</p>
     <p>Before:</p>
-    <pre class="src src-org">
-     <span style="color: #87cefa;">| fruit   |      quantity | price per fruit | COST          |</span>
+     <pre class="src src-org">  <span style="color: #87cefa;">| fruit   |      quantity | price per fruit | COST          |</span>
      <span style="color: #87cefa;">| apples  |            10 |               5 | </span><span style="color: #ff7f24;">=$2 * $3      </span><span style="color: #87cefa;">|</span>
      <span style="color: #87cefa;">| oranges |            20 |               7 | </span><span style="color: #ff7f24;">=$2 * $3      </span><span style="color: #87cefa;">|</span>
      <span style="color: #87cefa;">| TOTAL   | </span><span style="color: #ff7f24;">=vsum(@2..@3) </span><span style="color: #87cefa;">|                 |               |</span>
      </pre>
     <p>After:</p>
-    <pre class="src src-org">
-     <span style="color: #87cefa;">| fruit   |      quantity | price per fruit | COST     |</span>
+     <pre class="src src-org">  <span style="color: #87cefa;">| fruit   |      quantity | price per fruit | COST     |</span>
      <span style="color: #87cefa;">| apples  |            10 |               5 | 50       |</span>
      <span style="color: #87cefa;">| oranges |            20 |               7 | 140      |</span>
      <span style="color: #87cefa;">| TOTAL   |            30 |                 |          |</span>
@@ -229,12 +230,12 @@ Dear Alice...
 <pre class="src src-org">  * DONE Reply email from Alice
     <span style="color: #66D9EF;">CLOCK:</span> <span style="color: #00ffff; text-decoration: underline;">[2014-12-04 Thu 15:45]--[2014-12-04 Thu 15:50]</span> =&gt;  0:05
 
-  ** DONE Reply
+  ,** DONE Reply
      <span style="color: #66D9EF;">CLOCK:</span> <span style="color: #00ffff; text-decoration: underline;">[2014-12-04 Thu 16:00]--[2014-12-04 Thu 17:00]</span> =&gt;  1:00
 
   Dear Alice...
 
-  * TODO Capacity planning
+  ,* TODO Capacity planning
 </pre>
 <p>Another helpful feature is <i>narrowing down</i> to a headline so that
   other headlines are not shown. This can be done by pressing <code>C-x n s</code>.</p>
@@ -292,8 +293,7 @@ Dear Alice...
   <span style="color: #b3b3b3;">: 110</span>
 </pre>
 <p>Or chain it with a table:</p>
-<pre class="src src-org">
-  <span style="color: #465457; font-style: italic;">  #+name: fruits</span>
+<pre class="src src-org"><span style="color: #465457; font-style: italic;">  #+name: fruits</span>
   <span style="color: #87cefa;">| apples  | 10 |</span>
   <span style="color: #87cefa;">| oranges | 20 |</span>
 
@@ -321,27 +321,27 @@ Dear Alice...
     
       <li>
         <h3>
-          <a href="/posts/2014/12/12/using-tcpdump/">
-            Quickly inspecting HTTP traffic with tcpdump
-            <small>12 Dec 2014</small>
+          <a href="/posts/2015/04/03/how-to-declare-execution/">
+            How to Declare an Execution
+            <small>03 Apr 2015</small>
           </a>
         </h3>
       </li>
     
       <li>
         <h3>
-          <a href="/posts/2014/12/12/using-org-babel-for-lp-jp/">
-            Org Babelで文芸的プログラミング
-            <small>12 Dec 2014</small>
+          <a href="/posts/2015/03/31/variations-code-blocks-execution/">
+            Variations around the execution of code blocks
+            <small>31 Mar 2015</small>
           </a>
         </h3>
       </li>
     
       <li>
         <h3>
-          <a href="/posts/2014/12/12/using-org-babel-for-lp/">
-            Using Org Babel for Literate Programming
-            <small>12 Dec 2014</small>
+          <a href="/posts/2015/02/26/mesos-tokyo/">
+            Talked at the Tokyo Mesos Meetup #1
+            <small>26 Feb 2015</small>
           </a>
         </h3>
       </li>
